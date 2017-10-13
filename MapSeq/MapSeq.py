@@ -209,15 +209,15 @@ class MapSeq(object):
 
             # Plot strains that have aa0 and aa1
             samples = [None, None]
-            for i in 0, 1:
-                strains = set(pair[i] for pair in pairs)
+            for j in 0, 1:
+                strains = set(pair[j] for pair in pairs)
 
-                samples[i] = self.coords_in_both.loc[strains, :]
+                samples[j] = self.coords_in_both.loc[strains, :]
 
-                samples[i].plot.scatter(
-                    x="x", y="y", s=150, c=amino_acid_colors[aas[i]],
+                samples[j].plot.scatter(
+                    x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
                     edgecolor="white", linewidth=1, zorder=20, ax=ax,
-                    label="{}{}".format(aas[i], sub[1]))
+                    label="{}{}".format(aas[j], sub[1]))
 
             # Compute Hotelling's T-squared statistic on the two samples
             if len(samples[0]) > 1 and len(samples[1]) > 1:

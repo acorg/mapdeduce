@@ -6,6 +6,8 @@ from matplotlib.collections import LineCollection
 import numpy as np
 import spm1d
 
+from scipy import spatial
+
 from operator import and_
 import itertools
 
@@ -37,6 +39,10 @@ class MapSeq(object):
         # Replace any unkwnown amino acid with NaN
         cond = self.all_seqs.applymap(lambda x: x not in amino_acids)
         self.all_seqs.mask(cond, inplace=True)
+
+        # Remove any rows that contain NaN coords
+        mask = self.all_coords.notnull().any(axis=1)
+        self.all_coords = self.all_coords.loc[mask, :]
 
         # Strains in the sequences and coordinates dataframes
         self.strains_in_seq = set(self.all_seqs.index)
@@ -472,6 +478,84 @@ class MapSeq(object):
                 pairs.add(tuple(itertools.product(aa0_pos, aa1_pos)))
 
         return pairs
+
+    def identical_sequences(self, positions=None):
+        """
+        Return a list of DataFrames that contain identical sequences that are
+        all in the map.
+
+        @param positions. List of int. Only consider these positions. Default,
+            None, uses all positions.
+        """
+        identical = []
+        if positions is None:
+            positions = self.seq_in_both.columns.tolist()
+        groupby = self.seq_in_both.groupby(positions)
+        for sequence, strains in groupby.groups.iteritems():
+            if len(strains) > 1:
+                identical.append(strains)
+        return identical
+
+    def error(self, positions=None):
+        """
+        Assuming in a perfect system (sequencing, laboratory, cartography)
+        genetically identical strains should be in an identical position in the
+        map. This method returns the distribution of pairwise distances between
+        genetically identical strains.
+
+        Some groups of genetically identical strains are larger than others.
+        E.g. some groups can have ~30 strains, whilst lots of others have 2-5.
+        This methods computes the mean and median pairwise distance for each
+        group, so that one group does not dominate the distribution.
+
+        (There are (30^2-30)/2 = 435 pairwise distances between 30 points,
+        compared to (5^2-5)/2 = 10 for 10 points).
+
+        @param positions. List of int. Only consider these positions when
+            looking for genetically identical strains. Default, None, uses
+            all positions.
+        """
+        identical_sequences = self.identical_sequences(positions=positions)
+        n = len(identical_sequences)
+        means, medians = np.empty(n), np.empty(n)
+        for i, names in enumerate(identical_sequences):
+            # Each i is a list containing the indexes of identical sequences
+            coords = self.coords_in_both.loc[names, :].values
+            distances = spatial.distance.pdist(X=coords,
+                                               metric="euclidean",
+                                               p=2)
+            means[i] = np.mean(distances)
+            medians[i] = np.median(distances)
+        return {"means": means, "medians": medians}
+
+    def plot_error(self, positions=None):
+        """
+        Plot the distribution of means and median pairwise antigenic distances
+        between genetically strains, calculated by self.error()
+
+        @param positions. List of int. Only consider these positions when
+            looking for genetically identical strains. Default, None, uses
+            all positions.
+        """
+        error = self.error(positions=positions)
+        max_error = max(map(max, error.values()))
+        step = 0.5
+        bins = np.arange(0, np.ceil(max_error) + step, step)
+
+        fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(7, 10),
+                               sharex=True, sharey=True)
+
+        ax[0].hist(error["means"], bins=bins, ec="white")
+        ax[0].set_title("Means")
+        ax[0].set_ylabel("Frequency")
+
+        ax[1].hist(error["medians"], bins=bins, ec="white")
+        ax[1].set_title("Medians")
+        ax[1].set_ylabel("Frequency")
+
+        ax[1].set_xlabel("Antigenic distance (AU)")
+
+        return ax
 
     def find_single_substitutions(self, cluster_diff_df, filename=None,
                                   **kwargs):

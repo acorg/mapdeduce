@@ -2,6 +2,7 @@
 
 from Bio import SeqIO
 import pandas as pd
+import numpy as np
 import re
 
 
@@ -118,3 +119,55 @@ def clean_df_strain_names(df, filename):
 
     df.index = new_names
     return df
+
+
+def handle_duplicate_sequences(df):
+    """
+    (A) Remove rows with identical indexes and sequences.
+    (B) Keep rows with duplicate sequences, but different indexes.
+    (C) Merge strains with dupliacte indexes, but different sequences.
+        (replace ambiguous positions with X).
+
+    @param df. pd.DataFrame. Rows are strains, columns are amino acid
+        positions.
+    """
+    # (A, B) remove strains with repeated names & sequences
+    df = df[~(df.duplicated() & df.index.duplicated())]
+
+    # Each set of remaining duplicate indexes have different sequences
+    # Merge these groups of sequences
+    remaining_dupe_idx = df.index.duplicated(keep=False)
+    if remaining_dupe_idx.any():
+        merged = {i: df.loc[i, :].apply(merge_amino_acids)
+                  for i in df.index[remaining_dupe_idx]}
+        merged = pd.DataFrame.from_dict(merged, orient="index")
+        merged.columns = df.columns
+
+        # Uniqe indexes
+        unique = df[~remaining_dupe_idx]
+
+        return pd.concat((merged, unique))
+
+    else:
+        return df
+
+
+def merge_amino_acids(amino_acids):
+    """
+    Merge amino acids. If there is only one unique amino acid
+    return that. If there is only one unique amino acid, and the
+    rest are unknown (np.nan), then return the known amino acid.
+    If there are multiple known amino acids, then return unkown
+    (np.nan)
+
+    @param amino_acids: pd.Series
+    """
+    unique = pd.unique(amino_acids)
+    if unique.shape[0] == 1:
+        return unique[0]
+
+    unique_no_na = amino_acids.dropna().unique()
+    if unique_no_na.shape[0] == 1:
+        return unique_no_na[0]
+    else:
+        return np.nan

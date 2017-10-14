@@ -23,6 +23,11 @@ def setup_ax(map):
         ax.set_ylim(-7, 7)
         ax.set_xticks(range(-7, 8))
         ax.set_yticks(range(-7, 8))
+    elif map == "cdc-melb-2017-merge":
+        ax.set_xlim(-7, 7)
+        ax.set_ylim(-7, 7)
+        ax.set_xticks(range(-7, 8))
+        ax.set_yticks(range(-6, 7))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_xlabel("")
@@ -53,7 +58,12 @@ ellipse_params = {
         "PE09": dict(xy=(-2.7, -2), width=2.5, height=3.5, angle=-10, **kwds),
         "SW13": dict(xy=(0.5, 1.75), width=2, height=4, angle=-70, **kwds),
         "HK14": dict(xy=(1, -0.75), width=2.5, height=5, angle=-70, **kwds),
-    }
+    },
+    "cdc-melb-2017-merge": {
+        "PE09": dict(xy=(-2.7, 2), width=2.25, height=4, angle=-15, **kwds),
+        "SW13": dict(xy=(0, -2), width=2, height=4.5, angle=85, **kwds),
+        "HK14": dict(xy=(1, 1), width=3.75, height=5.25, angle=80, **kwds),
+    },
 }
 
 
@@ -86,6 +96,17 @@ def add_ellipses(map):
             else:
                 x = params["xy"][0] + params["width"] + 1
             y = params["xy"][1] + 1
+            ha = "center"
+            va = "bottom"
+
+        elif map == "cdc-melb-2017-merge":
+            if cluster == "PE09":
+                x = params["xy"][0] - params["width"] - 0.5
+            elif cluster == "HK14":
+                x = params["xy"][0] + params["width"]
+            else:
+                x = params["xy"][0] + params["width"] + 2
+            y = params["xy"][1]
             ha = "center"
             va = "bottom"
 

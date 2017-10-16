@@ -154,3 +154,15 @@ def combination_label(combination):
     """
     comb_list = sorted("{}{}".format(k, v) for k, v in combination.iteritems())
     return "+".join(comb_list)
+
+
+def point_size(n):
+    """
+    Determine point size as a function of the number of points in the scatter
+    plot
+
+    @param n. Int. Number of points.
+    """
+    if n > 9000:
+        return point_size(9000)
+    return (-4.26764259e-03 * n) + (2.30663771e-07 * n**2) + 20.21953616

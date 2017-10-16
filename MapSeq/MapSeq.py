@@ -12,7 +12,7 @@ from operator import and_
 import itertools
 
 from plotting import setup_ax, amino_acid_colors, add_ellipses, \
-    combination_label
+    combination_label, point_size
 from munging import handle_duplicate_sequences
 from data import amino_acids
 
@@ -121,8 +121,10 @@ class MapSeq(object):
                                                 label="Unknown sequence")
 
         # Plot antigens with a known sequence
-        s = 50 if self.map == 2018 else 100
-        kwds = dict(edgecolor="white", s=s)
+        # s = 50 if self.map == 2018 else 100
+        kwds = dict(lw=0.1,
+                    edgecolor="white",
+                    s=3 * point_size(self.seq_in_both.shape[0]))
         proportions = self.variant_proportions(p=p) * 100
 
         seq_grouped = self.seq_in_both.groupby(p)

@@ -216,10 +216,11 @@ class MapSeq(object):
 
                 samples[j] = self.coords_in_both.loc[strains, :]
 
-                samples[j].plot.scatter(
-                    x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
-                    edgecolor="white", linewidth=1, zorder=20, ax=ax,
-                    label="{}{}".format(aas[j], sub[1]))
+            for sample in sorted(samples, key=lambda x: len(x))[::-1]:
+                    sample.plot.scatter(
+                        x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
+                        edgecolor="white", linewidth=1, zorder=20, ax=ax,
+                        label="{}{}".format(aas[j], sub[1]))
 
             # Compute Hotelling's T-squared statistic on the two samples
             if len(samples[0]) > 1 and len(samples[1]) > 1:

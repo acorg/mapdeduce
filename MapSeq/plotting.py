@@ -1,7 +1,7 @@
 """Utilities and defaults for plotting"""
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
+from matplotlib.patches import Ellipse, Rectangle
 
 
 def setup_ax(map):
@@ -167,6 +167,27 @@ def add_ellipses(map):
             va = "bottom"
 
         ax.text(x, y, cluster, fontsize=12, ha=ha, va=va, zorder=20)
+
+rectangle_params = {
+    2009: {
+        "FU02-CA04": dict(xy=(-5, -0),
+                          width=6.5,
+                          height=5.5,
+                          angle=-40,
+                          **kwds)
+    }
+}
+
+
+def add_rectangles(map):
+    """
+    Add rectangles delimiting regions of antigenically different viruses
+
+    @param map: Str. 2009
+    """
+    ax = plt.gca()
+    for rectangle, params in rectangle_params[map].iteritems():
+        ax.add_artist(Rectangle(zorder=15, **params))
 
 
 amino_acid_colors = {

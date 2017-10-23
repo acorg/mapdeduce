@@ -4,6 +4,7 @@ from Bio import SeqIO
 import pandas as pd
 import numpy as np
 import re
+import matplotlib.pyplot as plt
 
 
 def dict_from_fasta(path):
@@ -171,3 +172,21 @@ def merge_amino_acids(amino_acids):
         return unique_no_na[0]
     else:
         return np.nan
+
+
+def points_in_patch(patch, df):
+    """
+    Return points in df contained in a matplotlib patch
+
+    @param patch. matplotlib.patches.Patch instance
+    @param df. (N, 2) dataframe containing coordinates.
+    """
+    fig, ax = plt.subplots()
+    df.plot.scatter(x="x", y="y", ax=ax)
+    ax.add_artist(patch)
+    path = patch.get_path()
+    patch_transform = patch.get_transform()
+    real_path = patch_transform.transform_path(path)
+    mask = real_path.contains_points(ax.transData.transform(df))
+    plt.close()
+    return mask

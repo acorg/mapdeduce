@@ -15,6 +15,7 @@ from plotting import setup_ax, amino_acid_colors, add_ellipses, \
     combination_label, point_size
 from munging import handle_duplicate_sequences
 from data import amino_acids
+from dataframes import CoordDf, SeqDf
 
 
 class MapSeq(object):
@@ -665,3 +666,59 @@ class MapSeq(object):
                     plt.tight_layout()
                     plt.savefig(filename.format(label))
                     plt.close()
+
+
+class OrderedMapSeq(MapSeq):
+    """
+    Like MapSeq, but the order of the indexes of the dataframes containing
+    the coordinates and sequences are identical.
+
+    Also, positions with no amino acid diversity are removed.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """This class accepts the same parameters as MapSeq"""
+        super(OrderedMapSeq, self).__init__(*args, **kwargs)
+
+        # Join the two dataframes, so they share indexes
+        combined = self.coords_in_both.join(self.seq_in_both)
+
+        # Remove strains that have any NaN entries
+        mask = ~ combined.isnull().any(axis=1)
+        print "Removed {} strains with NaN values".format(mask.sum())
+        combined = combined[mask]
+
+        self.coord = CoordDf(combined.loc[:, ["x", "y"]])
+        self.seqs = SeqDf(combined.drop(["x", "y"], axis=1))
+
+    def filter(self, patch, plot=True, remove_invariant=True,
+               get_dummies=True):
+        """
+        Remove data where the x y coordinates are outside a matplotlib patch.
+        This updates self.coord and self.seq inplace.
+
+        @param patch. matplotlib.patches.Patch instance
+        @param plot. Bool. Plot the points that have been included / excluded
+            and the patch.
+        @param remove_invariant. Bool. Remove sequence positions that only have
+            a single amino acid.
+        @param get_dummies. Bool. Attach dummy variable representation of the
+            sequences
+        """
+        mask = self.coord.points_in_patch(patch=patch)
+
+        if plot:
+            ax = self.coord.df.plot.scatter(x="x", y="y", label="All points",
+                                            c="black", s=5)
+
+        self.coord.df = self.coord.df[mask]
+        self.seqs.df = self.seqs.df[mask]
+
+        if remove_invariant:
+            self.seqs.remove_invariant(inplace=True)
+        if get_dummies:
+            self.seqs.get_dummies(inplace=True)
+
+        if plot:
+            self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)
+            return ax

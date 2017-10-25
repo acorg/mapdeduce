@@ -170,10 +170,10 @@ def add_ellipses(map):
 
 rectangle_params = {
     2009: {
-        "FU02-CA04": dict(xy=(-5, -0),
+        "FU02-CA04": dict(xy=(-5, -0.5),
                           width=6.5,
-                          height=5.5,
-                          angle=-40,
+                          height=7.5,
+                          angle=-35,
                           **kwds)
     }
 }

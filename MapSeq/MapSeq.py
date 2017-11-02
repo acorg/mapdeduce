@@ -673,7 +673,7 @@ class OrderedMapSeq(MapSeq):
     Like MapSeq, but the order of the indexes of the dataframes containing
     the coordinates and sequences are identical.
 
-    Also, positions with no amino acid diversity are removed.
+    Also, positions with no amino acid diversity are remove.
     """
 
     def __init__(self, *args, **kwargs):
@@ -684,14 +684,14 @@ class OrderedMapSeq(MapSeq):
         combined = self.coords_in_both.join(self.seq_in_both)
 
         # Remove strains that have any NaN entries
-        mask = ~ combined.isnull().any(axis=1)
-        print "Removed {} strains with NaN values".format(mask.sum())
+        mask = combined.notnull().any(axis=1)
+        print "Removed {} strains with NaN values".format((~mask).sum())
         combined = combined[mask]
 
         self.coord = CoordDf(combined.loc[:, ["x", "y"]])
         self.seqs = SeqDf(combined.drop(["x", "y"], axis=1))
 
-    def filter(self, patch, plot=True, remove_invariant=True,
+    def filter(self, patch=None, plot=True, remove_invariant=True,
                get_dummies=True):
         """
         Remove data where the x y coordinates are outside a matplotlib patch.
@@ -699,26 +699,26 @@ class OrderedMapSeq(MapSeq):
 
         @param patch. matplotlib.patches.Patch instance
         @param plot. Bool. Plot the points that have been included / excluded
-            and the patch.
+            and the patch. (Only for patch)
         @param remove_invariant. Bool. Remove sequence positions that only have
             a single amino acid.
         @param get_dummies. Bool. Attach dummy variable representation of the
             sequences
         """
-        mask = self.coord.points_in_patch(patch=patch)
-
-        if plot:
-            ax = self.coord.df.plot.scatter(x="x", y="y", label="All points",
-                                            c="black", s=5)
-
-        self.coord.df = self.coord.df[mask]
-        self.seqs.df = self.seqs.df[mask]
+        if patch is not None:
+            mask = self.coord.points_in_patch(patch=patch)
+            if plot:
+                ax = self.coord.df.plot.scatter(
+                    x="x", y="y", label="All points", c="black", s=5
+                )
+            self.coord.df = self.coord.df[mask]
+            self.seqs.df = self.seqs.df[mask]
 
         if remove_invariant:
             self.seqs.remove_invariant(inplace=True)
         if get_dummies:
             self.seqs.get_dummies(inplace=True)
 
-        if plot:
+        if plot and patch is not None:
             self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)
             return ax

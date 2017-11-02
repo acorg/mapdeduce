@@ -1,1 +1,3 @@
-2017-10-14 17:46:01+0100 [-] Log opened.
+2017-10-25 15:15:07+0100 [-] Log opened.
+2017-10-25 15:15:07+0100 [-] /usr/local/lib/python2.7/site-packages/rpy2/robjects/functions.py:106: exceptions.UserWarning: Error in 1:total.nperm : result would be too long a vector
+	

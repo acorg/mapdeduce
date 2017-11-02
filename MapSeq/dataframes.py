@@ -2,7 +2,10 @@
 
 import numpy as np
 import pandas as pd
+
 import sklearn
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import quantile_transform
 
 import shapely
 import shapely.affinity as affinity
@@ -56,6 +59,39 @@ class CoordDf(object):
         mask = path.contains_points(ax.transData.transform(self.df))
         plt.close()
         return mask
+
+    def pca_rotate(self, inplace=True):
+        """
+        Rotate the coordinates along first and second principal components.
+
+        @param inplace: Bool. Rotate the data inplace, or return a rotated
+            copy of the data.
+        """
+        coord_pca = PCA(n_components=2).fit(self.df)
+        df = pd.DataFrame(coord_pca.transform(self.df))
+        df.columns = "PC1", "PC2"
+        df.index = self.df.index
+        if inplace:
+            self.df = df
+        else:
+            return CoordDf(df=df)
+
+    def quantile_transform(self, inplace=True):
+        """
+        Transform features using quantile information. See 
+        http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.
+        quantile_transform.html#sklearn.preprocessing.quantile_transform
+
+        @param inplace: Bool.
+        """
+        arr = quantile_transform(self.df, output_distribution="normal")
+        df = pd.DataFrame(arr)
+        df.columns = self.df.columns
+        df.index = self.df.index
+        if inplace:
+            self.df = df
+        else:
+            return CoordDf(df=df)
 
 
 class SeqDf(object):

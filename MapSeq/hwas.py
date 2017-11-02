@@ -88,7 +88,7 @@ def effective_tests(snps):
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(corr)
     except np.linalg.LinAlgError:
-        # if only two SNPs in snps and are perfectly negatively correlated 
+        # if only two SNPs in snps and are perfectly negatively correlated
         if corr == -1:
             return 1
         else:
@@ -226,7 +226,7 @@ class HwasLmm(object):
             s: cov(self.snps.drop(s, axis=1)) for s in self.snps.columns
         }
 
-    def lmm(self, K_without_snp=False, **kwargs):
+    def lmm(self, K_without_snp=True, **kwargs):
         """Run lmm on the snps.
 
         @param K_without_snp. Bool. For each snp, use a covariance matrix
@@ -256,6 +256,7 @@ class HwasLmm(object):
             results = pd.Panel.from_dict(results, orient="minor")
 
         else:
+            warn("SNP being tested included in kinship matrix.")
             lmm = pd_qtl_test_lmm(snps=snps, pheno=self.pheno, K=self.K)
             results = lmm.results
 

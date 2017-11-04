@@ -243,3 +243,24 @@ def point_size(n):
     if n > 9000:
         return point_size(9000)
     return (-4.26764259e-03 * n) + (2.30663771e-07 * n**2) + 20.21953616
+
+
+def plot_arrow(start, end, color, lw=2, **kwargs):
+    """
+    Plot an arrow
+
+    @param start: tuple / ndarray. (2, ) Coordinates of start of arrow
+    @param end: tuple / ndarray. (2, ) Coordinates of pointy end of arrow
+    @param color: Arrow color
+    @param lw: Arrow linewidth
+    @param kwargs: Passed to arrowprops
+    """
+    ax = kwargs.pop("ax", plt.gca())
+    anno = ax.annotate("",
+                       xy=end,
+                       xytext=start,
+                       arrowprops=dict(facecolor=color,
+                                       edgecolor=color,
+                                       arrowstyle="->",
+                                       lw=lw,))
+    return anno.arrow_patch

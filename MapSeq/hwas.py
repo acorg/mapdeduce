@@ -7,6 +7,9 @@ import sklearn
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
+from dataframes import first_n_unique_rows
+from plotting import plot_arrow
+
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -343,4 +346,43 @@ class HwasLmm(object):
             means[i, 0] = x
             means[i, 1] = df.loc[idx, y].mean()
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
+        return ax
+
+    def plot_multi_effects(self, results, color_dict=None, n_groups_to_plot=8):
+        """
+        @param results: pd.DataFrame like that returned from HwasLmm.lmm()
+        @param color_dict: Dictionary containing colors for antigens
+        """
+        colors = tuple(color_dict[i] for i in self.pheno.index)
+        ax = self.pheno.plot.scatter(x="PC1", y="PC2", c=colors)
+
+        plot_df = results["beta"].apply(pd.Series)
+        plot_df["logp"] = results["logp"]
+        plot_df = np.round(plot_df, decimals=3)
+        plot_df = first_n_unique_rows(plot_df, n_groups_to_plot)
+        plot_df["p"] = results.loc[plot_df.index, "p"]
+
+        grouped = plot_df.groupby([0, 1, "logp"])
+        color = iter(sns.color_palette("Dark2", n_groups_to_plot))
+
+        arrows, labels = [], []
+        sorted_groups = sorted(grouped, key=lambda x: x[1]["logp"][0])[::-1]
+        for effect, _df in sorted_groups:
+
+            snp = _df.index.any()
+
+            # Arrow points to mean coords of antigens with that snp
+            end = self.pheno[self.snps.loc[:, snp] == 1].mean().values
+            start = end - np.array(effect)[:2]
+
+            row = _df.iloc[0, :]
+            lw = row["logp"]
+            arrows.append(plot_arrow(start, end, next(color), ax=ax, lw=lw))
+
+            p = row["p"]
+            snps_sorted = sorted(_df.index.tolist(), key=lambda x: int(x[:-1]))
+            labels.append("{:.5F} ".format(p) + ", ".join(snps_sorted))
+
+        plt.legend(arrows, labels, bbox_to_anchor=(1, 1), loc="upper left")
+
         return ax

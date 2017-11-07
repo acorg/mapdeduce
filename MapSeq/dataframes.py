@@ -153,3 +153,20 @@ class SeqDf(object):
             if pos in positions:
                 dummies.append(c)
         return dummies
+
+    def merge_duplicate_dummies(self, inplace=False):
+        """Merge SNPs that are identical in all strains.
+
+        @param inplace: Bool.
+        """
+        grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
+
+        df = pd.DataFrame(
+            data={"|".join(g.index): n for n, g in grouped},
+            index=self.dummies.index
+        )
+
+        if inplace:
+            self.dummies = df
+        else:
+            return df

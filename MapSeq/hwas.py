@@ -218,8 +218,6 @@ class HwasLmm(object):
         """
         @param snps: df. (N, S). S snps for N individuals
         @param pheno: df. (N, P). P phenotypes for N individuals
-        @param test_snps: List. Only test for association in these snps.
-            Covariance is computed for all snps.
         """
         if (snps.index != pheno.index).sum() != 0:
             raise ValueError("snps and pheno have different indexes")

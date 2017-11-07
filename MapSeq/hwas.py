@@ -7,7 +7,6 @@ import sklearn
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
-from dataframes import first_n_unique_rows
 from plotting import plot_arrow
 
 from tqdm import tqdm
@@ -114,59 +113,97 @@ def qq_plot(results, snps=None, **kwargs):
         -1 * np.log10(np.linspace(1 / float(n), 1, n)),
         index=df.index
     )
-    scatter_kwds = dict(x=x, edgecolor="white", s=s)
+    scatter_kwds = dict(
+        x=x,
+        edgecolor="white",
+        s=s
+    )
 
-    ax.scatter(y=df["logp"],
-               zorder=20,
-               label="-log10(p-value)",
-               c="#c7eae5",
-               **scatter_kwds)
+    ax.scatter(
+        y=df["logp"],
+        zorder=15,
+        label="-log10(p-value)",
+        c="#c7eae5",
+        **scatter_kwds
+    )
 
     try:
-        ax.scatter(y=df["logp-corrected"],
-                   zorder=20,
-                   label="-log10(Corrected p-value)",
-                   c="#35978f",
-                   **scatter_kwds)
+        ax.scatter(
+            y=df["logp-corrected"],
+            zorder=15,
+            label="-log10(Corrected p-value)",
+            c="#35978f",
+            **scatter_kwds
+        )
     except KeyError:
         pass
 
     try:
-        ax.scatter(y=-1 * np.log10(df["logp-empirical"]),
-                   zorder=18,
-                   label="-log10(Empirical p-value",
-                   c="#003c30",
-                   **scatter_kwds)
+        ax.scatter(
+            y=-1 * np.log10(df["logp-empirical"]),
+            zorder=10,
+            label="-log10(Empirical p-value",
+            c="#003c30",
+            **scatter_kwds
+        )
     except KeyError:
         pass
 
     try:
-        ax.scatter(y=df.loc[:, "joint-effect"],
-                   label="Joint-effect",
-                   c="#a6611a",
-                   zorder=15,
-                   **scatter_kwds)
+        ax.scatter(
+            y=df.loc[:, "joint-effect"],
+            label="Joint-effect",
+            c="#a6611a",
+            zorder=10,
+            **scatter_kwds
+        )
     except KeyError:
         pass
 
     # Label larger SNPs
-    if larger is not None:
+    if very_large is not None:
+
         y = df["logp"]
-        for snp in larger:
-            ax.text(x=x[snp],
+
+        for snp in very_large:
+
+            try:
+                ax.text(
+                    x=x[snp],
                     y=y[snp] + 0.05,
                     s=snp,
                     ha="center",
                     va="bottom",
                     zorder=20,
                     fontsize=10,
-                    rotation=90)
+                    rotation=90
+                )
+            except KeyError:
+                warn("{} not labelled".format(snp))
 
     ax.set_xlabel(r"Null $-log_{10}$(p-value)")
-    xmax, ymax = ax.get_xlim()[1], ax.get_ylim()[1]
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(0, ymax)
-    ax.plot((0, 50), (0, 50), c="white", zorder=10)  # x = y
+
+    ax.set_xlim(
+        left=0,
+        right=ax.get_xlim()[1]
+    )
+
+    ax.set_ylim(
+        bottom=0,
+        top=ax.get_ylim()[1]
+    )
+
+    ax.plot(
+        (0, 50),
+        (0, 50),
+        c="white",
+        zorder=10
+    )
+
+    ax.legend(
+        bbox_to_anchor=(1, 1),
+        loc="upper left",
+    )
 
     return ax
 
@@ -181,36 +218,61 @@ class HwasLmm(object):
         """
         @param snps: df. (N, S). S snps for N individuals
         @param pheno: df. (N, P). P phenotypes for N individuals
+        @param test_snps: List. Only test for association in these snps.
+            Covariance is computed for all snps.
         """
         if (snps.index != pheno.index).sum() != 0:
             raise ValueError("snps and pheno have different indexes")
+
+        if (len(snps.index) != len(set(snps.index))):
+            raise ValueError("snps indices aren't all unique")
+        if (len(snps.columns) != len(set(snps.columns))):
+            raise ValueError("snps columns aren't all unique")
+        if (len(pheno.index) != len(set(pheno.index))):
+            raise ValueError("pheno indices aren't all unique")
+        if (len(pheno.columns) != len(set(pheno.columns))):
+            raise ValueError("pheno columns aren't all unique")
+
+        self.snps = snps
+        self.pheno = pheno - pheno.mean()
+
         self.N = snps.shape[0]   # n individuals
         self.S = snps.shape[1]   # n snps
         self.P = pheno.shape[1]  # n phenotypes
-        self.snps = snps
-        self.pheno = pheno
+        self.P0 = pheno.columns[0]
         self.K = cov(snps)
         self.n_tests = 1 if self.S == 1 else effective_tests(self.snps)
         if self.P > 1:
             self.Asnps = np.eye(self.P)
+            self.P1 = pheno.columns[1]
 
-    def compute_k_leave_each_snp_out(self):
+    def compute_k_leave_each_snp_out(self, test_snps=None):
         """Leave each snp out of self.snps and compute a covariance matrix.
         This attaches a K_leave_out attribute which is a dict. Keys are the
         snp left out. Values are the corresponding covariance matrix.
+
+        @param test_snps: List. Only compute covariance matrix without snps
+            for these snps.
         """
+        test_snps = self.snps.columns if test_snps is None else test_snps
         self.K_leave_out = {
-            s: cov(self.snps.drop(s, axis=1)) for s in self.snps.columns
+            s: cov(self.snps.drop(s, axis=1)) for s in test_snps
         }
 
-    def lmm(self):
-        """Run lmm on the snps."""
+    def lmm(self, test_snps=None):
+        """Run LMM
+
+        @param test_snps: List. Only test for associations with these snps.
+        """
         if not hasattr(self, "K_leave_out"):
-            self.compute_k_leave_each_snp_out()
+            self.compute_k_leave_each_snp_out(test_snps=test_snps)
+
+        if test_snps is None:
+            test_snps = self.snps.columns
 
         results = {}
 
-        for snp in tqdm(self.snps.columns):
+        for snp in tqdm(test_snps):
 
             if self.P == 1:
 
@@ -224,13 +286,50 @@ class HwasLmm(object):
 
             else:
 
-                lmm, pv = qtl_test_lmm_kronecker(
-                    snps=self.snps.loc[:, [snp, ]].values,
-                    phenos=self.pheno.values,
-                    Asnps=self.Asnps,
-                    K1r=self.K_leave_out[snp]
-                )
+                try:
+                    lmm, pv = qtl_test_lmm_kronecker(
+                        snps=self.snps.loc[:, [snp, ]].values,
+                        phenos=self.pheno.values,
+                        Asnps=self.Asnps,
+                        K1r=self.K_leave_out[snp]
+                    )
 
+                except AssertionError:
+
+                    vs = VarianceDecomposition(
+                        Y=self.pheno.values
+                    )
+
+                    vs.addFixedEffect(
+                        F=self.snps.loc[:, [snp, ]].values,
+                        A=self.Asnps
+                    )
+
+                    vs.addRandomEffect(
+                        K=self.K_leave_out[snp]
+                    )
+
+                    vs.addRandomEffect(
+                        is_noise=True
+                    )
+
+                    conv = vs.optimize()
+
+                    if conv:
+                        lmm, pv = qtl_test_lmm_kronecker(
+                            snps=self.snps.loc[:, [snp, ]].values,
+                            phenos=self.pheno.values,
+                            Asnps=self.Asnps,
+                            K1r=self.K_leave_out[snp],
+                            K1c=vs.getTraitCovar(0),
+                            K2c=vs.getTraitCovar(1)
+                        )
+
+                    else:
+                        raise ValueError("Variance decom. didn't optimize")
+
+                # lmm.getBetaSNP() returns (P, S) array of effect sizes
+                # Only tested 1 snp
                 beta = lmm.getBetaSNP()[:, 0]
 
             results[snp] = {
@@ -348,41 +447,87 @@ class HwasLmm(object):
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
         return ax
 
-    def plot_multi_effects(self, results, color_dict=None, n_groups_to_plot=8):
+    def plot_multi_effects(self, results, color_dict=None, max_groups=8,
+                           label_arrows=False, min_effect=0, max_p=1):
         """
         @param results: pd.DataFrame like that returned from HwasLmm.lmm()
         @param color_dict: Dictionary containing colors for antigens
+        @param max_groups: Number. Maximum number of groups to show.
+        @param label_arrows: Bool. Attach labels to the arrows
+        @param min_effect: Number. Only show snps with a joint effect
+             > min_effect
+        @param max_p: Number. Only show snps with a p value < max_p
         """
-        colors = tuple(color_dict[i] for i in self.pheno.index)
-        ax = self.pheno.plot.scatter(x="PC1", y="PC2", c=colors)
+        ax = self.pheno.plot.scatter(
+            x=self.P0,
+            y=self.P1,
+            c=[color_dict[i] for i in self.pheno.index],
+            zorder=20,
+            s=60,
+            lw=0.25,
+            edgecolor="white",
+        )
 
-        plot_df = results["beta"].apply(pd.Series)
-        plot_df["logp"] = results["logp"]
-        plot_df = np.round(plot_df, decimals=3)
-        plot_df = first_n_unique_rows(plot_df, n_groups_to_plot)
-        plot_df["p"] = results.loc[plot_df.index, "p"]
+        ax.set_aspect(1)
 
-        grouped = plot_df.groupby([0, 1, "logp"])
-        color = iter(sns.color_palette("Dark2", n_groups_to_plot))
+        df = results["beta"].apply(pd.Series)
+        df.columns = "b0", "b1"
+        df["joint"] = results["beta"].apply(np.linalg.norm)
+        df["snp"] = df.index
+        df["logp"] = results["logp"]
+        df = df[df["joint"] > min_effect]
+        df = df[df["logp"] > -1 * np.log10(max_p)]
+        df.sort_values(by=["logp", "snp"])
+        df = np.round(df, decimals=2)
+
+        color = iter(
+            sns.color_palette("Set1", max_groups)
+        )
 
         arrows, labels = [], []
-        sorted_groups = sorted(grouped, key=lambda x: x[1]["logp"][0])[::-1]
-        for effect, _df in sorted_groups:
 
-            snp = _df.index.any()
+        # Iterate over groups with the same effects and logp
+        grouped = df.groupby(
+            by=["logp", "b0", "b1"],
+            sort=False
+        )
 
-            # Arrow points to mean coords of antigens with that snp
-            end = self.pheno[self.snps.loc[:, snp] == 1].mean().values
-            start = end - np.array(effect)[:2]
+        for (logp, b0, b1), group in tuple(grouped)[:max_groups]:
 
-            row = _df.iloc[0, :]
-            lw = row["logp"]
-            arrows.append(plot_arrow(start, end, next(color), ax=ax, lw=lw))
+            # A representative snp. This assumes that all snps with this
+            # logp, b0 and b1 will have exactly the same snp profile
+            snp = group.index[0]
+            end = self.pheno[self.snps.loc[:, snp] == 1].mean()
+            start = end - np.array([b0, b1])
 
-            p = row["p"]
-            snps_sorted = sorted(_df.index.tolist(), key=lambda x: int(x[:-1]))
-            labels.append("{:.5F} ".format(p) + ", ".join(snps_sorted))
+            # Arrow legend label
+            snps_sorted = "\n            ".join(group.index.sort_values())
+            pv = "{:.4F}".format(results.loc[snp, "p"])
+            j = "{:.2F}".format(group.loc[snp, "joint"])
+            labels.append("{} {} {}".format(pv, j, snps_sorted))
 
-        plt.legend(arrows, labels, bbox_to_anchor=(1, 1), loc="upper left")
+            if label_arrows:
+                arrow_label = snps_sorted.replace("\n            ", "\n")
+            else:
+                arrow_label = ""
 
-        return ax
+            arrows.append(
+                plot_arrow(
+                    start=start,
+                    end=end,
+                    color=next(color),
+                    ax=ax,
+                    lw=logp * 1.5,
+                    zorder=5,
+                    label=arrow_label,
+                )
+            )
+
+        leg = ax.legend(
+            arrows,
+            labels,
+            bbox_to_anchor=(1, 1),
+            loc="upper left",
+        )
+
+        return ax, leg

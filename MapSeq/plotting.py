@@ -245,7 +245,7 @@ def point_size(n):
     return (-4.26764259e-03 * n) + (2.30663771e-07 * n**2) + 20.21953616
 
 
-def plot_arrow(start, end, color, lw=2, **kwargs):
+def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     """
     Plot an arrow
 
@@ -253,14 +253,19 @@ def plot_arrow(start, end, color, lw=2, **kwargs):
     @param end: tuple / ndarray. (2, ) Coordinates of pointy end of arrow
     @param color: Arrow color
     @param lw: Arrow linewidth
+    @param label: Text label for the arrow
     @param kwargs: Passed to arrowprops
     """
     ax = kwargs.pop("ax", plt.gca())
-    anno = ax.annotate("",
+    anno = ax.annotate(label,
                        xy=end,
                        xytext=start,
-                       arrowprops=dict(facecolor=color,
-                                       edgecolor=color,
-                                       arrowstyle="->",
-                                       lw=lw,))
+                       arrowprops=dict(
+                           facecolor=color,
+                           edgecolor=color,
+                           width=lw,
+                           headwidth=5 * lw,
+                           headlength=4 * lw,
+                       )
+                       )
     return anno.arrow_patch

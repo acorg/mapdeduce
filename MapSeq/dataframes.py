@@ -15,26 +15,6 @@ from shapely.geometry.multipoint import MultiPoint
 import matplotlib.pyplot as plt
 
 
-def first_n_unique_rows(df, n):
-    """
-    Return the first n unique rows of a dataframe
-
-    @param df: pd.DataFrame
-    @param n: int
-    """
-    unique = set()
-    i = 0
-    steps = []
-    while len(unique) < n + 1:
-        t = tuple(df.iloc[i, :])
-        orig_len = len(unique)
-        unique.add(t)
-        if len(unique) > orig_len:
-            steps.append(i)
-        i += 1
-    return df.iloc[:steps[n], :]
-
-
 class CoordDf(object):
     """Simple class for Dataframes containing x, y coordinates"""
 
@@ -98,7 +78,7 @@ class CoordDf(object):
 
     def quantile_transform(self, inplace=True):
         """
-        Transform features using quantile information. See 
+        Transform features using quantile information. See
         http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.
         quantile_transform.html#sklearn.preprocessing.quantile_transform
 
@@ -161,3 +141,15 @@ class SeqDf(object):
         for i in xrange(n_shuffles):
             arr[:, i] = sklearn.utils.shuffle(values)
         return arr
+
+    def get_dummies_at_positions(self, positions):
+        """Return a list of dummy variable names at positions
+
+        @param positions: List of integer positions
+        """
+        dummies = []
+        for c in self.dummies.columns:
+            pos = int(c[: -1])
+            if pos in positions:
+                dummies.append(c)
+        return dummies

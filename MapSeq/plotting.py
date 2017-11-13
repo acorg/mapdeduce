@@ -1,5 +1,7 @@
 """Utilities and defaults for plotting"""
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import Ellipse, Rectangle
@@ -275,15 +277,23 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     return anno.arrow_patch
 
 
-def map_setup(ax):
+def map_setup(ax=None):
     """Configure a plot to be an antigenic map. This means integer spaced grid,
     and an aspect ratio of 1.
     """
-    ax.get_yaxis().set_major_locator(MaxNLocator(integer=True))
-    ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
+    if ax is None:
+        ax = plt.gca()
+
+    xtick_limits = np.floor(ax.get_xlim()) + np.array([0, 1])
+    ax.set_xticks(np.arange(*xtick_limits))
+
+    ytick_limits = np.floor(ax.get_ylim()) + np.array([0, 1])
+    ax.set_yticks(np.arange(*ytick_limits))
+
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_ylabel("")
     ax.set_xlabel("")
+
     ax.set_aspect(1)
     return ax

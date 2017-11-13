@@ -258,12 +258,12 @@ class HwasLmm(object):
             s: cov(self.snps.drop(s, axis=1)) for s in test_snps
         }
 
-    def lmm(self, test_snps=None):
-        """Run LMM
+    def fit(self, test_snps=None):
+        """Run LMM.
+
+        Results are attached as a results attribute on self.
 
         @param test_snps: List. Only test for associations with these snps.
-        @returns pd.DataFrame. Containing p-values and effect sizes of the snps
-            tested.
         """
         if not hasattr(self, "K_leave_out"):
             self.compute_k_leave_each_snp_out(test_snps=test_snps)
@@ -353,7 +353,7 @@ class HwasLmm(object):
         if self.P > 1:
             df["joint-effect"] = df["beta"].apply(np.linalg.norm)
 
-        return df
+        self.results = df
 
     def lmm_permute(self, n, K_without_snp=False, **kwargs):
         """Run lmm on n shuffled permutations of snps.
@@ -450,28 +450,44 @@ class HwasLmm(object):
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
         return ax
 
-    def plot_multi_effects(self, results, color_dict=None, max_groups=8,
-                           label_arrows=False, min_effect=0, max_p=1,
-                           plot_similar_together=False, test_pos=None,
-                           plot_antigens=True):
+    def plot_multi_effects(self, min_effect=0, max_p=1, label_arrows=False,
+                           plot_similar_together=False, max_groups=8,
+                           test_pos=None, plot_antigens=True, color_dict=None):
         """
-        @param results: pd.DataFrame like that returned from HwasLmm.lmm()
-        @param color_dict: Dictionary containing colors for antigens
-        @param max_groups: Number. Maximum number of groups to show.
-        @param label_arrows: Bool. Attach labels to the arrows
+        Visualisation of 2D joint effects detected.
+
+        Arrows are plotted that correspond to the joint effect vector. The
+        arrow tip points towards the mean position of strains with the SNP.
+        Arrow width is proportional to -1 x log10(p-value), so that SNPs that
+        are 10x more significant twice the width.
+
         @param min_effect: Number. Only show snps with a joint effect
              > min_effect
+
         @param max_p: Number. Only show snps with a p value < max_p
+
+        @param label_arrows: Bool. Attach labels to the arrows
+
         @param plot_similar_together. Bool. Plot snps with similar effects
             and p-values with the same arrow. This rounds the effect sizes and
             logp values to 2 decimal places, and performs a groupby on these
             columns.
-        @param test_pos. List. HA positions that are being tested. There may
+
+        @param max_groups: Number. Maximum number of groups to show if plotting
+            similar together.
+
+        @param test_pos. List. Only show SNPs at these positions. There may
             be snps at positions that aren't being tested that have the same
             profile as one that does. In that case the un-wanted position will
             be in the dummy name. Remove positions that aren't being tested
             from the dummy names
+
         @param plot_antigens: Bool. Plot the antigens as well.
+
+        @param color_dict: Dictionary containing colors for antigens. No effect
+            unless plot_antigens also True.
+
+        @returns ax: Matplotlib ax
         """
         if plot_antigens:
             if color_dict is not None:
@@ -489,12 +505,14 @@ class HwasLmm(object):
                 edgecolor="white",
             )
 
-        df = results["beta"].apply(pd.Series)
+        df = self.results["beta"].apply(pd.Series)
         df.columns = "b0", "b1"
-        df["joint"] = results["beta"].apply(np.linalg.norm)
+        df["joint"] = self.results["beta"].apply(np.linalg.norm)
         df["snp"] = df.index
-        df["logp"] = results["logp"]
-        df = df[results["p"] < max_p]  # Now may not be same len as results
+        df["logp"] = self.results["logp"]
+
+        # After this operation, df may not be same len as self.results
+        df = df[self.results["p"] < max_p]
         df = df[df["joint"] > min_effect]
         df.sort_values(by=["logp", "snp"])
 
@@ -518,7 +536,7 @@ class HwasLmm(object):
                 start = end - np.array([b0, b1])
 
                 snps_sorted = "\n            ".join(group.index.sort_values())
-                pv = "{:.4F}".format(results.loc[snp, "p"])
+                pv = "{:.4F}".format(self.results.loc[snp, "p"])
                 j = "{:.2F}".format(group.loc[snp, "joint"])
                 label = "{} {} {}".format(pv, j, snps_sorted)
 
@@ -548,7 +566,7 @@ class HwasLmm(object):
                             store.append(i)
                     snps_sorted = "\n            ".join(store)
 
-                pv = "{:.4F}".format(results.loc[dummy, "p"])
+                pv = "{:.4F}".format(self.results.loc[dummy, "p"])
                 j = "{:.2F}".format(row["joint"])
                 label = "{} {} {}".format(pv, j, snps_sorted)
 

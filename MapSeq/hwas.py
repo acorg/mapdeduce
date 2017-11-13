@@ -258,7 +258,7 @@ class HwasLmm(object):
             s: cov(self.snps.drop(s, axis=1)) for s in test_snps
         }
 
-    def fit(self, test_snps=None):
+    def fit(self, test_snps=None, progress_bar=False):
         """Run LMM.
 
         Results are attached as a results attribute on self.
@@ -273,8 +273,10 @@ class HwasLmm(object):
 
         results = {}
 
-        for snp in tqdm(test_snps):
-            print snp
+        iterable = tqdm(test_snps) if progress_bar else test_snps
+
+        for snp in iterable:
+
             if self.P == 1:
 
                 lmm = qtl_test_lmm(
@@ -316,7 +318,11 @@ class HwasLmm(object):
                         is_noise=True
                     )
 
-                    conv = vs.optimize()
+                    try:
+                        conv = vs.optimize()
+                    except np.linalg.LinAlgError:
+                        warnings.warn("{} raised LinAlgError".format(snp))
+                        continue
 
                     if conv:
                         lmm, pv = qtl_test_lmm_kronecker(
@@ -354,6 +360,41 @@ class HwasLmm(object):
             df["joint-effect"] = df["beta"].apply(np.linalg.norm)
 
         self.results = df
+
+    def predict(self, snps, max_p=1, min_effect=0):
+        """
+        Predict phenotype values for each individual in SNPs
+
+        @param snps: M x S ndarray. M individuals, S snps
+
+        @param max_p: Number. Only include SNPs that have a p-value less than
+            max_p
+
+        @param min_effect: Number. Only include SNPs that have an effect size
+            greater than min_effect
+        """
+        df = self.summarise_joint(
+            max_p=max_p,
+            min_effect=min_effect
+        )
+
+        if df.empty:
+            raise ValueError(
+                "No SNPs with p-value < {:.2E} and effect size > {:.2E}"
+                "".format(max_p, min_effect)
+            )
+
+        predictors = df.index
+
+        effects = df.loc[predictors, ["b0", "b1"]]
+
+        snps = snps.loc[:, predictors]
+
+        return pd.DataFrame(
+            data=np.dot(snps, effects),
+            index=snps.index,
+            columns=effects.columns
+        )
 
     def lmm_permute(self, n, K_without_snp=False, **kwargs):
         """Run lmm on n shuffled permutations of snps.
@@ -450,9 +491,111 @@ class HwasLmm(object):
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
         return ax
 
+    def plot_antigens(self, color_dict=None, **kwargs):
+        """
+        2D scatter plot of antigens
+
+        @param color_dict: Dict / None. Values are mpl color for each antigen.
+
+        @param **kwargs. Passed to self.pheno.plot.scatter
+        """
+        if color_dict is not None:
+            c = [color_dict[i] for i in self.pheno.index]
+
+        else:
+            c = "black"
+
+        return self.pheno.plot.scatter(
+            x=self.P0,
+            y=self.P1,
+            c=c,
+            s=60,
+            lw=0.25,
+            edgecolor="white",
+            ax=plt.gca(),
+            **kwargs
+        )
+
+    def summarise_joint(self, min_effect=0, max_p=1):
+        """Make a summary dataframe of the joint effects. Columns comprise
+        effect sizes in each dimension individually, the joint effect size, the
+        p-value of the association, and -1 x log10(p-value).
+
+        @param min_effect: Number. Only include snps with a joint effect size >
+            min_effect
+
+        @param max_p: Number. Only inlucde snps with a p-value < max_p.
+
+        @returns. pd.DataFrame. Containing the summary.
+        """
+        df = self.results["beta"].apply(pd.Series)
+        df.columns = "b0", "b1"
+        df["joint"] = self.results["beta"].apply(np.linalg.norm)
+        df["snp"] = df.index
+        df["logp"] = self.results["logp"]
+        df["p"] = self.results["p"]
+
+        df = df[df["p"] < max_p]
+        df = df[df["joint"] > min_effect]
+
+        df.sort_values(by=["logp", "snp"])
+        df.drop("snp", axis=1, inplace=True)
+
+        return df
+
+    def plot_antigens_with_snp(self, snp, jitter=0, randomz=None, **kwargs):
+        """Plot antigens that have a snp.
+
+        @param snp. Must specify a column in self.snps
+
+        @param jitter. Number. Add jitter to the antigen positions. Random
+            uniform jitter is generated in the interval -1, 1, multiplyed by
+            the value of jitter, and added to the values that are visualised.
+
+        @param randomz. None / Number. If not None, then each point gets a
+            random z value within +/- 0.5 units of randomz
+        """
+        ax = kwargs.pop("ax", plt.gca())
+
+        mask = self.snps.loc[:, snp] == 1
+        n = mask.sum()
+
+        offsets = np.random.uniform(
+            low=-1,
+            high=1,
+            size=n * 2,
+        ) * jitter
+
+        df = self.pheno[mask] + offsets.reshape(n, 2)
+
+        if randomz:
+
+            df["z"] = np.random.uniform(
+                low=-0.5,
+                high=0.5,
+                size=n
+            ) + randomz
+
+            for idx, row in df.iterrows():
+                ax.scatter(
+                    x=row[self.P0],
+                    y=row[self.P1],
+                    zorder=row["z"],
+                    **kwargs
+                )
+
+        else:
+            df.plot.scatter(
+                x=self.P0,
+                y=self.P1,
+                ax=ax,
+                **kwargs
+            )
+
     def plot_multi_effects(self, min_effect=0, max_p=1, label_arrows=False,
+                           plot_strains_with_snps=True,
                            plot_similar_together=False, max_groups=8,
-                           test_pos=None, plot_antigens=True, color_dict=None):
+                           test_pos=None, color_dict=None):
         """
         Visualisation of 2D joint effects detected.
 
@@ -468,6 +611,8 @@ class HwasLmm(object):
 
         @param label_arrows: Bool. Attach labels to the arrows
 
+        @param plot_strains_with_snps: Bool. Mark which strains have which SNPs
+
         @param plot_similar_together. Bool. Plot snps with similar effects
             and p-values with the same arrow. This rounds the effect sizes and
             logp values to 2 decimal places, and performs a groupby on these
@@ -482,41 +627,15 @@ class HwasLmm(object):
             be in the dummy name. Remove positions that aren't being tested
             from the dummy names
 
-        @param plot_antigens: Bool. Plot the antigens as well.
-
         @param color_dict: Dictionary containing colors for antigens. No effect
             unless plot_antigens also True.
 
         @returns ax: Matplotlib ax
         """
-        if plot_antigens:
-            if color_dict is not None:
-                c = [color_dict[i] for i in self.pheno.index]
-            else:
-                c = "black"
-
-            ax = self.pheno.plot.scatter(
-                x=self.P0,
-                y=self.P1,
-                c=c,
-                zorder=20,
-                s=60,
-                lw=0.25,
-                edgecolor="white",
-            )
-
-        df = self.results["beta"].apply(pd.Series)
-        df.columns = "b0", "b1"
-        df["joint"] = self.results["beta"].apply(np.linalg.norm)
-        df["snp"] = df.index
-        df["logp"] = self.results["logp"]
-
-        # After this operation, df may not be same len as self.results
-        df = df[self.results["p"] < max_p]
-        df = df[df["joint"] > min_effect]
-        df.sort_values(by=["logp", "snp"])
-
-        # Find starts, ends, and labels for arrows
+        df = self.summarise_joint(
+            min_effect=min_effect,
+            max_p=max_p,
+        )
 
         arrows = []
 
@@ -545,6 +664,7 @@ class HwasLmm(object):
                     "start": start,
                     "label": label,
                     "logp": logp,
+                    "snp": snp,
                 })
 
         else:
@@ -575,11 +695,17 @@ class HwasLmm(object):
                     "start": start,
                     "label": label,
                     "logp": row["logp"],
+                    "snp": dummy,
                 })
 
-        # Plot the arrows
+        # Plotting
 
-        color = iter(sns.color_palette("Set1", len(arrows)))
+        ax = plt.gca()
+
+        colors = sns.color_palette("Set1", len(arrows))
+        for a, c in zip(arrows, colors):
+            a["color"] = c
+
         leg_artists, leg_labels = [], []
 
         for a in arrows:
@@ -587,18 +713,33 @@ class HwasLmm(object):
             label = a["label"] if label_arrows else ""
             leg_labels.append(a["label"])
 
+            # Primary arrow
             leg_artists.append(
                 plot_arrow(
                     start=a["start"],
                     end=a["end"],
-                    color=next(color),
+                    color=a["color"],
                     lw=a["logp"],
-                    zorder=5,
+                    zorder=15,
                     label=label,
+                    ax=ax
                 )
             )
 
-        ax = plt.gca()
+            if plot_strains_with_snps:
+
+                self.plot_antigens_with_snp(
+                    snp=a["snp"],
+                    jitter=0.1,
+                    c=a["color"],
+                    edgecolor="white",
+                    s=40,
+                    randomz=1,
+                    alpha=0.5,
+                    lw=1,
+                    ax=ax,
+                )
+
         ax.legend(
             leg_artists,
             leg_labels,

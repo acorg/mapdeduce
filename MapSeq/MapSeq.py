@@ -6,12 +6,13 @@ from matplotlib.collections import LineCollection
 import numpy as np
 import spm1d
 
+import scipy
 from scipy import spatial
 
 from operator import and_
 import itertools
 
-import warnings
+import tqdm
 
 from plotting import setup_ax, amino_acid_colors, add_ellipses, \
     combination_label, point_size, map_setup
@@ -369,36 +370,115 @@ class MapSeq(object):
         positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
         return self.seq_in_both.groupby(positions)
 
-    def plot_strains_with_combinations(self, combinations, **kwargs):
+    def plot_strains_with_combinations(self, combinations, plot_other=True,
+                                       **kwargs):
         """
         Plot a map highlighting strains with combinations of amino acids
         at particular positions.
 
         @param combinations. Dict. Keys are positions, values are amino
             acids:  E.g. {145: "N", 189: "S"}
+
+        @param plot_other. Bool. Plot other antigens (those without the
+            combinations).
+
         @param **kwargs. Passed to the scatter function of the strains with
             particular combinations.
         """
         df = self.strains_with_combinations(combinations)
-        label = "+".join(sorted("{}{}".format(k, v)
-                                for k, v in combinations.iteritems()))
+
+        label = "+".join(
+            sorted("{}{}".format(k, v) for k, v in combinations.iteritems())
+        )
+
         if df.empty:
             print "No strains with {}".format(label)
+
         else:
             strains = df.index
             print "{} strains with {}".format(len(strains), label)
-            ax = self.all_coords.plot.scatter(x="x", y="y", s=5,
-                                              color="darkgrey")
+
+            if plot_other:
+                self.all_coords.plot.scatter(
+                    x="x",
+                    y="y",
+                    s=5,
+                    color="darkgrey"
+                )
 
             # self.all_coords.loc[strains, :] may be a Series, hence ax.scatter
-            ax.scatter(self.all_coords.loc[strains, "x"],
-                       self.all_coords.loc[strains, "y"],
-                       label=label,
-                       **kwargs)
-            ax.legend()
-            add_ellipses(self.map)
-            setup_ax(self.map)
-            return ax
+            plt.scatter(
+                self.all_coords.loc[strains, "x"],
+                self.all_coords.loc[strains, "y"],
+                label=label,
+                **kwargs
+            )
+            plt.legend()
+
+            if self.map:
+                add_ellipses(self.map)
+                setup_ax(self.map)
+
+    def plot_strains_with_combinations_kde(self, combinations, c=0.9,
+                                           color="black"):
+        """
+        Plot the countour corresponding to the region that contains c percent
+        of the density of a KDE over strains with combinations of amino acid
+        polymorphisms specified in combinations.
+
+        @param combinations: Dictionary specifying combinations. E.g.:
+
+                    {145: "N", 133: "D"}
+
+        @param c: Number.
+
+        @param color: Mpl color for the contour line
+        """
+        df = self.strains_with_combinations(combinations)
+
+        label = "+".join(
+            sorted("{}{}".format(k, v) for k, v in combinations.iteritems())
+        )
+
+        if df.empty:
+            print "No strains with {}".format(label)
+
+        else:
+            strains = df.index
+            print "{} strains with {}".format(len(strains), label)
+
+            dataset = self.all_coords.loc[strains, :].T
+
+            kde = scipy.stats.gaussian_kde(
+                dataset=dataset.values,
+                bw_method="silverman"
+            )
+
+            xmin, ymin = dataset.T.min() - 1
+            xmax, ymax = dataset.T.max() + 1
+
+            xnum = (xmax - xmin) * 20
+            ynum = (ymax - ymin) * 20
+
+            Xgrid, Ygrid = np.meshgrid(
+                np.linspace(xmin, xmax, num=xnum),
+                np.linspace(ymin, ymax, num=ynum)
+            )
+
+            Z = kde.evaluate(
+                np.vstack([Xgrid.ravel(), Ygrid.ravel()])
+            )
+
+            zsort = np.sort(Z)[::-1]
+            dens = zsort[np.argmax(np.cumsum(zsort) > Z.sum() * c)]
+
+            plt.contour(
+                Xgrid,
+                Ygrid,
+                Z.reshape(Xgrid.shape),
+                levels=[dens, ],
+                colors=color,
+            )
 
     def differ_by_n(self, n):
         """
@@ -689,7 +769,7 @@ class OrderedMapSeq(MapSeq):
         mask = combined.notnull().any(axis=1)
         n_with_nan = (~mask).sum()
         if n_with_nan:
-            warnings.warn(
+            tqdm.write(
                 "Removed {} strains with NaN values".format(n_with_nan)
             )
             combined = combined[mask]

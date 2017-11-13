@@ -11,8 +11,10 @@ from scipy import spatial
 from operator import and_
 import itertools
 
+import warnings
+
 from plotting import setup_ax, amino_acid_colors, add_ellipses, \
-    combination_label, point_size
+    combination_label, point_size, map_setup
 from munging import handle_duplicate_sequences
 from data import amino_acids
 from dataframes import CoordDf, SeqDf
@@ -685,40 +687,80 @@ class OrderedMapSeq(MapSeq):
 
         # Remove strains that have any NaN entries
         mask = combined.notnull().any(axis=1)
-        print "Removed {} strains with NaN values".format((~mask).sum())
-        combined = combined[mask]
+        n_with_nan = (~mask).sum()
+        if n_with_nan:
+            warnings.warn(
+                "Removed {} strains with NaN values".format(n_with_nan)
+            )
+            combined = combined[mask]
 
         self.coord = CoordDf(combined.loc[:, ["x", "y"]])
         self.seqs = SeqDf(combined.drop(["x", "y"], axis=1))
 
     def filter(self, patch=None, plot=True, remove_invariant=True,
-               get_dummies=True):
+               get_dummies=True, merge_duplicate_dummies=False,
+               rename_idx=False):
         """
         Remove data where the x y coordinates are outside a matplotlib patch.
         This updates self.coord and self.seq inplace.
 
         @param patch. matplotlib.patches.Patch instance
         @param plot. Bool. Plot the points that have been included / excluded
-            and the patch. (Only for patch)
+            and the patch. (Only if a patch is specified).
         @param remove_invariant. Bool. Remove sequence positions that only have
             a single amino acid.
         @param get_dummies. Bool. Attach dummy variable representation of the
             sequences
+        @param merge_duplicate_dummies. Bool. Merge dummy variables that have
+            the same profile (identical for all strains).
+        @param rename_idx. Bool. Rename strains in the format strain-X where X
+            is an integer. This is necessary for merging duplicate dummies if
+            there are duplicate strain names (which can occur if a strain was
+            titrated multiple times).
         """
+        # Strain removal operations first
+
         if patch is not None:
-            mask = self.coord.points_in_patch(patch=patch)
+
             if plot:
                 ax = self.coord.df.plot.scatter(
-                    x="x", y="y", label="All points", c="black", s=5
+                    x="x",
+                    y="y",
+                    label="All points",
+                    c="black",
+                    s=5
                 )
+
+            mask = self.coord.points_in_patch(patch=patch)
+
             self.coord.df = self.coord.df[mask]
             self.seqs.df = self.seqs.df[mask]
 
         if remove_invariant:
             self.seqs.remove_invariant(inplace=True)
+
+        if rename_idx:
+            old_idx = self.coord.df.index
+            new_idx = ["strain-{}".format(i) for i in range(old_idx.shape[0])]
+            self.strain_names = dict(zip(new_idx, old_idx))
+            self.coord.df.index = new_idx
+            self.seqs.df.index = new_idx
+
         if get_dummies:
             self.seqs.get_dummies(inplace=True)
 
+        if merge_duplicate_dummies:
+            self.seqs.merge_duplicate_dummies(inplace=True)
+
         if plot and patch is not None:
-            self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)
+
+            self.coord.df.plot.scatter(
+                x="x",
+                y="y",
+                label="Included",
+                ax=ax
+            )
+
+            map_setup(ax)
+
             return ax

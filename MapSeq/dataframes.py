@@ -143,15 +143,26 @@ class SeqDf(object):
         return arr
 
     def get_dummies_at_positions(self, positions):
-        """Return a list of dummy variable names at positions
+        """Return set of dummy variable names at HA positions.
 
-        @param positions: List of integer positions
+        Dummy variable names are either singles (e.g. 135K), or compound
+        (e.g. 7D|135K|265E). For compound dummy variable names return the
+        entire compound name if any constituent SNP is in positions.
+
+        @param positions: List of positions.
         """
-        dummies = []
-        for c in self.dummies.columns:
-            pos = int(c[: -1])
-            if pos in positions:
-                dummies.append(c)
+        dummies = set()
+        add = dummies.add
+
+        for dummy in self.dummies.columns:
+
+            for c in dummy.split("|"):
+                pos = int(c[: -1])
+
+                if pos in positions:
+                    add(dummy)
+                    break
+
         return dummies
 
     def merge_duplicate_dummies(self, inplace=False):

@@ -1,7 +1,9 @@
 """Utilities and defaults for plotting"""
 
 import matplotlib.pyplot as plt
+
 from matplotlib.patches import Ellipse, Rectangle
+from matplotlib.ticker import MaxNLocator
 
 
 def setup_ax(map):
@@ -257,15 +259,31 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     @param kwargs: Passed to arrowprops
     """
     ax = kwargs.pop("ax", plt.gca())
-    anno = ax.annotate(label,
-                       xy=end,
-                       xytext=start,
-                       arrowprops=dict(
-                           facecolor=color,
-                           edgecolor=color,
-                           width=lw,
-                           headwidth=5 * lw,
-                           headlength=4 * lw,
-                       )
-                       )
+    anno = ax.annotate(
+        label,
+        xy=end,
+        xytext=start,
+        arrowprops=dict(
+            facecolor=color,
+            edgecolor=color,
+            width=lw,
+            headwidth=5 * lw,
+            headlength=4 * lw,
+            **kwargs
+        )
+    )
     return anno.arrow_patch
+
+
+def map_setup(ax):
+    """Configure a plot to be an antigenic map. This means integer spaced grid,
+    and an aspect ratio of 1.
+    """
+    ax.get_yaxis().set_major_locator(MaxNLocator(integer=True))
+    ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_ylabel("")
+    ax.set_xlabel("")
+    ax.set_aspect(1)
+    return ax

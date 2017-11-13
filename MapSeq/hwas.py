@@ -7,14 +7,14 @@ import sklearn
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
-from plotting import plot_arrow
+from plotting import plot_arrow, map_setup
 
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from permp import permp
-from warnings import warn
+import warnings
 
 
 def shuffle_values(nperm, values):
@@ -179,7 +179,7 @@ def qq_plot(results, snps=None, **kwargs):
                     rotation=90
                 )
             except KeyError:
-                warn("{} not labelled".format(snp))
+                warnings.warn("{} not labelled".format(snp))
 
     ax.set_xlabel(r"Null $-log_{10}$(p-value)")
 
@@ -232,7 +232,8 @@ class HwasLmm(object):
             raise ValueError("pheno columns aren't all unique")
 
         self.snps = snps
-        self.pheno = pheno - pheno.mean()
+        self.pheno_shift = pheno.mean()
+        self.pheno = pheno - self.pheno_shift
 
         self.N = snps.shape[0]   # n individuals
         self.S = snps.shape[1]   # n snps
@@ -261,6 +262,8 @@ class HwasLmm(object):
         """Run LMM
 
         @param test_snps: List. Only test for associations with these snps.
+        @returns pd.DataFrame. Containing p-values and effect sizes of the snps
+            tested.
         """
         if not hasattr(self, "K_leave_out"):
             self.compute_k_leave_each_snp_out(test_snps=test_snps)
@@ -271,7 +274,7 @@ class HwasLmm(object):
         results = {}
 
         for snp in tqdm(test_snps):
-
+            print snp
             if self.P == 1:
 
                 lmm = qtl_test_lmm(
@@ -293,6 +296,8 @@ class HwasLmm(object):
                     )
 
                 except AssertionError:
+
+                    warnings.warn("Doing manual VarianceDecomposition")
 
                     vs = VarianceDecomposition(
                         Y=self.pheno.values
@@ -384,7 +389,7 @@ class HwasLmm(object):
             contains standard p-values
         """
         if self.pheno.shape[1] > 1:
-            warn("Only implemented for univariate phenotypes")
+            warnings.warn("Only implemented for univariate phenotypes")
         pheno = self.pheno.columns[0]
         if "p-empirical" in results.items:
             print "empirical pvalues already in results will be overwritten:"
@@ -446,7 +451,9 @@ class HwasLmm(object):
         return ax
 
     def plot_multi_effects(self, results, color_dict=None, max_groups=8,
-                           label_arrows=False, min_effect=0, max_p=1):
+                           label_arrows=False, min_effect=0, max_p=1,
+                           plot_similar_together=False, test_pos=None,
+                           plot_antigens=True):
         """
         @param results: pd.DataFrame like that returned from HwasLmm.lmm()
         @param color_dict: Dictionary containing colors for antigens
@@ -455,77 +462,132 @@ class HwasLmm(object):
         @param min_effect: Number. Only show snps with a joint effect
              > min_effect
         @param max_p: Number. Only show snps with a p value < max_p
+        @param plot_similar_together. Bool. Plot snps with similar effects
+            and p-values with the same arrow. This rounds the effect sizes and
+            logp values to 2 decimal places, and performs a groupby on these
+            columns.
+        @param test_pos. List. HA positions that are being tested. There may
+            be snps at positions that aren't being tested that have the same
+            profile as one that does. In that case the un-wanted position will
+            be in the dummy name. Remove positions that aren't being tested
+            from the dummy names
+        @param plot_antigens: Bool. Plot the antigens as well.
         """
-        ax = self.pheno.plot.scatter(
-            x=self.P0,
-            y=self.P1,
-            c=[color_dict[i] for i in self.pheno.index],
-            zorder=20,
-            s=60,
-            lw=0.25,
-            edgecolor="white",
-        )
+        if plot_antigens:
+            if color_dict is not None:
+                c = [color_dict[i] for i in self.pheno.index]
+            else:
+                c = "black"
 
-        ax.set_aspect(1)
+            ax = self.pheno.plot.scatter(
+                x=self.P0,
+                y=self.P1,
+                c=c,
+                zorder=20,
+                s=60,
+                lw=0.25,
+                edgecolor="white",
+            )
 
         df = results["beta"].apply(pd.Series)
         df.columns = "b0", "b1"
         df["joint"] = results["beta"].apply(np.linalg.norm)
         df["snp"] = df.index
         df["logp"] = results["logp"]
+        df = df[results["p"] < max_p]  # Now may not be same len as results
         df = df[df["joint"] > min_effect]
-        df = df[df["logp"] > -1 * np.log10(max_p)]
         df.sort_values(by=["logp", "snp"])
-        df = np.round(df, decimals=2)
 
-        color = iter(
-            sns.color_palette("Set1", max_groups)
-        )
+        # Find starts, ends, and labels for arrows
 
-        arrows, labels = [], []
+        arrows = []
 
-        # Iterate over groups with the same effects and logp
-        grouped = df.groupby(
-            by=["logp", "b0", "b1"],
-            sort=False
-        )
+        if plot_similar_together:
 
-        for (logp, b0, b1), group in tuple(grouped)[:max_groups]:
+            df = np.round(df, decimals=2)
 
-            # A representative snp. This assumes that all snps with this
-            # logp, b0 and b1 will have exactly the same snp profile
-            snp = group.index[0]
-            end = self.pheno[self.snps.loc[:, snp] == 1].mean()
-            start = end - np.array([b0, b1])
+            grouped = df.groupby(
+                by=["logp", "b0", "b1"],
+                sort=False
+            )
 
-            # Arrow legend label
-            snps_sorted = "\n            ".join(group.index.sort_values())
-            pv = "{:.4F}".format(results.loc[snp, "p"])
-            j = "{:.2F}".format(group.loc[snp, "joint"])
-            labels.append("{} {} {}".format(pv, j, snps_sorted))
+            for (logp, b0, b1), group in tuple(grouped)[:max_groups]:
 
-            if label_arrows:
-                arrow_label = snps_sorted.replace("\n            ", "\n")
-            else:
-                arrow_label = ""
+                snp = group.index[0]  # A representative snp
+                end = self.pheno[self.snps.loc[:, snp] == 1].mean()
+                start = end - np.array([b0, b1])
 
-            arrows.append(
+                snps_sorted = "\n            ".join(group.index.sort_values())
+                pv = "{:.4F}".format(results.loc[snp, "p"])
+                j = "{:.2F}".format(group.loc[snp, "joint"])
+                label = "{} {} {}".format(pv, j, snps_sorted)
+
+                arrows.append({
+                    "end": end,
+                    "start": start,
+                    "label": label,
+                    "logp": logp,
+                })
+
+        else:
+
+            for dummy, row in df.iterrows():
+
+                mask = self.snps.loc[:, dummy] == 1
+                end = self.pheno[mask].mean().values
+                start = end - row[["b0", "b1"]].values
+
+                if test_pos is None:
+                    snps_sorted = "\n            ".join(dummy.split("|"))
+
+                else:
+                    store = []
+                    for i in dummy.split("|"):
+                        pos = int(i[:-1])
+                        if pos in test_pos:
+                            store.append(i)
+                    snps_sorted = "\n            ".join(store)
+
+                pv = "{:.4F}".format(results.loc[dummy, "p"])
+                j = "{:.2F}".format(row["joint"])
+                label = "{} {} {}".format(pv, j, snps_sorted)
+
+                arrows.append({
+                    "end": end,
+                    "start": start,
+                    "label": label,
+                    "logp": row["logp"],
+                })
+
+        # Plot the arrows
+
+        color = iter(sns.color_palette("Set1", len(arrows)))
+        leg_artists, leg_labels = [], []
+
+        for a in arrows:
+
+            label = a["label"] if label_arrows else ""
+            leg_labels.append(a["label"])
+
+            leg_artists.append(
                 plot_arrow(
-                    start=start,
-                    end=end,
+                    start=a["start"],
+                    end=a["end"],
                     color=next(color),
-                    ax=ax,
-                    lw=logp * 1.5,
+                    lw=a["logp"],
                     zorder=5,
-                    label=arrow_label,
+                    label=label,
                 )
             )
 
-        leg = ax.legend(
-            arrows,
-            labels,
-            bbox_to_anchor=(1, 1),
-            loc="upper left",
+        ax = plt.gca()
+        ax.legend(
+            leg_artists,
+            leg_labels,
+            bbox_to_anchor=(1, 0.5),
+            loc="center left",
         )
 
-        return ax, leg
+        map_setup(ax)
+
+        return ax

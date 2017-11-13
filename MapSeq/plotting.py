@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import Ellipse, Rectangle
-from matplotlib.ticker import MaxNLocator
 
 
 def setup_ax(map):

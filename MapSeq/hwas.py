@@ -722,7 +722,10 @@ class HwasLmm(object):
         for a, c in zip(arrows, colors):
             a["color"] = c
 
-        leg_artists, leg_labels = [], []
+        if ax.get_legend():
+            leg_artists, leg_labels = ax.get_legend_handles_labels()
+        else:
+            leg_artists, leg_labels = [], []
 
         for a in arrows:
 
@@ -736,7 +739,7 @@ class HwasLmm(object):
                     end=a["end"],
                     color=a["color"],
                     lw=a["logp"],
-                    zorder=15,
+                    zorder=20,
                     label=label,
                     ax=ax
                 )

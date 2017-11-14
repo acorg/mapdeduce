@@ -260,10 +260,12 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     @param kwargs: Passed to arrowprops
     """
     ax = kwargs.pop("ax", plt.gca())
+    zorder = kwargs.pop("zorder", None)
     anno = ax.annotate(
         label,
         xy=end,
         xytext=start,
+        zorder=zorder,
         arrowprops=dict(
             facecolor=color,
             edgecolor=color,

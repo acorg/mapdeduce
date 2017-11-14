@@ -104,65 +104,98 @@ class MapSeq(object):
         value_counts = series.value_counts()
         return (value_counts / value_counts.sum()).sort_values()
 
-    def scatter_colored_by_amino_acid(self, p, randomz=True, ellipses=True):
+    def scatter_colored_by_amino_acid(self, p, randomz=True, ellipses=True,
+                                      **kwargs):
         """
         Plot map colored by amino acids at position p.
 
         @param p. Int. HA position
+
         @param randomz. Bool. Given points random positions in z. This is
             slower because marks have to plotted individually.
+
         @param ellipses. Bool. Demark clusters with ellipses.
-        @param label_clusters. Bool. Label the clusters.
+
+        @param kwargs. Passed to ax.scatter for the colored strains.
         """
         ax = plt.gca()
 
-        # Plot antigens without a known sequence
-        self.coords_excl_to_coords.plot.scatter(ax=ax,
-                                                x="x",
-                                                y="y",
-                                                s=5,
-                                                color="darkgrey",
-                                                label="Unknown sequence")
+        # Antigens without a known sequence
+        self.coords_excl_to_coords.plot.scatter(
+            ax=ax,
+            x="x",
+            y="y",
+            s=5,
+            color="darkgrey",
+            label="Unknown sequence"
+        )
 
-        # Plot antigens with a known sequence
-        # s = 50 if self.map == 2018 else 100
-        kwds = dict(lw=0.1,
-                    edgecolor="white",
-                    s=3 * point_size(self.seq_in_both.shape[0]))
+        # Antigens with a known sequence
+        kwds = dict(
+            lw=1,
+            edgecolor="white",
+            s=3 * point_size(self.seq_in_both.shape[0]),
+            **kwargs
+        )
+
         proportions = self.variant_proportions(p=p) * 100
-
         seq_grouped = self.seq_in_both.groupby(p)
+
         for amino_acid, seq_group in seq_grouped:
+
             coord_group = self.coords_in_both.loc[seq_group.index, :]
+
             try:
                 kwds["color"] = amino_acid_colors[amino_acid]
+
             except KeyError:
                 kwds["color"] = amino_acid_colors["X"]
+
             label = "{} {:.1f}%".format(amino_acid, proportions[amino_acid])
 
             if randomz:
                 zorders = np.random.rand(seq_group.shape[0]) + 5
+
                 for z, (strain, row) in zip(zorders, coord_group.iterrows()):
-                    ax.scatter(x=row["x"], y=row["y"], zorder=z, **kwds)
+
+                    ax.scatter(
+                        x=row["x"],
+                        y=row["y"],
+                        zorder=z,
+                        **kwds
+                    )
 
                 # Plot the final point twice, but add a label for the group
-                ax.scatter(x=row["x"], y=row["y"], label=label, **kwds)
+                ax.scatter(
+                    x=row["x"],
+                    y=row["y"],
+                    label=label,
+                    **kwds
+                )
 
             else:
-                coord_group.plot.scatter(label=label, x='x', y='y', ax=ax,
-                                         **kwds)
+                coord_group.plot.scatter(
+                    label=label,
+                    x='x',
+                    y='y',
+                    ax=ax,
+                    **kwds
+                )
 
         if ellipses:
             add_ellipses(self.map)
 
         setup_ax(self.map)
+
         ax.legend()
-        ax.text(x=0.5,
-                y=1,
-                s=p,
-                fontsize=25,
-                va="top",
-                transform=ax.transAxes)
+        ax.text(
+            x=0.5,
+            y=1,
+            s=p,
+            fontsize=25,
+            va="top",
+            transform=ax.transAxes
+        )
 
         return ax
 

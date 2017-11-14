@@ -420,7 +420,7 @@ class MapSeq(object):
                 setup_ax(self.map)
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
-                                           color="black"):
+                                           color="black", **kwargs):
         """
         Plot the countour corresponding to the region that contains c percent
         of the density of a KDE over strains with combinations of amino acid
@@ -433,6 +433,8 @@ class MapSeq(object):
         @param c: Number.
 
         @param color: Mpl color for the contour line
+
+        @param **kwargs: Passed to plt.contour
         """
         df = self.strains_with_combinations(combinations)
 
@@ -454,11 +456,11 @@ class MapSeq(object):
                 bw_method="silverman"
             )
 
-            xmin, ymin = dataset.T.min() - 1
-            xmax, ymax = dataset.T.max() + 1
+            xmin, ymin = dataset.T.min() - 2
+            xmax, ymax = dataset.T.max() + 2
 
-            xnum = (xmax - xmin) * 20
-            ynum = (ymax - ymin) * 20
+            xnum = (xmax - xmin) * 5
+            ynum = (ymax - ymin) * 5
 
             Xgrid, Ygrid = np.meshgrid(
                 np.linspace(xmin, xmax, num=xnum),
@@ -478,6 +480,7 @@ class MapSeq(object):
                 Z.reshape(Xgrid.shape),
                 levels=[dens, ],
                 colors=color,
+                **kwargs
             )
 
     def differ_by_n(self, n):

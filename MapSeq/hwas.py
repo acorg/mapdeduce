@@ -359,6 +359,8 @@ class HwasLmm(object):
         if self.P > 1:
             df["joint-effect"] = df["beta"].apply(np.linalg.norm)
 
+        df.index.name = "AAP"
+
         self.results = df
 
     def predict(self, snps, max_p=1, min_effect=0):
@@ -592,10 +594,10 @@ class HwasLmm(object):
                 **kwargs
             )
 
-    def plot_multi_effects(self, min_effect=0, max_p=1, label_arrows=False,
-                           plot_strains_with_snps=True,
-                           plot_similar_together=False, max_groups=8,
-                           test_pos=None, color_dict=None):
+    def plot_multi_effects(self, min_effect=0, max_p=1, snps=None,
+                           label_arrows=False, plot_strains_with_snps=True,
+                           colors=None, plot_similar_together=False,
+                           max_groups=8, test_pos=None):
         """
         Visualisation of 2D joint effects detected.
 
@@ -609,9 +611,14 @@ class HwasLmm(object):
 
         @param max_p: Number. Only show snps with a p value < max_p
 
+        @param snps: List. Show these snps. Overrides max_p and min_effect.
+
         @param label_arrows: Bool. Attach labels to the arrows
 
         @param plot_strains_with_snps: Bool. Mark which strains have which SNPs
+
+        @param colors: List of mpl colors to use for arrows. Should be at at
+            least as long as how many arrows will be plotted.
 
         @param plot_similar_together. Bool. Plot snps with similar effects
             and p-values with the same arrow. This rounds the effect sizes and
@@ -627,15 +634,22 @@ class HwasLmm(object):
             be in the dummy name. Remove positions that aren't being tested
             from the dummy names
 
-        @param color_dict: Dictionary containing colors for antigens. No effect
-            unless plot_antigens also True.
-
         @returns ax: Matplotlib ax
         """
-        df = self.summarise_joint(
-            min_effect=min_effect,
-            max_p=max_p,
-        )
+        if snps is not None:
+
+            df = self.summarise_joint(
+                min_effect=0,
+                max_p=1,
+            )
+            df = df.loc[snps, :]
+
+        else:
+
+            df = self.summarise_joint(
+                min_effect=min_effect,
+                max_p=max_p,
+            )
 
         arrows = []
 
@@ -702,7 +716,9 @@ class HwasLmm(object):
 
         ax = plt.gca()
 
-        colors = sns.color_palette("Set1", len(arrows))
+        if colors is None:
+            colors = sns.color_palette("Set1", len(arrows))
+
         for a, c in zip(arrows, colors):
             a["color"] = c
 

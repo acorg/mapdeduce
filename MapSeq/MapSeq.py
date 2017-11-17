@@ -810,8 +810,10 @@ class OrderedMapSeq(MapSeq):
             )
             combined = combined[mask]
 
-        self.coord = CoordDf(combined.loc[:, ["x", "y"]])
-        self.seqs = SeqDf(combined.drop(["x", "y"], axis=1))
+        phenotypes = self.coords_in_both.columns
+
+        self.coord = CoordDf(combined.loc[:, phenotypes])
+        self.seqs = SeqDf(combined.drop(phenotypes, axis=1))
 
     def filter(self, patch=None, plot=True, remove_invariant=True,
                get_dummies=True, merge_duplicate_dummies=False,

@@ -7,6 +7,8 @@ import sklearn
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import quantile_transform
 
+from scipy.spatial.distance import euclidean
+
 import shapely
 import shapely.affinity as affinity
 from shapely.geometry.point import Point
@@ -67,9 +69,10 @@ class CoordDf(object):
         @param inplace: Bool. Rotate the data inplace, or return a rotated
             copy of the data.
         """
-        coord_pca = PCA(n_components=2).fit(self.df)
+        n_components = self.df.shape[1]
+        coord_pca = PCA(n_components=n_components).fit(self.df)
         df = pd.DataFrame(coord_pca.transform(self.df))
-        df.columns = "PC1", "PC2"
+        df.columns = ["PC{}".format(i + 1) for i in range(n_components)]
         df.index = self.df.index
         if inplace:
             self.df = df
@@ -92,6 +95,39 @@ class CoordDf(object):
             self.df = df
         else:
             return CoordDf(df=df)
+
+    def paired_distances(self, other_df):
+        """
+        Compute euclidean distances between points in self.df and paired 
+        points in another dataframe. The other dataframe must have the same
+        dimensions as self.df
+
+        @param other_df: pd.DataFrame
+
+        @returns ndarray: Euclidean distances.
+        """
+        if self.df.index.shape != other_df.index.shape:
+            raise ValueError("Index lengths mismatched.")
+
+        if self.df.columns.shape != other_df.columns.shape:
+            raise ValueError("Column lengths mismatched.")
+
+        n = self.df.shape[0]
+
+        distances = np.empty(n)
+
+        for i in range(n):
+
+            try:
+                distances[i] = euclidean(
+                    u=self.df.iloc[i, :],
+                    v=other_df.iloc[i, :]
+                )
+
+            except ValueError:
+                distances[i] = np.nan
+
+        return distances
 
 
 class SeqDf(object):

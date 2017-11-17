@@ -386,11 +386,12 @@ class HwasLmm(object):
                 "".format(max_p, min_effect)
             )
 
-        predictors = df.index
+        effects = df.filter(regex="b[0-9]", axis=1)
 
-        effects = df.loc[predictors, ["b0", "b1"]]
+        predictors = effects.index & snps.columns
 
         snps = snps.loc[:, predictors]
+        effects = effects.loc[predictors, :]
 
         return pd.DataFrame(
             data=np.dot(snps, effects),
@@ -531,7 +532,7 @@ class HwasLmm(object):
         @returns. pd.DataFrame. Containing the summary.
         """
         df = self.results["beta"].apply(pd.Series)
-        df.columns = "b0", "b1"
+        df.columns = ["b{}".format(i) for i in range(df.shape[1])]
         df["joint"] = self.results["beta"].apply(np.linalg.norm)
         df["snp"] = df.index
         df["logp"] = self.results["logp"]

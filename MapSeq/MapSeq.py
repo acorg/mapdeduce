@@ -9,6 +9,8 @@ import spm1d
 import scipy
 from scipy import spatial
 
+import sklearn
+
 from operator import and_
 import itertools
 
@@ -386,7 +388,21 @@ class MapSeq(object):
 
         masks = (self.seq_in_both.loc[:, k] == v
                  for k, v in combinations.iteritems())
-        return self.seq_in_both[reduce(and_, masks)]
+
+        df = self.seq_in_both[reduce(and_, masks)]
+
+        if df.empty:
+
+            label = "+".join(
+                sorted(
+                    "{}{}".format(k, v) for k, v in combinations.iteritems()
+                )
+            )
+
+            raise ValueError("No strains with {}".format(label))
+
+        else:
+            return df
 
     def duplicate_sequences(self, **kwargs):
         """
@@ -470,51 +486,46 @@ class MapSeq(object):
         @param **kwargs: Passed to plt.contour
         """
         df = self.strains_with_combinations(combinations)
+        strains = df.index
 
-        label = "+".join(
-            sorted("{}{}".format(k, v) for k, v in combinations.iteritems())
+        dataset = self.all_coords.loc[strains, :]
+
+        grid = sklearn.model_selection.GridSearchCV(
+            estimator=sklearn.neighbors.KernelDensity(kernel="guassian"),
+            param_grid=dict(bandwidth=np.linspace(0.01, 2, 20)),
+            cv=3
         )
 
-        if df.empty:
-            print "No strains with {}".format(label)
+        kde = grid.fit(dataset).best_estimator_
 
-        else:
-            strains = df.index
-            print "{} strains with {}".format(len(strains), label)
+        xmin, ymin = dataset.min() - 2
+        xmax, ymax = dataset.max() + 2
 
-            dataset = self.all_coords.loc[strains, :].T
+        xnum = (xmax - xmin) * 5
+        ynum = (ymax - ymin) * 5
 
-            kde = scipy.stats.gaussian_kde(
-                dataset=dataset.values,
-                bw_method="silverman"
+        Xgrid, Ygrid = np.meshgrid(
+            np.linspace(xmin, xmax, num=xnum),
+            np.linspace(ymin, ymax, num=ynum)
+        )
+
+        Z = np.exp(
+            kde.score_samples(
+                np.vstack([Xgrid.ravel(), Ygrid.ravel()]).T
             )
+        )
 
-            xmin, ymin = dataset.T.min() - 2
-            xmax, ymax = dataset.T.max() + 2
+        zsort = np.sort(Z)[::-1]
+        dens = zsort[np.argmax(np.cumsum(zsort) > Z.sum() * c)]
 
-            xnum = (xmax - xmin) * 5
-            ynum = (ymax - ymin) * 5
-
-            Xgrid, Ygrid = np.meshgrid(
-                np.linspace(xmin, xmax, num=xnum),
-                np.linspace(ymin, ymax, num=ynum)
-            )
-
-            Z = kde.evaluate(
-                np.vstack([Xgrid.ravel(), Ygrid.ravel()])
-            )
-
-            zsort = np.sort(Z)[::-1]
-            dens = zsort[np.argmax(np.cumsum(zsort) > Z.sum() * c)]
-
-            plt.contour(
-                Xgrid,
-                Ygrid,
-                Z.reshape(Xgrid.shape),
-                levels=[dens, ],
-                colors=color,
-                **kwargs
-            )
+        plt.contour(
+            Xgrid,
+            Ygrid,
+            Z.reshape(Xgrid.shape),
+            levels=[dens, ],
+            colors=color,
+            **kwargs
+        )
 
     def differ_by_n(self, n):
         """

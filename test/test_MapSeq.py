@@ -218,3 +218,7 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
         strains = grouped.groups[("Q", "N", "A")]
         test = set(strains)
         self.assertEqual({"strain3", "strain6"}, test)
+
+if __name__ == "__main__":
+
+    unittest.main()

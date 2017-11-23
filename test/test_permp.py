@@ -32,3 +32,7 @@ class Permp(unittest.TestCase):
         """Should return an np array"""
         p = permp(1, 1000, 3, 997)
         self.assertIsInstance(p, np.ndarray)
+
+if __name__ == "__main__":
+
+    unittest.main()

@@ -50,10 +50,14 @@ def effective_tests(snps):
     """
     if snps.shape[1] == 1:
         return 1
+
     corr, p = scipy.stats.spearmanr(snps)
+
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(corr)
+
     except np.linalg.LinAlgError:
+
         # if only two SNPs in snps and are perfectly negatively correlated
         if corr == -1:
             return 1
@@ -240,7 +244,7 @@ class HwasLmm(object):
         self.P = pheno.shape[1]  # n phenotypes
         self.P0 = pheno.columns[0]
         self.K = cov(snps)
-        self.n_tests = 1 if self.S == 1 else effective_tests(self.snps)
+
         if self.P > 1:
             self.Asnps = np.eye(self.P)
             self.P1 = pheno.columns[1]
@@ -265,11 +269,11 @@ class HwasLmm(object):
 
         @param test_snps: List. Only test for associations with these snps.
         """
-        if not hasattr(self, "K_leave_out"):
-            self.compute_k_leave_each_snp_out(test_snps=test_snps)
-
         if test_snps is None:
             test_snps = self.snps.columns
+
+        if not hasattr(self, "K_leave_out"):
+            self.compute_k_leave_each_snp_out(test_snps=test_snps)
 
         results = {}
 
@@ -349,7 +353,7 @@ class HwasLmm(object):
         df = pd.DataFrame.from_dict(results, orient="index")
         df.sort_values("p", inplace=True)
 
-        corrected = df["p"] * self.n_tests
+        corrected = df["p"] * effective_tests(self.snps.loc[:, test_snps])
         corrected[corrected > 1] = 1
         df["p-corrected"] = corrected
 

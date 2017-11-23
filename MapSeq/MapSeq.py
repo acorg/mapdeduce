@@ -6,7 +6,6 @@ from matplotlib.collections import LineCollection
 import numpy as np
 import spm1d
 
-import scipy
 from scipy import spatial
 
 import sklearn
@@ -491,7 +490,7 @@ class MapSeq(object):
         dataset = self.all_coords.loc[strains, :]
 
         grid = sklearn.model_selection.GridSearchCV(
-            estimator=sklearn.neighbors.KernelDensity(kernel="guassian"),
+            estimator=sklearn.neighbors.KernelDensity(kernel="gaussian"),
             param_grid=dict(bandwidth=np.linspace(0.01, 2, 20)),
             cv=3
         )

@@ -532,6 +532,7 @@ class HwasLmm(object):
         2D scatter plot of antigens
 
         @param color_dict: Dict / None. Values are mpl color for each antigen.
+            Overrides c, if c passed as a kwarg.
 
         @param **kwargs. Passed to self.pheno.plot.scatter
         """
@@ -539,15 +540,15 @@ class HwasLmm(object):
             c = [color_dict[i] for i in self.pheno.index]
 
         else:
-            c = "black"
+            c = kwargs.pop("c", "black")
 
         return self.pheno.plot.scatter(
             x=self.P0,
             y=self.P1,
             c=c,
-            s=60,
-            lw=0.25,
-            edgecolor="white",
+            s=kwargs.pop("s", 60),
+            lw=kwargs.pop("lw", 0.25),
+            edgecolor=kwargs.pop("edgecolor", "white"),
             ax=plt.gca(),
             **kwargs
         )
@@ -631,7 +632,7 @@ class HwasLmm(object):
     def plot_multi_effects(self, min_effect=0, max_p=1, snps=None,
                            label_arrows=False, plot_strains_with_snps=True,
                            colors=None, plot_similar_together=False,
-                           max_groups=8, test_pos=None):
+                           max_groups=8, test_pos=None, lw_factor=1):
         """
         Visualisation of 2D joint effects detected.
 
@@ -667,6 +668,10 @@ class HwasLmm(object):
             profile as one that does. In that case the un-wanted position will
             be in the dummy name. Remove positions that aren't being tested
             from the dummy names
+
+        @param lw_factor: Number. Arrow linewidths are:
+
+                     -1 * log10(p-value) * lw_factor
 
         @returns ax: Matplotlib ax
         """
@@ -766,13 +771,12 @@ class HwasLmm(object):
             label = a["label"] if label_arrows else ""
             leg_labels.append(a["label"])
 
-            # Primary arrow
             leg_artists.append(
                 plot_arrow(
                     start=a["start"],
                     end=a["end"],
                     color=a["color"],
-                    lw=a["logp"],
+                    lw=a["logp"] * lw_factor,
                     zorder=20,
                     label=label,
                     ax=ax

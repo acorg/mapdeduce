@@ -263,11 +263,14 @@ class HwasLmm(object):
         }
 
     def fit(self, test_snps=None, progress_bar=False):
-        """Run LMM.
+        """
+        Run LMM.
 
         Results are attached as a results attribute on self.
 
-        @param test_snps: List. Only test for associations with these snps.
+        @param test_snps: List. Test for associations with these snps.
+
+        @param progress_bar: Bool. Visualise tqdm progress bar.
         """
         if test_snps is None:
             test_snps = self.snps.columns
@@ -281,10 +284,20 @@ class HwasLmm(object):
 
         for snp in iterable:
 
+            snp_profile = self.snps.loc[:, [snp, ]].values
+
+            if np.unique(snp_profile).shape[0] != 2:
+
+                warnings.warn(
+                    "{} does not have 2 unique values. Skipping.".format(snp)
+                )
+
+                continue
+
             if self.P == 1:
 
                 lmm = qtl_test_lmm(
-                    snps=self.snps.loc[:, [snp, ]].values,
+                    snps=snp_profile,
                     pheno=self.pheno.values,
                     K=self.K_leave_out[snp]
                 )
@@ -295,7 +308,7 @@ class HwasLmm(object):
 
                 try:
                     lmm, pv = qtl_test_lmm_kronecker(
-                        snps=self.snps.loc[:, [snp, ]].values,
+                        snps=snp_profile,
                         phenos=self.pheno.values,
                         Asnps=self.Asnps,
                         K1r=self.K_leave_out[snp]
@@ -310,7 +323,7 @@ class HwasLmm(object):
                     )
 
                     vs.addFixedEffect(
-                        F=self.snps.loc[:, [snp, ]].values,
+                        F=snp_profile,
                         A=self.Asnps
                     )
 
@@ -330,7 +343,7 @@ class HwasLmm(object):
 
                     if conv:
                         lmm, pv = qtl_test_lmm_kronecker(
-                            snps=self.snps.loc[:, [snp, ]].values,
+                            snps=snp_profile,
                             phenos=self.pheno.values,
                             Asnps=self.Asnps,
                             K1r=self.K_leave_out[snp],
@@ -392,7 +405,23 @@ class HwasLmm(object):
 
         effects = df.filter(regex="b[0-9]", axis=1)
 
+        if effects.empty:
+            raise ValueError(
+                "df returned from self.summarise_joint does not contain "
+                "effects"
+            )
+
         predictors = effects.index & snps.columns
+
+        if predictors.empty:
+            raise ValueError(
+                "No SNPs predictors to use.\n\n"
+                "effects: {effects}\n\n"
+                "snps: {snps}".format(
+                    effects=effects.index,
+                    snps=snps.columns,
+                )
+            )
 
         snps = snps.loc[:, predictors]
         effects = effects.loc[predictors, :]

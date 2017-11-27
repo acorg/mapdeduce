@@ -1,20 +1,23 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
 import numpy as np
+import pandas as pd
+
 import scipy
 import sklearn
 
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
-from plotting import plot_arrow, map_setup
-
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-from permp import permp
 import warnings
+from tqdm import tqdm
+from permp import permp
+
+from plotting import plot_arrow, map_setup
+from dataframes import CoordDf
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def shuffle_values(nperm, values):
@@ -379,6 +382,85 @@ class HwasLmm(object):
         df.index.name = "AAP"
 
         self.results = df
+
+    def cross_validate(self, n_splits=5, progress_bar=False):
+        """
+        Conduct K-fold cross validation. Split data into n_splits training and
+        testing splits. Train on each training split.
+
+        Attaches list containing the results of the cross validation as a
+        self.folds attribute.
+
+        @param n_splits: Int. Number of folds.
+
+        @param progress_bar: Bool. Show tqdm progress bar for each fold.
+        """
+        if hasattr(self, "folds"):
+            raise AttributeError("HwasLmm already has folds attribute.")
+
+        kf = sklearn.model_selection.KFold(
+            n_splits=n_splits,
+            random_state=1234,
+        )
+
+        folds = []
+        append = folds.append
+
+        for train, test in kf.split(self.snps):
+
+            train_snps_i = self.snps.iloc[train, :].copy()
+            train_pheno_i = self.pheno.iloc[train, :].copy()
+
+            # Train on diverse snps (not all either 0 or 1)
+            means = train_snps_i.mean()
+            mask = (means > 0) & (means < 1)
+            diverse_snps_i = mask.index[mask]
+
+            hwas_i = HwasLmm(
+                snps=train_snps_i,
+                pheno=train_pheno_i,
+            )
+
+            hwas_i.fit(
+                test_snps=diverse_snps_i,
+                progress_bar=progress_bar,
+            )
+
+            test_snps_i = self.snps.iloc[test, :].copy()
+            test_pheno_i = self.pheno.iloc[test, :].copy()
+
+            append((hwas_i, test_pheno_i, test_snps_i))
+
+        self.folds = folds
+
+    def cross_validation_predictions(self, p_grid):
+        """
+        Predict phenotypes for cross validation folds. Include only SNPs that
+        have a p value lower than that of each element in p_grid.
+
+        @param p_grid: np.ndarray. p value thresholds.
+
+        @returns pd.Panel: Items are p-values, major axis are strains, minor
+            axis are folds. Run pn.apply(np.mean, axis=1) to get fold means
+        """
+        dists = {}
+
+        for p in p_grid:
+
+            dists[p] = {}
+
+            for i, (hwas, test_pheno, test_snps) in enumerate(self.folds):
+
+                pheno_predict = hwas.predict(
+                    snps=test_snps,
+                    max_p=p,
+                )
+
+                cdf = CoordDf(pheno_predict)
+
+                dists[p][i] = pd.Series(cdf.paired_distances(test_pheno))
+
+        return pd.Panel(data=dists)
 
     def predict(self, snps, max_p=1, min_effect=0):
         """

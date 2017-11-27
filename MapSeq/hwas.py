@@ -221,10 +221,13 @@ class HwasLmm(object):
     combinations on antigenic phenotypes.
     """
 
-    def __init__(self, snps, pheno):
+    def __init__(self, snps, pheno, subtract_pheno_mean=True):
         """
         @param snps: df. (N, S). S snps for N individuals
+
         @param pheno: df. (N, P). P phenotypes for N individuals
+
+        @param subtract_pheno_mean: Bool. Mean centre the phenotype.
         """
         if (snps.index != pheno.index).sum() != 0:
             raise ValueError("snps and pheno have different indexes")
@@ -239,8 +242,11 @@ class HwasLmm(object):
             raise ValueError("pheno columns aren't all unique")
 
         self.snps = snps
-        self.pheno_shift = pheno.mean()
-        self.pheno = pheno - self.pheno_shift
+        self.pheno = pheno
+
+        if subtract_pheno_mean:
+            self.pheno_shift = pheno.mean()
+            self.pheno -= self.pheno_shift
 
         self.N = snps.shape[0]   # n individuals
         self.S = snps.shape[1]   # n snps
@@ -382,6 +388,19 @@ class HwasLmm(object):
         df.index.name = "AAP"
 
         self.results = df
+
+    def regress_out(self, snp):
+        """
+        Regress out the effects of snp from the phenotype. Returns the residual
+        phenotype.
+
+        @param snp. Must be in the index of self.snps
+
+        @returns residual_pheno: pd.DataFrame. Same shape as self.pheno (N, P)
+        """
+        beta = self.results.loc[snp, "beta"].reshape(1, -1)
+        profile = self.snps.loc[:, snp].values.reshape(-1, 1)
+        return self.pheno - profile.dot(beta)
 
     def cross_validate(self, n_splits=5, progress_bar=False):
         """

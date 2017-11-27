@@ -64,6 +64,55 @@ class HwasLmmCrossValidation(unittest.TestCase):
         # If pheno offset not handled correctly mean error would be ~100
         self.assertLess(pn.mean().mean()[1], 5)
 
+
+class HwasLmmRegressOut(unittest.TestCase):
+    """Tests for HwasLmm.regress_out"""
+
+    def setUp(self):
+        """Attach HwasLmm with known effects to self"""
+        pheno = pd.DataFrame(
+            np.array(((0, 0), (1, 0), (2, 0))),
+            columns=["x", "y"],
+            index=["a", "b", "c"]
+        )
+
+        snps = pd.DataFrame(
+            np.array(((0, 0), (1, 1), (0, 1))),
+            columns=["SNP-1", "SNP-2"],
+            index=["a", "b", "c"]
+        )
+
+        self.hwas = HwasLmm(snps=snps, pheno=pheno, subtract_pheno_mean=False)
+
+        # Specify effects with known vectors, to test that they are regressed
+        # out correctly. Dataframe with beta column in same format as
+        # Hwas.results
+        self.hwas.results = pd.DataFrame({
+            "beta": [np.array((1, 0)), np.array((2, 2))],
+        }, index=["SNP-1", "SNP-2"])
+
+    def test_returns_df(self):
+        """HwasLmm.regress_out should return a DataFrame"""
+        df = self.hwas.regress_out("SNP-1")
+        self.assertIsInstance(df, pd.core.frame.DataFrame)
+
+    def test_df_dims(self):
+        """Output should have same dimensions as original data"""
+        df = self.hwas.regress_out("SNP-1")
+        self.assertEqual(self.hwas.pheno.shape, df.shape)
+
+    def test_snp1_regressed_out_correctly(self):
+        """Test maths for SNP1"""
+        output = self.hwas.regress_out("SNP-1")
+        expect = np.array(((0, 0), (0, 0), (2, 0)))
+        self.assertEqual(0, (output - expect).sum().sum())
+
+    def test_snp2_regressed_out_correctly(self):
+        """Test maths for SNP2"""
+        output = self.hwas.regress_out("SNP-2")
+        expect = np.array(((0, 0), (-1, -2), (0, -2)))
+        self.assertEqual(0, (output - expect).sum().sum())
+
 if __name__ == "__main__":
 
     unittest.main()

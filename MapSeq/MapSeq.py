@@ -122,14 +122,15 @@ class MapSeq(object):
         ax = plt.gca()
 
         # Antigens without a known sequence
-        self.coords_excl_to_coords.plot.scatter(
-            ax=ax,
-            x="x",
-            y="y",
-            s=5,
-            color="darkgrey",
-            label="Unknown sequence"
-        )
+        if not self.coords_excl_to_coords.empty:
+            self.coords_excl_to_coords.plot.scatter(
+                ax=ax,
+                x="x",
+                y="y",
+                s=5,
+                color="darkgrey",
+                label="Unknown sequence"
+            )
 
         # Antigens with a known sequence
         kwds = dict(
@@ -330,6 +331,7 @@ class MapSeq(object):
         @param filename: Format string with one field to fill in. Each
             position will be substituted in. E.g.:
             "img/melb-h3-2009-coloured-by-pos/{}.png"
+
         @param kwds: Passed to scatter_colored_by_amino_acid
         """
         # Save text file containing html of the variant positions. 1 sorted by
@@ -337,25 +339,33 @@ class MapSeq(object):
         sorted_primary = sorted(self.variant_positions)
         sorted_most_common = \
             self.variant_positions_sorted_by_most_common_variant()
+
         img_tag = '<img src="{}" class="map" />\n'
+
         with open(".by_primary.txt", "w") as fobj:
             for p in sorted_primary:
                 fobj.write(img_tag.format(filename.format(p)))
+
         with open(".by_most_common.txt", "w") as fobj:
             for p in sorted_most_common:
                 fobj.write(img_tag.format(filename.format(p)))
+
         print "Wrote .by_primary.txt and .by_most_common.txt."
 
-        # Now do scatter plots
-        n = len(self.variant_positions)
-        print "There are {} variant positions.".format(n)
+        print "There are {} variant positions.".format(
+            len(self.variant_positions)
+        )
+
         print "Doing",
+
         for i, p in enumerate(self.variant_positions):
             print "{}".format(p),
+
             fig, ax = plt.subplots()
             self.scatter_colored_by_amino_acid(p, **kwds)
+            map_setup()
             plt.tight_layout()
-            plt.savefig(filename.format(p), dpi=100)
+            plt.savefig(filename.format(p), bbox_inches="tight")
             plt.close()
 
     def variant_positions_sorted_by_most_common_variant(self):

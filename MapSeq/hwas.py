@@ -221,7 +221,7 @@ class HwasLmm(object):
     combinations on antigenic phenotypes.
     """
 
-    def __init__(self, snps, pheno, subtract_pheno_mean=True):
+    def __init__(self, snps, pheno):
         """
         @param snps: df. (N, S). S snps for N individuals
 
@@ -243,10 +243,6 @@ class HwasLmm(object):
 
         self.snps = snps
         self.pheno = pheno
-
-        if subtract_pheno_mean:
-            self.pheno_shift = pheno.mean()
-            self.pheno -= self.pheno_shift
 
         self.N = snps.shape[0]   # n individuals
         self.S = snps.shape[1]   # n snps
@@ -374,13 +370,17 @@ class HwasLmm(object):
 
         df = pd.DataFrame.from_dict(results, orient="index")
         df.sort_values("p", inplace=True)
-
-        corrected = df["p"] * effective_tests(self.snps.loc[:, test_snps])
-        corrected[corrected > 1] = 1
-        df["p-corrected"] = corrected
-
         df["logp"] = np.log10(df["p"]) * -1
-        df["logp-corrected"] = np.log10(df["p-corrected"]) * -1
+
+        n_tests = effective_tests(self.snps.loc[:, test_snps])
+        corrected = df["p"] * n_tests
+        df["p-corrected"] = corrected
+        df["logp-corrected"] = np.log10(corrected) * -1
+
+        # p-values can't exceed 1
+        mask = df["p-corrected"] > 1
+        df.loc[mask, "p-corrected"] = 1
+        df.loc[mask, "logp-corrected"] = 0
 
         if self.P > 1:
             df["joint-effect"] = df["beta"].apply(np.linalg.norm)
@@ -389,18 +389,63 @@ class HwasLmm(object):
 
         self.results = df
 
-    def regress_out(self, snp):
+    def regress_out(self, snp, summary_plot=False):
         """
         Regress out the effects of snp from the phenotype. Returns the residual
         phenotype.
 
         @param snp. Must be in the index of self.snps
 
+        @param summary_plot: Bool. Visualise the phenotype shift.
+
         @returns residual_pheno: pd.DataFrame. Same shape as self.pheno (N, P)
         """
         beta = self.results.loc[snp, "beta"].reshape(1, -1)
         profile = self.snps.loc[:, snp].values.reshape(-1, 1)
-        return self.pheno - profile.dot(beta)
+        residual = self.pheno - profile.dot(beta)
+
+        if summary_plot:
+            ax = self.pheno.plot.scatter(
+                x="x",
+                y="y",
+                s=5,
+                c="black",
+                label="Original"
+            )
+
+            residual.plot.scatter(
+                x="x",
+                y="y",
+                ax=ax,
+                s=10,
+                label="Residual"
+            )
+
+            joined = residual.join(
+                self.pheno,
+                lsuffix="resid",
+                rsuffix="orig"
+            )
+
+            for strain, row in joined.iterrows():
+                xmatch = row["xresid"] != row["xorig"]
+                ymatch = row["yresid"] != row["yorig"]
+
+                if xmatch and ymatch:
+                    ax.plot(
+                        (row["xresid"], row["xorig"]),
+                        (row["yresid"], row["yorig"]),
+                        c="black",
+                        zorder=1,
+                        lw=0.3
+                    )
+            map_setup()
+
+            return residual, ax
+
+        else:
+
+            return residual
 
     def cross_validate(self, n_splits=5, progress_bar=False):
         """
@@ -481,7 +526,7 @@ class HwasLmm(object):
 
         return pd.Panel(data=dists)
 
-    def predict(self, snps, max_p=1, min_effect=0):
+    def predict(self, snps, max_p=1, min_effect=0, df=None):
         """
         Predict phenotype values for each individual in SNPs
 
@@ -492,11 +537,15 @@ class HwasLmm(object):
 
         @param min_effect: Number. Only include SNPs that have an effect size
             greater than min_effect
+
+        @param df: pd.DataFrame. Optional. Provide df containing effects for
+            each snp.
         """
-        df = self.summarise_joint(
-            max_p=max_p,
-            min_effect=min_effect
-        )
+        if df is None:
+            df = self.summarise_joint(
+                max_p=max_p,
+                min_effect=min_effect
+            )
 
         if df.empty:
             raise ValueError(
@@ -776,20 +825,14 @@ class HwasLmm(object):
 
         @returns ax: Matplotlib ax
         """
+        df = self.summarise_joint(
+            min_effect=0,
+            max_p=1,
+        )
+
         if snps is not None:
 
-            df = self.summarise_joint(
-                min_effect=0,
-                max_p=1,
-            )
             df = df.loc[snps, :]
-
-        else:
-
-            df = self.summarise_joint(
-                min_effect=min_effect,
-                max_p=max_p,
-            )
 
         arrows = []
 
@@ -823,7 +866,7 @@ class HwasLmm(object):
 
         else:
 
-            for dummy, row in df.iterrows():
+            for dummy, row in df.iloc[:max_groups, :].iterrows():
 
                 mask = self.snps.loc[:, dummy] == 1
                 end = self.pheno[mask].mean().values

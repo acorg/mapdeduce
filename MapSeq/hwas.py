@@ -253,6 +253,7 @@ class HwasLmm(object):
         if self.P > 1:
             self.Asnps = np.eye(self.P)
             self.P1 = pheno.columns[1]
+            self.Acovs = np.eye(self.P)
 
     def compute_k_leave_each_snp_out(self, test_snps=None):
         """Leave each snp out of self.snps and compute a covariance matrix.
@@ -951,3 +952,84 @@ class HwasLmm(object):
         map_setup(ax)
 
         return ax
+
+    def interaction(self, a, b):
+        """
+        Test for evidence of interaction between snps a and b
+
+        @param a: Column in self.snps
+
+        @param b: Column in self.snps
+
+        @returns Dictionary containing pvalue and effect size of interaction,
+            and the counts of the different classes of strains with
+            combinations of a and b.
+        """
+        covs = self.snps.loc[:, [a, b]].values
+
+        Xa = covs[:, 0].reshape(-1, 1)
+        Xb = covs[:, 1].reshape(-1, 1)
+        Xab = np.logical_and(Xa, Xb).astype(float)
+
+        # Test a occurs alone
+        if not np.any(Xab != Xa):
+            raise ValueError("{a} never occurs without {b}.".format(a=a, b=b))
+
+        # Test b occurs alone
+        if not np.any(Xab != Xb):
+            raise ValueError("{b} never occurs without {a}.".format(a=a, b=b))
+
+        # Test a and b occur together
+        if Xab.sum() == 0:
+            raise ValueError("{a} and {b} don't cooccur".format(a=a, b=b))
+
+        K1r = cov(self.snps.drop([a, b], axis=1))
+
+        try:
+            lmm, pv = qtl_test_lmm_kronecker(
+                snps=Xab,
+                phenos=self.pheno.values,
+                covs=covs,
+                Acovs=self.Acovs,
+                Asnps=self.Asnps,
+                K1r=K1r
+            )
+
+        except AssertionError:
+
+            warnings.warn("Doing manual VarianceDecomposition")
+            vs = VarianceDecomposition(Y=self.pheno.values)
+            vs.addFixedEffect(F=Xab, A=self.Asnps)
+            vs.addFixedEffect(F=covs, A=self.Asnps)
+            vs.addRandomEffect(K=K1r)
+            vs.addRandomEffect(is_noise=True)
+            conv = vs.optimize()
+
+            if conv:
+                lmm, pv = qtl_test_lmm_kronecker(
+                    snps=Xab,
+                    phenos=self.pheno.values,
+                    covs=covs,
+                    Asnps=self.Asnps,
+                    Acovs=self.Acovs,
+                    K1r=K1r,
+                    K1c=vs.getTraitCovar(0),
+                    K2c=vs.getTraitCovar(1)
+                )
+
+            else:
+                raise ValueError("Variance decom. didn't optimize")
+
+        pv = pv[0, 0]
+        # lmm.getBetaSNP() returns (P, S) array of effect sizes
+        # Only tested 1 snp
+        beta = lmm.getBetaSNP()[:, 0]
+
+        return {
+            "p": pv,
+            "beta": beta,
+            "count_ab": Xab.sum(),
+            "count_a_without_b": (Xa - Xab).sum(),
+            "count_b_without_a": (Xb - Xab).sum(),
+            "count_not_a_or_b": np.logical_not(np.logical_or(Xa, Xb)).sum()
+        }

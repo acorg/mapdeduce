@@ -381,13 +381,16 @@ class MapSeq(object):
                                                  key=lambda x: x[-1])
         return tuple(p.name for p in proportions_all_variants_sorted)
 
-    def strains_with_combinations(self, combinations):
+    def strains_with_combinations(self, combinations, without=False):
         """
         Return strains that have combinations of amino acids at particular
         positions.
 
         @param combinations. Dict. Keys are positions, values are amino
             acids:  E.g. {145: "N", 189: "S"}
+
+        @param without. Bool. Return strains without the combination.
+
         @returns pd.DataFrame. Containing strains with the amino acid
             combinations.
         """
@@ -398,7 +401,12 @@ class MapSeq(object):
         masks = (self.seq_in_both.loc[:, k] == v
                  for k, v in combinations.iteritems())
 
-        df = self.seq_in_both[reduce(and_, masks)]
+        mask = reduce(and_, masks)
+
+        if without:
+            mask = ~ mask
+
+        df = self.seq_in_both[mask]
 
         if df.empty:
 
@@ -428,8 +436,8 @@ class MapSeq(object):
         positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
         return self.seq_in_both.groupby(positions)
 
-    def plot_strains_with_combinations(self, combinations, plot_other=True,
-                                       **kwargs):
+    def plot_strains_with_combinations(self, combinations, without=False,
+                                       plot_other=True, **kwargs):
         """
         Plot a map highlighting strains with combinations of amino acids
         at particular positions.
@@ -437,22 +445,33 @@ class MapSeq(object):
         @param combinations. Dict. Keys are positions, values are amino
             acids:  E.g. {145: "N", 189: "S"}
 
+        @param without. Bool. Plot strains without the combination.
+
         @param plot_other. Bool. Plot other antigens (those without the
             combinations).
 
         @param **kwargs. Passed to the scatter function of the strains with
             particular combinations.
         """
-        df = self.strains_with_combinations(combinations)
+        df = self.strains_with_combinations(
+            combinations=combinations,
+            without=without
+        )
 
         label = "+".join(
             sorted("{}{}".format(k, v) for k, v in combinations.iteritems())
         )
 
+        if without:
+            label = "Without " + label
+
         if df.empty:
             print "No strains with {}".format(label)
 
         else:
+
+            ax = plt.gca()
+
             strains = df.index
             print "{} strains with {}".format(len(strains), label)
 
@@ -461,7 +480,8 @@ class MapSeq(object):
                     x="x",
                     y="y",
                     s=5,
-                    color="darkgrey"
+                    color="darkgrey",
+                    ax=ax
                 )
 
             # self.all_coords.loc[strains, :] may be a Series, hence ax.scatter

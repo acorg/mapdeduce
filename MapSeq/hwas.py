@@ -221,39 +221,49 @@ class HwasLmm(object):
     combinations on antigenic phenotypes.
     """
 
-    def __init__(self, snps, pheno):
+    def __init__(self, snps, pheno, covs=None):
         """
-        @param snps: df. (N, S). S snps for N individuals
+        @param snps: pd.DataFrame. (N, S). S snps for N individuals.
 
-        @param pheno: df. (N, P). P phenotypes for N individuals
+        @param pheno: pd.DataFrame. (N, P). P phenotypes for N individuals.
 
-        @param subtract_pheno_mean: Bool. Mean centre the phenotype.
+        @param covs: pd.DataFrame. (N, Q). Q covariates for N individuals.
         """
         if (snps.index != pheno.index).sum() != 0:
-            raise ValueError("snps and pheno have different indexes")
+            raise ValueError("snps and pheno have different indexes.")
 
         if (len(snps.index) != len(set(snps.index))):
-            raise ValueError("snps indices aren't all unique")
+            raise ValueError("snps indices aren't all unique.")
+
         if (len(snps.columns) != len(set(snps.columns))):
-            raise ValueError("snps columns aren't all unique")
+            raise ValueError("snps columns aren't all unique.")
+
         if (len(pheno.index) != len(set(pheno.index))):
-            raise ValueError("pheno indices aren't all unique")
+            raise ValueError("pheno indices aren't all unique.")
+
         if (len(pheno.columns) != len(set(pheno.columns))):
-            raise ValueError("pheno columns aren't all unique")
+            raise ValueError("pheno columns aren't all unique.")
 
         self.snps = snps
         self.pheno = pheno
+        self.covs = covs
 
-        self.N = snps.shape[0]   # n individuals
-        self.S = snps.shape[1]   # n snps
-        self.P = pheno.shape[1]  # n phenotypes
+        self.N = snps.shape[0]   # Number of individuals
+        self.S = snps.shape[1]   # Number of snps
+        self.P = pheno.shape[1]  # Number of phenotypes
         self.P0 = pheno.columns[0]
         self.K = cov(snps)
+
+        if self.covs is not None:
+            self.Q = covs.shape[1]  # Number of covariates
+            self.Acovs = np.eye(self.P)
+
+        else:
+            self.Acovs = None
 
         if self.P > 1:
             self.Asnps = np.eye(self.P)
             self.P1 = pheno.columns[1]
-            self.Acovs = np.eye(self.P)
 
     def compute_k_leave_each_snp_out(self, test_snps=None):
         """Leave each snp out of self.snps and compute a covariance matrix.
@@ -291,6 +301,7 @@ class HwasLmm(object):
         for snp in iterable:
 
             snp_profile = self.snps.loc[:, [snp, ]].values
+            covs = self.covs.values if self.covs is not None else None
 
             if np.unique(snp_profile).shape[0] != 2:
 
@@ -305,7 +316,8 @@ class HwasLmm(object):
                 lmm = qtl_test_lmm(
                     snps=snp_profile,
                     pheno=self.pheno.values,
-                    K=self.K_leave_out[snp]
+                    K=self.K_leave_out[snp],
+                    covs=covs
                 )
 
                 beta = lmm.getBetaSNP()[0, 0]
@@ -317,29 +329,29 @@ class HwasLmm(object):
                         snps=snp_profile,
                         phenos=self.pheno.values,
                         Asnps=self.Asnps,
-                        K1r=self.K_leave_out[snp]
+                        K1r=self.K_leave_out[snp],
+                        covs=covs,
+                        Acovs=self.Acovs
                     )
 
                 except AssertionError:
 
-                    warnings.warn("Doing manual VarianceDecomposition")
+                    warnings.warn("Doing manual variance decomposition.")
 
-                    vs = VarianceDecomposition(
-                        Y=self.pheno.values
-                    )
+                    vs = VarianceDecomposition(Y=self.pheno.values)
 
-                    vs.addFixedEffect(
-                        F=snp_profile,
-                        A=self.Asnps
-                    )
+                    if self.covs is not None:
+                        F = np.concatenate(
+                            (self.covs.values, snp_profile),
+                            axis=1
+                        )
 
-                    vs.addRandomEffect(
-                        K=self.K_leave_out[snp]
-                    )
+                    else:
+                        F = snp_profile
 
-                    vs.addRandomEffect(
-                        is_noise=True
-                    )
+                    vs.addFixedEffect(F=F, A=self.Acovs)
+                    vs.addRandomEffect(K=self.K_leave_out[snp])
+                    vs.addRandomEffect(is_noise=True)
 
                     try:
                         conv = vs.optimize()
@@ -352,13 +364,16 @@ class HwasLmm(object):
                             snps=snp_profile,
                             phenos=self.pheno.values,
                             Asnps=self.Asnps,
+                            covs=covs,
+                            Acovs=self.Acovs,
                             K1r=self.K_leave_out[snp],
                             K1c=vs.getTraitCovar(0),
                             K2c=vs.getTraitCovar(1)
                         )
 
                     else:
-                        raise ValueError("Variance decom. didn't optimize")
+                        raise ValueError("Variance decomposition didn't "
+                                         "optimize for {}.".format(snp))
 
                 # lmm.getBetaSNP() returns (P, S) array of effect sizes
                 # Only tested 1 snp
@@ -422,11 +437,7 @@ class HwasLmm(object):
                 label="Residual"
             )
 
-            joined = residual.join(
-                self.pheno,
-                lsuffix="resid",
-                rsuffix="orig"
-            )
+            joined = residual.join(self.pheno, lsuffix="resid", rsuffix="orig")
 
             for strain, row in joined.iterrows():
                 xmatch = row["xresid"] != row["xorig"]
@@ -465,7 +476,7 @@ class HwasLmm(object):
 
         kf = sklearn.model_selection.KFold(
             n_splits=n_splits,
-            random_state=1234,
+            random_state=1234
         )
 
         folds = []

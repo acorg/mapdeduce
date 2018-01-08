@@ -3,6 +3,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
+import warnings
+
 import numpy as np
 import spm1d
 
@@ -416,10 +418,9 @@ class MapSeq(object):
                 )
             )
 
-            raise ValueError("No strains with {}".format(label))
+            warnings.warn("No strains with {}".format(label))
 
-        else:
-            return df
+        return df
 
     def duplicate_sequences(self, **kwargs):
         """
@@ -470,7 +471,7 @@ class MapSeq(object):
 
         else:
 
-            ax = plt.gca()
+            fig, ax = plt.subplots()
 
             strains = df.index
             print "{} strains with {}".format(len(strains), label)

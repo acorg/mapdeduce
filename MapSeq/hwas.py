@@ -792,7 +792,7 @@ class HwasLmm(object):
             )
 
     def plot_multi_effects(self, min_effect=0, max_p=1, snps=None,
-                           label_arrows=False, plot_strains_with_snps=True,
+                           label_arrows=False, plot_strains_with_snps=False,
                            colors=None, plot_similar_together=False,
                            max_groups=8, test_pos=None, lw_factor=1):
         """

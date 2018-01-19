@@ -32,15 +32,18 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
     @returns pd.DataFrame: Indexes are record IDs in upper case, columns are
         positions
     """
-    sequence_dict = dict_from_fasta(path)
-    df = pd.DataFrame.from_dict({
-        k: tuple(v) for k, v in sequence_dict.iteritems()
-    }, orient='index')
+    with open(path, 'r') as handle:
+        seqs = [(r.id.upper(), r.seq)for r in SeqIO.parse(handle, 'fasta')]
 
-    # Drop unwanted columns
-    df = df.iloc[:, :len(positions)]
+    index = [s[0] for s in seqs]
 
-    df.columns = positions
+    data = [pd.Series(list(s[1])) for s in seqs]
+
+    df = pd.DataFrame(data, index=index)
+
+    df = df.iloc[:, :len(positions)]  # Drop unwanted columns
+
+    df.columns = positions  # Rename columns
 
     return df
 

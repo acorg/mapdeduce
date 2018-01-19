@@ -456,12 +456,10 @@ class MapSeq(object):
         """
         df = self.strains_with_combinations(
             combinations=combinations,
-            without=without
-        )
+            without=without)
 
         label = "+".join(
-            sorted("{}{}".format(k, v) for k, v in combinations.iteritems())
-        )
+            sorted("{}{}".format(k, v) for k, v in combinations.iteritems()))
 
         if without:
             label = "Without " + label
@@ -471,7 +469,10 @@ class MapSeq(object):
 
         else:
 
-            fig, ax = plt.subplots()
+            ax = kwargs.pop("ax", False)
+
+            if not ax:
+                fig, ax = plt.subplots()
 
             strains = df.index
             print "{} strains with {}".format(len(strains), label)
@@ -480,18 +481,16 @@ class MapSeq(object):
                 self.all_coords.plot.scatter(
                     x="x",
                     y="y",
-                    s=5,
+                    s=10,
                     color="darkgrey",
-                    ax=ax
-                )
+                    ax=ax)
 
             # self.all_coords.loc[strains, :] may be a Series, hence ax.scatter
             plt.scatter(
                 self.all_coords.loc[strains, "x"],
                 self.all_coords.loc[strains, "y"],
                 label=label,
-                **kwargs
-            )
+                **kwargs)
             plt.legend()
 
             if self.map:

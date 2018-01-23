@@ -794,7 +794,8 @@ class HwasLmm(object):
     def plot_multi_effects(self, min_effect=0, max_p=1, snps=None,
                            label_arrows=False, plot_strains_with_snps=False,
                            colors=None, plot_similar_together=False,
-                           max_groups=8, test_pos=None, lw_factor=1):
+                           max_groups=8, test_pos=None, lw_factor=1,
+                           simple_legend=False):
         """
         Visualisation of 2D joint effects detected.
 
@@ -835,6 +836,9 @@ class HwasLmm(object):
 
                      -1 * log10(p-value) * lw_factor
 
+        @param simple_legend: Bool. Show only the snp name in the legend,
+            omitting p-value and effect size.
+
         @returns ax: Matplotlib ax
         """
         df = self.summarise_joint(
@@ -847,6 +851,8 @@ class HwasLmm(object):
             df = df.loc[snps, :]
 
         arrows = []
+
+        legend_pad = "\n" if simple_legend else "\n            "
 
         if plot_similar_together:
 
@@ -863,10 +869,14 @@ class HwasLmm(object):
                 end = self.pheno[self.snps.loc[:, snp] == 1].mean()
                 start = end - np.array([b0, b1])
 
-                snps_sorted = "\n            ".join(group.index.sort_values())
+                snps_sorted = legend_pad.join(group.index.sort_values())
                 pv = "{:.4F}".format(self.results.loc[snp, "p"])
                 j = "{:.2F}".format(group.loc[snp, "joint"])
-                label = "{} {} {}".format(pv, j, snps_sorted)
+
+                if simple_legend:
+                    label = snps_sorted
+                else:
+                    label = "{} {} {}".format(pv, j, snps_sorted)
 
                 arrows.append({
                     "end": end,
@@ -885,7 +895,7 @@ class HwasLmm(object):
                 start = end - row[["b0", "b1"]].values
 
                 if test_pos is None:
-                    snps_sorted = "\n            ".join(dummy.split("|"))
+                    snps_sorted = legend_pad.join(dummy.split("|"))
 
                 else:
                     store = []
@@ -893,11 +903,15 @@ class HwasLmm(object):
                         pos = int(i[:-1])
                         if pos in test_pos:
                             store.append(i)
-                    snps_sorted = "\n            ".join(store)
+                    snps_sorted = legend_pad.join(store)
 
                 pv = "{:.4F}".format(self.results.loc[dummy, "p"])
                 j = "{:.2F}".format(row["joint"])
-                label = "{} {} {}".format(pv, j, snps_sorted)
+
+                if simple_legend:
+                    label = snps_sorted
+                else:
+                    label = "{} {} {}".format(pv, j, snps_sorted)
 
                 arrows.append({
                     "end": end,

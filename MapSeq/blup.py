@@ -5,7 +5,7 @@ import pandas as pd
 
 from limix_legacy.modules.varianceDecomposition import VarianceDecomposition
 
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, LeaveOneOut
 
 from scipy.spatial.distance import euclidean
 

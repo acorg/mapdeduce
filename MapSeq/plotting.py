@@ -3,7 +3,7 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-
+from matplotlib.ticker import MultipleLocator
 from matplotlib.patches import Ellipse, Rectangle
 
 
@@ -279,22 +279,16 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
 
 
 def map_setup(ax=None):
-    """Configure a plot to be an antigenic map. This means integer spaced grid,
-    and an aspect ratio of 1.
+    """Configure a plot to be an antigenic map.
+
+    Maps have integer spaced grids, an aspect ratio of 1, and no axis labels.
     """
-    if ax is None:
-        ax = plt.gca()
-
-    xtick_limits = np.floor(ax.get_xlim()) + np.array([0, 1])
-    ax.set_xticks(np.arange(*xtick_limits))
-
-    ytick_limits = np.floor(ax.get_ylim()) + np.array([0, 1])
-    ax.set_yticks(np.arange(*ytick_limits))
-
+    ax = plt.gca() if ax is None else ax
+    ax.get_xaxis().set_major_locator(MultipleLocator(base=1.0))
+    ax.get_yaxis().set_major_locator(MultipleLocator(base=1.0))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_ylabel("")
     ax.set_xlabel("")
-
     ax.set_aspect(1)
     return ax

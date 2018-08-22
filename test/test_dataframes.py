@@ -7,7 +7,7 @@ import unittest2 as unittest
 import numpy as np
 import pandas as pd
 
-from MapSeq.dataframes import CoordDf
+from MapDeduce.dataframes import CoordDf
 
 
 class CoordDfPairedDistTests(unittest.TestCase):

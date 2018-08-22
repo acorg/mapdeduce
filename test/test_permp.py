@@ -2,7 +2,7 @@
 
 """Tests for permp function that computes empirical p-values"""
 
-from MapSeq.permp import permp
+from MapDeduce.permp import permp
 import numpy as np
 import unittest2 as unittest
 from rpy2.rinterface import RRuntimeError

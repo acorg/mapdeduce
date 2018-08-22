@@ -4,7 +4,7 @@
 
 import unittest2 as unittest
 
-from MapSeq.data import not_109_to_301, not_110_to_199
+from MapDeduce.data import not_109_to_301, not_110_to_199
 
 
 class MapSeqData(unittest.TestCase):

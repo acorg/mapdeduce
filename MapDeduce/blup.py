@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from .dataframes import SeqDf
 from .hwas import cov
-from .MapSeq import OrderedMapSeq
+from .mapseq import OrderedMapSeq
 from .helper import expand_sequences
 
 

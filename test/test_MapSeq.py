@@ -6,7 +6,7 @@ import numpy as np
 import unittest2 as unittest
 import pandas as pd
 
-from MapDeduce.MapSeq import MapSeq
+from MapDeduce.mapseq import MapSeq
 
 
 class MapSeqAttributes(unittest.TestCase):

@@ -1,5 +1,7 @@
 # MapDeduce
 
+![Example](data/example.png)
+
 A python library for:
 
 -   Handling antigenic maps and sequence data.

@@ -3,6 +3,13 @@
 A python library for:
 
 -   Handling antigenic maps and sequence data.
--   Testing associations between amino acid poloymorphisms and antigenic
+-   Testing associations between amino acid polymorphisms and antigenic
     diversity.
--   Plotting antignec maps
+-   Plotting antigenic maps.
+
+# Installation
+
+```bash
+git clone https://github.com/davipatti/MapDeduce.git
+pip install -e MapDeduce
+```

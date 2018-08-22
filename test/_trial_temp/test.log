@@ -1,0 +1,5 @@
+2018-08-22 11:39:34+0100 [-] Log opened.
+2018-08-22 11:39:35+0100 [-] /Users/david/MapDeduce/MapDeduce/MapSeq.py:421: exceptions.UserWarning: No strains with 1K
+2018-08-22 11:39:35+0100 [-] /Users/david/MapDeduce/MapDeduce/MapSeq.py:421: exceptions.UserWarning: No strains with 1L
+2018-08-22 11:39:35+0100 [-] /Users/david/.virtualenvs/limix-stable/lib/python2.7/site-packages/rpy2/robjects/functions.py:106: exceptions.UserWarning: Error in 1:total.nperm : result would be too long a vector
+	

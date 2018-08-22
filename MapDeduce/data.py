@@ -1,5 +1,23 @@
 """Useful data."""
 
+# Source https://www.fludb.org/brc/vaccineRecommend.spg?decorator=influenza
+# These are all Northern Hemisphere recommendations
+seasonToVaccine = {
+    '2005-2006': 'A(H3N2)/CALIFORNIA/7/2004',
+    '2006-2007': 'A(H3N2)/WISCONSIN/67/2005',
+    '2007-2008': 'A(H3N2)/WISCONSIN/67/2005',
+    '2008-2009': 'A(H3N2)/BRISBANE/10/2007',
+    '2009-2010': 'A(H3N2)/BRISBANE/10/2007',
+    '2010-2011': 'A(H3N2)/PERTH/16/2009',
+    '2011-2012': 'A(H3N2)/PERTH/16/2009',
+    '2012-2013': 'A(H3N2)/VICTORIA/361/2011',
+    '2013-2014': 'A(H3N2)/VICTORIA/361/2011',
+    '2014-2015': 'A(H3N2)/TEXAS/50/2012',
+    '2015-2016': 'A(H3N2)/SWITZERLAND/9715293/2013',
+    '2016-2017': 'A(H3N2)/HONG KONG/4801/2014',
+    '2017-2018': 'A(H3N2)/HONG KONG/4801/2014'
+}
+
 amino_acids = {
     "A",
     "C",

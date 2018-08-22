@@ -8,21 +8,21 @@ janToMay = 1, 2, 3, 4, 5
 
 def in_season(season):
     """Make function to test if a date is in season.
-    
+
     Args:
         season (str): E.g. '2006-2007'
-    
+
     Returns:
         function
     """
     yr1, yr2 = map(int, season.split('-'))
-    
+
     def fun(date):
         """Check if a date is in a season.
 
         Args:
             date (pd.Timestamp)
-        
+
         Returns:
             Bool
         """
@@ -32,16 +32,16 @@ def in_season(season):
             return True
         else:
             return False
-    
+
     return fun
 
 
 def season_from_timestamp(ts):
     """Convert timestamp to a season
-    
+
     Args:
         ts (pd.Timestamp)
-        
+
     Returns:
         str. Like 2006-2007
     """
@@ -60,7 +60,7 @@ def season_from_timestamp(ts):
 
 def date_str_to_timestamp(date):
     """Make date field in fasta header into a pd.timestamp.
-    
+
     Args:
         date (str): Date from fasta header
 
@@ -73,6 +73,6 @@ def date_str_to_timestamp(date):
 
     elif '(Day unknown)' in date:
         return pd.to_datetime(date[:7], format='%Y-%m')
-    
+
     else:
         return pd.to_datetime(date)

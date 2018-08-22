@@ -23,6 +23,7 @@ def is_not_amino_acid(a):
     else:
         return False
 
+
 def string_to_series(arg):
     """Each element in string becomes element in series
 
@@ -39,6 +40,7 @@ def string_to_series(arg):
         return pd.Series(tuple(arg))
     except TypeError:
         return pd.Series()
+
 
 def expand_sequences(series):
     """Expand Series containing sequences into DataFrame.

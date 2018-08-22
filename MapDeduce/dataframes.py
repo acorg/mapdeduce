@@ -9,11 +9,6 @@ from sklearn.preprocessing import quantile_transform
 
 from scipy.spatial.distance import euclidean
 
-import shapely
-import shapely.affinity as affinity
-from shapely.geometry.point import Point
-from shapely.geometry.multipoint import MultiPoint
-
 import matplotlib.pyplot as plt
 
 

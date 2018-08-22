@@ -17,12 +17,12 @@ import itertools
 
 import tqdm
 
-from plotting import setup_ax, amino_acid_colors, add_ellipses, \
+from .plotting import setup_ax, amino_acid_colors, add_ellipses, \
     combination_label, point_size, map_setup
-from munging import handle_duplicate_sequences
-from data import amino_acids
-from dataframes import CoordDf, SeqDf
-from helper import is_not_amino_acid
+from .munging import handle_duplicate_sequences
+from .data import amino_acids
+from .dataframes import CoordDf, SeqDf
+from .helper import is_not_amino_acid
 
 
 class MapSeq(object):
@@ -44,7 +44,7 @@ class MapSeq(object):
         self.all_coords = coord_df.copy()
         self.map = kwargs.pop("map", None)
 
-        # Replace any unkwnown amino acid with NaN
+        # Replace any unknown amino acids with NaN
         cond = self.all_seqs.applymap(lambda x: x not in amino_acids)
         self.all_seqs.mask(cond, inplace=True)
 

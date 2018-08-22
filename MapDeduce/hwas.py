@@ -11,10 +11,10 @@ from limix.vardec import VarianceDecomposition
 
 import warnings
 from tqdm import tqdm
-from permp import permp
 
-from plotting import plot_arrow, map_setup
-from dataframes import CoordDf
+from .permp import permp
+from .plotting import plot_arrow, map_setup
+from .dataframes import CoordDf
 
 import seaborn as sns
 import matplotlib.pyplot as plt

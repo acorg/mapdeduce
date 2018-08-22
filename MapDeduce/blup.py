@@ -11,6 +11,10 @@ from scipy.spatial.distance import euclidean
 
 from tqdm import tqdm
 
+from .dataframes import SeqDf, CoordDf
+from .hwas import cov
+from .MapSeq import MapSeq
+
 
 class LmmBlup(object):
     """Best linear unbiased predictions of a linear mixed model."""
@@ -113,3 +117,85 @@ class LmmBlup(object):
                 distance[j] = euclidean(p[j], test_set[j])
 
             self.kfold_error[i] = pd.Series(distance)
+
+
+class FluLmmBlup(object):
+
+    def __init__(self, filepath_or_df):
+        """Train LMM and predict antigenic coordinates on influenza data.
+
+        @param filepathor_df. Str. Filepath to csv file containing data to
+            train the LMM. File should have four columns that correspond to:
+                strain name, x coordinate, y coordinate, sequence
+            Or: pd.DataFrame with the same columns
+        """
+        if type(filepath_or_df) is str:
+            self.df = pd.read_csv(
+                filepath_or_buffer=filepath_or_df,
+                header=None,
+                index_col=0,
+                names=["strain", "x", "y", "seq"])
+        else:
+            self.df = filepath_or_df
+
+        # Drop strains without a sequence or antigenic coordinates
+        has_seq = self.df["seq"].notnull()
+        has_coord = self.df.loc[:, ["x", "y"]].notnull().all(axis=1)
+        self.df = self.df[has_seq & has_coord]
+
+        # Expand sequences so that every amino acid is a different element in a
+        # DataFrame
+        self.seq = self.df["seq"].apply(lambda x: pd.Series(tuple(x)))
+        self.seq.columns += 1
+        self.seq = self.seq[range(1, 329)]
+
+        # Coordinates
+        self.coords = self.df[["x", "y"]]
+
+    def predict(self, unknown_df):
+        """Train a LMM using self.seq and self.coords as training data. Then
+        predict coordinates of sequences in unknown_df.
+
+        @param unknown_df. pd.DataFrame. Dataframe containing sequences with
+            unknown antigenic coordinates. Must have columns names equal to
+            range(1, 329).
+
+        @returns Dataframe containing predicted antigenic coordinates.
+        """
+        # Concatenate the sequences to into one dataframe
+        try:
+            columns_match = (self.seq.columns == unknown_df.columns).all()
+
+        except ValueError:
+            raise ValueError("unknown_df does not have 328 columns")
+
+        if not columns_match:
+            raise ValueError(
+                "unknown_df columns are not equal to range(1, 329)")
+
+        seq_comb = pd.concat([self.seq, unknown_df])
+
+        # Process sequences for running LMM
+        seq_comb = SeqDf(seq_comb)
+        seq_comb.remove_invariant(inplace=True)
+        seq_comb.get_dummies(inplace=True)
+        seq_comb.merge_duplicate_dummies(inplace=True)
+
+        # Compute the covariance matrix of the dummies
+        K = cov(seq_comb.dummies.values)
+
+        # Make filler coordinates for the unknown sequences
+        # Their value is irrelevant - they are not used in training
+        n_unknown = unknown_df.shape[0]
+        filler = np.zeros((n_unknown, 2))
+        Y = np.vstack((self.coords.values, filler))
+
+        blup = LmmBlup(Y=Y, K=K)
+
+        n_known = self.df.shape[0]
+        train = np.arange(n_known)
+        test = np.arange(n_known, n_known + n_unknown)
+
+        return pd.DataFrame(
+            data=blup.predict(train=train, test=test),
+            index=unknown_df.index)

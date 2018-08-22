@@ -19,5 +19,5 @@ def is_not_amino_acid(a):
 
     if a not in amino_acids:
         return True
-
-    return False
+    else:
+        return False

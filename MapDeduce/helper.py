@@ -2,9 +2,10 @@
 
 from data import amino_acids
 
+
 def is_not_amino_acid(a):
     """Test if a is not an amino acid.
-    
+
     Args:
         a (str): String to test.
 

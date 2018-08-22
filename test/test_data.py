@@ -32,6 +32,6 @@ class MapSeqData(unittest.TestCase):
         self.assertIn(1, not_110_to_199)
         self.assertNotIn(0, not_110_to_199)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     unittest.main()

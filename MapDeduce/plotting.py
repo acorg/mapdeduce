@@ -1,6 +1,4 @@
-"""Utilities and defaults for plotting"""
-
-import numpy as np
+"""Utilities and defaults for plotting."""
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -170,6 +168,7 @@ def add_ellipses(map):
             va = "bottom"
 
         ax.text(x, y, cluster, fontsize=12, ha=ha, va=va, zorder=20)
+
 
 rectangle_params = {
     2009: {

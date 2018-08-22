@@ -98,7 +98,7 @@ class CoordDf(object):
 
     def paired_distances(self, other_df):
         """
-        Compute euclidean distances between points in self.df and paired 
+        Compute euclidean distances between points in self.df and paired
         points in another dataframe. The other dataframe must have the same
         dimensions as self.df
 

@@ -218,6 +218,6 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
         test = set(strains)
         self.assertEqual({"strain3"}, test)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     unittest.main()

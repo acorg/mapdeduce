@@ -115,6 +115,6 @@ class HwasLmmRegressOut(unittest.TestCase):
         expect = np.array(((0, 0), (-1, -2), (0, -2)))
         self.assertEqual(0, (output - expect).sum().sum())
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     unittest.main()

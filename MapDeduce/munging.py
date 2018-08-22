@@ -65,10 +65,10 @@ def read_eu_coordinate_layout(path):
     return df.loc['AG', :]
 
 
-# Compile these once
-strain_regex = re.compile("^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
-ah3n2_regex = re.compile("^([A-Z]+_)?A\(H3N2\)\/")
-human_regex = re.compile("\/HUMAN\/")
+# Compile once
+strain_regex = re.compile(r"^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
+ah3n2_regex = re.compile(r"^([A-Z]+_)?A\(H3N2\)\/")
+human_regex = re.compile(r"\/HUMAN\/")
 
 
 def clean_strain_name(strain_name):

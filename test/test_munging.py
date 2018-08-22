@@ -58,6 +58,6 @@ class DfFromFastaTests(unittest.TestCase):
         strain = "a/zhejiang/48/2004".upper()
         self.assertEqual("G", self.df.loc[strain, 5])
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     unittest.main()

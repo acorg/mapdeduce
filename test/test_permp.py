@@ -33,6 +33,6 @@ class Permp(unittest.TestCase):
         p = permp(1, 1000, 3, 997)
         self.assertIsInstance(p, np.ndarray)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     unittest.main()

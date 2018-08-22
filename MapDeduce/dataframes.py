@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 
 
 class CoordDf(object):
-    """Simple class for Dataframes containing x, y coordinates"""
+    """Class for x, y coordinate data."""
 
     def __init__(self, df):
         """@param df: pd.DataFrame. Must contain x and y columns."""
@@ -29,20 +29,18 @@ class CoordDf(object):
         Rotate points specified by the xy coordinates in the DataFrame
         a degrees around the origin anticlockwise.
 
-        This method is very slow with the number of points I typically have
-        in datasets (~5000). Instantiating this many Point instances is very
-        slow.
-
         @param a: Number. Arc degrees to rotate the dataframe by
         @param inplace: Bool. Rotate the data inplace, or return a rotated
             copy of the data.
         """
-        multipoint = MultiPoint(self.df.apply(Point, axis=1))
-        rotated = affinity.rotate(multipoint, angle=a)
-        array = np.array(shapely.geometry.base.dump_coords(rotated))
-        df = pd.DataFrame(array[:, 0])
-        df.columns = self.df.columns
-        df.index = self.df.index
+        theta = np.radians(a)
+        c, s = np.cos(theta), np.sin(theta)
+        R = np.array(((c, -s), (s, c)))
+
+        df = pd.DataFrame(
+            np.matmul(self.df, R), index=self.df.index,
+            columns=self.df.columns)
+
         if inplace:
             self.df = df
         else:

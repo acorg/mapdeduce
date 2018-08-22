@@ -11,6 +11,7 @@ from scipy.spatial.distance import euclidean
 
 import matplotlib.pyplot as plt
 
+from .helper import expand_sequences
 
 class CoordDf(object):
     """Class for x, y coordinate data."""
@@ -125,6 +126,19 @@ class SeqDf(object):
     def __init__(self, df):
         """@param df: pd.DataFrame. Columns are amino acid positions."""
         self.df = df
+
+    def __repr__(self):
+        return "SeqDf with {} samples and {} sequence positions.".format(
+                    *self.df.shape)
+
+    @classmethod
+    def from_series(cls, series):
+        """Make new SeqDf from a series.
+
+        @param series: pd.Series. Each element in series is a string. See
+            MapDeduce.helper.expand_sequences for more details.
+        """
+        return cls(expand_sequences(series))
 
     def remove_invariant(self, inplace=True):
         """Remove positions (columns) that contain only one amino acid.

@@ -1,5 +1,7 @@
 """Utilities and defaults for plotting."""
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from matplotlib.patches import Ellipse, Rectangle
@@ -281,6 +283,8 @@ def map_setup(ax=None):
     """Configure a plot to be an antigenic map.
 
     Maps have integer spaced grids, an aspect ratio of 1, and no axis labels.
+
+    @param ax. Matplotlib ax.
     """
     ax = plt.gca() if ax is None else ax
     ax.get_xaxis().set_major_locator(MultipleLocator(base=1.0))
@@ -291,3 +295,16 @@ def map_setup(ax=None):
     ax.set_xlabel("")
     ax.set_aspect(1)
     return ax
+
+def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):
+    """Plot a histogram as a line plot.
+
+    @param arr: Array-like.
+    @param hist_kwds: Dict. Passed to np.histogram
+    @param plot_kwds: Dict. Passed to plt.plot
+    """
+    hist, bin_edges = np.histogram(arr, **hist_kwds)
+    left = bin_edges[:-1]
+    right = bin_edges[1:]
+    mid = np.vstack((left, right)).mean(axis=0)
+    plt.plot(mid, hist, **plot_kwds)

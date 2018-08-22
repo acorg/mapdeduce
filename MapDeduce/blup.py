@@ -11,7 +11,7 @@ from scipy.spatial.distance import euclidean
 
 from tqdm import tqdm
 
-from .dataframes import SeqDf, CoordDf
+from .dataframes import SeqDf
 from .hwas import cov
 from .MapSeq import OrderedMapSeq
 from .helper import expand_sequences
@@ -44,8 +44,7 @@ class LmmBlup(object):
             raise ValueError("Must specify design matrix")
 
     def predict(self, train, test):
-        """
-        Train LMM using values in the training set, and return predicitons
+        """Train LMM using values in the training set, and return predictions
         for responses in the test set.
 
         @param train. n x 1 ndarray. Indexes of rows to use as the train set
@@ -73,8 +72,7 @@ class LmmBlup(object):
         return vc.predictPhenos()
 
     def predict_kfolds(self, n_splits, random_state=1234, progress_bar=True):
-        """
-        Predict k test folds of the data having trained on training folds.
+        """Predict k test folds of the data having trained on training folds.
 
         @param n_splits: Int. Number of folds.
         @param random_state: Int. Used to initialize random state.

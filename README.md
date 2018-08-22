@@ -1,7 +1,5 @@
 # MapDeduce
 
-![Example](data/example.png)
-
 A python library for:
 
 -   Handling antigenic maps and sequence data.
@@ -9,9 +7,11 @@ A python library for:
     diversity.
 -   Plotting antigenic maps.
 
+![Example](data/example.png)
+
 # Installation
 
 ```bash
-git clone https://github.com/davipatti/MapDeduce.git
-pip install -e MapDeduce
+git clone https://github.com/acorg/MapDeduce.git
+pip install -e ./MapDeduce
 ```

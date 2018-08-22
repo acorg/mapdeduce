@@ -208,16 +208,15 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
 
     def test_unknown_sequence(self):
         """
-        Unknown sequences (e.g. "X" / "-" in fasta) should not prevent
-        strains being considered equal. E.g. QK- should be considered equal to
-        QKL.
+        Any non-amino acids in sequences (e.g. "X" / "-" in fasta) should not
+        be included.
 
         strain6 should match strain3
         """
         grouped = self.ms.duplicate_sequences()
         strains = grouped.groups[("Q", "N", "A")]
         test = set(strains)
-        self.assertEqual({"strain3", "strain6"}, test)
+        self.assertEqual({"strain3"}, test)
 
 if __name__ == "__main__":
 

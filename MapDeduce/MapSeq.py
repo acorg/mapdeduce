@@ -22,6 +22,7 @@ from plotting import setup_ax, amino_acid_colors, add_ellipses, \
 from munging import handle_duplicate_sequences
 from data import amino_acids
 from dataframes import CoordDf, SeqDf
+from helper import is_not_amino_acid
 
 
 class MapSeq(object):
@@ -423,8 +424,12 @@ class MapSeq(object):
         return df
 
     def duplicate_sequences(self, **kwargs):
-        """
-        Find groups of duplicate sequences.
+        """Find groups of duplicate sequences.
+
+        Any element in self.seq_in_both that is not one of the standard 20
+        1-letter amino acid abbreviations is ignored. (It is treated as NaN,
+        see: http://pandas.pydata.org/pandas-docs/stable/
+            missing_data.html#na-values-in-groupby)
 
         Optional kwargs:
 
@@ -435,7 +440,8 @@ class MapSeq(object):
         @returns: pd.GroupBy
         """
         positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
-        return self.seq_in_both.groupby(positions)
+        df = self.seq_in_both
+        return df.mask(df.applymap(is_not_amino_acid)).groupby(positions)
 
     def plot_strains_with_combinations(self, combinations, without=False,
                                        plot_other=True, **kwargs):

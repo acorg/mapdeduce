@@ -837,7 +837,7 @@ class OrderedMapSeq(MapSeq):
     Like MapSeq, but the order of the indexes of the dataframes containing
     the coordinates and sequences are identical.
 
-    Also, positions with no amino acid diversity are remove.
+    Also, positions with no amino acid diversity are removed.
     """
 
     def __init__(self, *args, **kwargs):

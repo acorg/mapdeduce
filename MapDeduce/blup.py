@@ -13,7 +13,8 @@ from tqdm import tqdm
 
 from .dataframes import SeqDf, CoordDf
 from .hwas import cov
-from .MapSeq import MapSeq
+from .MapSeq import OrderedMapSeq
+from .helper import expand_sequences
 
 
 class LmmBlup(object):
@@ -127,7 +128,8 @@ class FluLmmBlup(object):
         @param filepathor_df. Str. Filepath to csv file containing data to
             train the LMM. File should have four columns that correspond to:
                 strain name, x coordinate, y coordinate, sequence
-            Or: pd.DataFrame with the same columns
+            Or: pd.DataFrame with the same columns. All strain names must be
+            unique.
         """
         if type(filepath_or_df) is str:
             self.df = pd.read_csv(
@@ -136,29 +138,27 @@ class FluLmmBlup(object):
                 index_col=0,
                 names=["strain", "x", "y", "seq"])
         else:
-            self.df = filepath_or_df
+            df = filepath_or_df
 
-        # Drop strains without a sequence or antigenic coordinates
-        has_seq = self.df["seq"].notnull()
-        has_coord = self.df.loc[:, ["x", "y"]].notnull().all(axis=1)
-        self.df = self.df[has_seq & has_coord]
+        if len(df.index) != len(set(df.index)):
+            raise ValueError("Indexes in DataFrame must all be unique.")
 
-        # Expand sequences so that every amino acid is a different element in a
-        # DataFrame
-        self.seq = self.df["seq"].apply(lambda x: pd.Series(tuple(x)))
-        self.seq.columns += 1
-        self.seq = self.seq[range(1, 329)]
+        coord_df = df[["x", "y"]]
+        seq_df = expand_sequences(df["seq"])
+        seq_df = seq_df[range(1, 329)]
 
-        # Coordinates
-        self.coords = self.df[["x", "y"]]
+        ms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+        self.seq = ms.seq_in_both
+        self.coord = ms.coords_in_both
 
     def predict(self, unknown_df):
-        """Train a LMM using self.seq and self.coords as training data. Then
+        """Train a LMM using self.seq and self.coord as training data. Then
         predict coordinates of sequences in unknown_df.
 
         @param unknown_df. pd.DataFrame. Dataframe containing sequences with
             unknown antigenic coordinates. Must have columns names equal to
-            range(1, 329).
+            range(1, 329). All indexes in unknown_df must be unique, and not
+            match any indexes in self.seq or self.coord.
 
         @returns Dataframe containing predicted antigenic coordinates.
         """
@@ -173,7 +173,13 @@ class FluLmmBlup(object):
             raise ValueError(
                 "unknown_df columns are not equal to range(1, 329)")
 
+        if len(unknown_df.index) != len(set(unknown_df.index)):
+            raise ValueError("Indexes in unknown_df must all be unique.")
+
         seq_comb = pd.concat([self.seq, unknown_df])
+
+        if len(unknown_df.index) + len(self.seq.index) > len(seq_comb.index):
+            raise ValueError("Indexes in unkown_df must not overlap self.seq")
 
         # Process sequences for running LMM
         seq_comb = SeqDf(seq_comb)
@@ -188,11 +194,11 @@ class FluLmmBlup(object):
         # Their value is irrelevant - they are not used in training
         n_unknown = unknown_df.shape[0]
         filler = np.zeros((n_unknown, 2))
-        Y = np.vstack((self.coords.values, filler))
+        Y = np.vstack((self.coord.values, filler))
 
         blup = LmmBlup(Y=Y, K=K)
 
-        n_known = self.df.shape[0]
+        n_known = self.coord.shape[0]
         train = np.arange(n_known)
         test = np.arange(n_known, n_known + n_unknown)
 

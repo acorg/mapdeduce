@@ -131,20 +131,20 @@ class CoordDf(object):
 
 
 class SeqDf(object):
-    """Class for dataframes containing amino acid sequences"""
+    """Class for DataFrames containing amino acid sequences."""
 
     def __init__(self, df):
-        """@param df: pd.DataFrame. Columns are amino acid positions"""
+        """@param df: pd.DataFrame. Columns are amino acid positions."""
         self.df = df
 
     def remove_invariant(self, inplace=True):
-        """Remove positions (columns) that contain only one amino acid
+        """Remove positions (columns) that contain only one amino acid.
 
         @param inplace: Bool.
         """
         mask = self.df.apply(lambda x: pd.unique(x).shape[0] > 1)
-        print "Removed {} sequence positions that were invariant".format(
-            (~mask).sum())
+        n = (~mask).sum()
+        print "Removed {} invariant sequence positions".format(n)
         new = self.df.loc[:, self.df.columns[mask]]
 
         if inplace:
@@ -153,7 +153,7 @@ class SeqDf(object):
             return new
 
     def get_dummies(self, inplace=True):
-        """Get dummy variable represenation of the sequences
+        """Get dummy variable representation of the sequences.
 
         @param inplace: Bool.
         """
@@ -210,8 +210,7 @@ class SeqDf(object):
 
         df = pd.DataFrame(
             data={"|".join(g.index): n for n, g in grouped},
-            index=self.dummies.index
-        )
+            index=self.dummies.index)
 
         if inplace:
             self.dummies = df

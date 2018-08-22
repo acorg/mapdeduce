@@ -12,6 +12,6 @@ A python library for:
 # Installation
 
 ```bash
-git clone https://github.com/davipatti/MapDeduce.git
-pip install -e MapDeduce
+git clone https://github.com/acorg/MapDeduce.git
+pip install -e ./MapDeduce
 ```

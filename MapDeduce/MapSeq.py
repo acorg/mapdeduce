@@ -81,9 +81,7 @@ class MapSeq(object):
     def scatter_with_without(self):
         """Plot indicating which antigens do and do not have sequences."""
         ax = plt.gca()
-        kwds = dict(ax=ax,
-                    x="x",
-                    y="y")
+        kwds = dict(ax=ax, x="x", y="y")
         n_without_sequence = self.coords_excl_to_coords.shape[0]
         self.coords_excl_to_coords.plot.scatter(
             color="darkgrey",
@@ -127,21 +125,13 @@ class MapSeq(object):
         # Antigens without a known sequence
         if not self.coords_excl_to_coords.empty:
             self.coords_excl_to_coords.plot.scatter(
-                ax=ax,
-                x="x",
-                y="y",
-                s=5,
-                color="darkgrey",
-                label="Unknown sequence"
-            )
+                ax=ax, x="x", y="y", s=5, color="darkgrey",
+                label="Unknown sequence")
 
         # Antigens with a known sequence
         kwds = dict(
-            lw=1,
-            edgecolor="white",
-            s=3 * point_size(self.seq_in_both.shape[0]),
-            **kwargs
-        )
+            lw=1, edgecolor="white",
+            s=3 * point_size(self.seq_in_both.shape[0]), **kwargs)
 
         proportions = self.variant_proportions(p=p) * 100
         seq_grouped = self.seq_in_both.groupby(p)
@@ -162,30 +152,14 @@ class MapSeq(object):
                 zorders = np.random.rand(seq_group.shape[0]) + 5
 
                 for z, (strain, row) in zip(zorders, coord_group.iterrows()):
-
-                    ax.scatter(
-                        x=row["x"],
-                        y=row["y"],
-                        zorder=z,
-                        **kwds
-                    )
+                    ax.scatter(x=row["x"], y=row["y"], zorder=z, **kwds)
 
                 # Plot the final point twice, but add a label for the group
-                ax.scatter(
-                    x=row["x"],
-                    y=row["y"],
-                    label=label,
-                    **kwds
-                )
+                ax.scatter(x=row["x"], y=row["y"], label=label, **kwds)
 
             else:
                 coord_group.plot.scatter(
-                    label=label,
-                    x='x',
-                    y='y',
-                    ax=ax,
-                    **kwds
-                )
+                    label=label, x='x', y='y', ax=ax, **kwds)
 
         if ellipses:
             add_ellipses(self.map)
@@ -193,14 +167,7 @@ class MapSeq(object):
         setup_ax(self.map)
 
         ax.legend()
-        ax.text(
-            x=0.5,
-            y=1,
-            s=p,
-            fontsize=25,
-            va="top",
-            transform=ax.transAxes
-        )
+        ax.text(x=0.5, y=1, s=p, fontsize=25, va="top", transform=ax.transAxes)
 
         return ax
 
@@ -232,20 +199,14 @@ class MapSeq(object):
             fig, ax = plt.subplots()
 
             # Antigens without a known sequence
-            self.coords_excl_to_coords.plot.scatter(ax=ax,
-                                                    x="x",
-                                                    y="y",
-                                                    s=5,
-                                                    color="lightgrey",
-                                                    label="Unknown sequence")
+            self.coords_excl_to_coords.plot.scatter(
+                ax=ax, x="x", y="y", s=5, color="lightgrey",
+                label="Unknown sequence")
 
             # Antigens with a known sequence
-            self.coords_in_both.plot.scatter(ax=ax,
-                                             x="x",
-                                             y="y",
-                                             s=10,
-                                             color="darkgrey",
-                                             label="Known sequence")
+            self.coords_in_both.plot.scatter(
+                ax=ax, x="x", y="y", s=10, color="darkgrey",
+                label="Known sequence")
 
             # More transparent lines when there are more points
             alpha = 0.95 ** len(pairs)
@@ -273,12 +234,10 @@ class MapSeq(object):
                     h.inference().p, h.z, *map(int, h.df))
             else:
                 h_report = "[Insufficient data]"
-            ax.text(x=0,
-                    y=1,
-                    s=r"2 sample Hotelling's T$^2$" + "\n" + h_report,
-                    ha="left",
-                    va="top",
-                    transform=ax.transAxes)
+
+            ax.text(
+                x=0, y=1, ha="left", va="top", transform=ax.transAxes,
+                s=r"2 sample Hotelling's T$^2$" + "\n" + h_report)
 
             if connecting_lines:
                 for pair in pairs:
@@ -308,12 +267,10 @@ class MapSeq(object):
                         raise ValueError("This 'pair' indexes less that 2 "
                                          "strains\n{}".format(pair))
 
-                    ax.add_collection(LineCollection(segments=segments,
-                                                     lw=1,
-                                                     color="black",
-                                                     alpha=alpha,
-                                                     zorder=10,
-                                                     label=""))
+                    ax.add_collection(
+                        LineCollection(
+                            segments=segments, lw=1, color="black",
+                            alpha=alpha, zorder=10, label=""))
 
             if ellipses:
                 add_ellipses(self.map)
@@ -415,9 +372,7 @@ class MapSeq(object):
 
             label = "+".join(
                 sorted(
-                    "{}{}".format(k, v) for k, v in combinations.iteritems()
-                )
-            )
+                    "{}{}".format(k, v) for k, v in combinations.iteritems()))
 
             warnings.warn("No strains with {}".format(label))
 
@@ -474,7 +429,6 @@ class MapSeq(object):
             print "No strains with {}".format(label)
 
         else:
-
             ax = kwargs.pop("ax", False)
 
             if not ax:
@@ -485,18 +439,13 @@ class MapSeq(object):
 
             if plot_other:
                 self.all_coords.plot.scatter(
-                    x="x",
-                    y="y",
-                    s=10,
-                    color="darkgrey",
-                    ax=ax)
+                    x="x", y="y", s=10, color="darkgrey", ax=ax)
 
             # self.all_coords.loc[strains, :] may be a Series, hence ax.scatter
             plt.scatter(
                 self.all_coords.loc[strains, "x"],
                 self.all_coords.loc[strains, "y"],
-                label=label,
-                **kwargs)
+                label=label, **kwargs)
             plt.legend()
 
             if self.map:
@@ -541,26 +490,18 @@ class MapSeq(object):
 
         Xgrid, Ygrid = np.meshgrid(
             np.linspace(xmin, xmax, num=xnum),
-            np.linspace(ymin, ymax, num=ynum)
-        )
+            np.linspace(ymin, ymax, num=ynum))
 
         Z = np.exp(
             kde.score_samples(
-                np.vstack([Xgrid.ravel(), Ygrid.ravel()]).T
-            )
-        )
+                np.vstack([Xgrid.ravel(), Ygrid.ravel()]).T))
 
         zsort = np.sort(Z)[::-1]
         dens = zsort[np.argmax(np.cumsum(zsort) > Z.sum() * c)]
 
         plt.contour(
-            Xgrid,
-            Ygrid,
-            Z.reshape(Xgrid.shape),
-            levels=[dens, ],
-            colors=color,
-            **kwargs
-        )
+            Xgrid, Ygrid, Z.reshape(Xgrid.shape), levels=[dens, ],
+            colors=color, **kwargs)
 
     def differ_by_n(self, n):
         """
@@ -888,12 +829,7 @@ class OrderedMapSeq(MapSeq):
 
             if plot:
                 ax = self.coord.df.plot.scatter(
-                    x="x",
-                    y="y",
-                    label="All points",
-                    c="black",
-                    s=5
-                )
+                    x="x", y="y", label="All points", c="black", s=5)
 
             mask = self.coord.points_in_patch(patch=patch)
 
@@ -919,11 +855,7 @@ class OrderedMapSeq(MapSeq):
         if plot and patch is not None:
 
             self.coord.df.plot.scatter(
-                x="x",
-                y="y",
-                label="Included",
-                ax=ax
-            )
+                x="x", y="y", label="Included", ax=ax)
 
             map_setup(ax)
 

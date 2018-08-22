@@ -31,10 +31,8 @@ class CoordDf(object):
         theta = np.radians(a)
         c, s = np.cos(theta), np.sin(theta)
         R = np.array(((c, -s), (s, c)))
-
-        df = pd.DataFrame(
-            np.matmul(self.df, R), index=self.df.index,
-            columns=self.df.columns)
+        arr = np.matmul(self.df, R)
+        df = pd.DataFrame(arr, index=self.df.index, columns=self.df.columns)
 
         if inplace:
             self.df = df
@@ -81,9 +79,8 @@ class CoordDf(object):
         @param inplace: Bool.
         """
         arr = quantile_transform(self.df, output_distribution="normal")
-        df = pd.DataFrame(arr)
-        df.columns = self.df.columns
-        df.index = self.df.index
+        df = pd.DataFrame(arr, index=self.df.index, columns=self.df.columns)
+
         if inplace:
             self.df = df
         else:
@@ -114,8 +111,7 @@ class CoordDf(object):
             try:
                 distances[i] = euclidean(
                     u=self.df.iloc[i, :],
-                    v=other_df.iloc[i, :]
-                )
+                    v=other_df.iloc[i, :])
 
             except ValueError:
                 distances[i] = np.nan

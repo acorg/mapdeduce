@@ -303,8 +303,21 @@ def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):
     @param hist_kwds: Dict. Passed to np.histogram
     @param plot_kwds: Dict. Passed to plt.plot
     """
+    x, y = calc_line_hist(arr=arr, hist_kwds=hist_kwds)
+    plt.plot(x, y, **plot_kwds)
+
+def calc_line_hist(arr, hist_kwds=dict()):
+    """Calculate x, y values for line histogram.
+
+    x values are the mid points of the bins.
+    y values are the frequencies / densities in each bin.
+
+    @param arr: Array-like.
+    @param hist_kwds: Dict. Passed to np.histogram
+    @returns tuple: (x, y)
+    """
     hist, bin_edges = np.histogram(arr, **hist_kwds)
     left = bin_edges[:-1]
     right = bin_edges[1:]
     mid = np.vstack((left, right)).mean(axis=0)
-    plt.plot(mid, hist, **plot_kwds)
+    return mid, hist

@@ -59,3 +59,16 @@ def expand_sequences(series):
     df.columns = range(df.shape[1])
     df.columns += 1
     return df[df.notnull().all(axis=1)]
+
+def check_all_not_null(df):
+    """Check that each row in df does not contain only null entries.
+
+    Args:
+        df (pd.DataFrame)
+
+    Returns:
+        If any rows are not null, returns pd.Index
+    """
+    mask = df.isnull().all(axis=1)
+    if mask.sum():
+        return mask[mask].index

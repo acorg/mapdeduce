@@ -4,34 +4,60 @@ import pandas as pd
 
 octToDec = 10, 11, 12
 janToMay = 1, 2, 3, 4, 5
+aprToNov = 4, 5, 6, 7, 8, 9, 10, 11
 
 
 def in_season(season):
     """Make function to test if a date is in season.
 
     Args:
-        season (str): E.g. '2006-2007'
+        season (str or int): E.g. '2006-2007' or '2005'. Northern hemisphere
+            seasons straddle two years, and are specified like '2005-2006'. 
+            Southern hemisphere seasons are fully contained within one year and
+            are specified like '2005' or as ints: 2005.
 
     Returns:
         function
     """
-    yr1, yr2 = map(int, season.split('-'))
+    if "-" in season:
+        # Northern hemisphere season
+        yr1, yr2 = map(int, season.split('-'))
 
-    def fun(date):
-        """Check if a date is in a season.
+        def fun(date):
+            """Check if a date is in a northern hemisphere season.
 
-        Args:
-            date (pd.Timestamp)
+            Args:
+                date (pd.Timestamp)
 
-        Returns:
-            Bool
-        """
-        if date.year == yr1 and date.month in octToDec:
-            return True
-        elif date.year == yr2 and date.month in janToMay:
-            return True
-        else:
-            return False
+            Returns:
+                Bool
+            """
+            if date.year == yr1 and date.month in octToDec:
+                return True
+            elif date.year == yr2 and date.month in janToMay:
+                return True
+            else:
+                return False
+
+    elif len(str(season)) == 4:
+        yr = int(season)
+
+        def fun(date):
+            """Check if a date is in the southern hemisphere season.
+
+            Args:
+                date (pd.Timestamp)
+
+            Returns:
+                Bool
+            """
+            if date.year == yr and date.month in aprToNov:
+                return True
+            else:
+                return False
+
+    else:
+        raise ValueError("'{}' doesn't look like a flu season.".format(season))
 
     return fun
 

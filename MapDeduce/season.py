@@ -19,7 +19,9 @@ def in_season(season):
     Returns:
         function
     """
-    if "-" in season:
+    hemisphere = hemisphere_from_season(season)
+
+    if hemisphere == "N":
         # Northern hemisphere season
         yr1, yr2 = map(int, season.split('-'))
 
@@ -39,7 +41,7 @@ def in_season(season):
             else:
                 return False
 
-    elif len(str(season)) == 4:
+    elif hemisphere == "S":
         yr = int(season)
 
         def fun(date):

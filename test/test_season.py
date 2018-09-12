@@ -4,7 +4,8 @@
 
 import unittest2 as unittest
 
-from MapDeduce.season import in_season, season_from_timestamp
+from MapDeduce.season import in_season, season_from_timestamp, \
+    hemisphere_from_season
 from pandas import to_datetime
 
 class InSeasonTests(unittest.TestCase):
@@ -75,6 +76,23 @@ class SeasonFromTimestampTests(unittest.TestCase):
         ts = to_datetime("2005")
         season = season_from_timestamp(ts=None, hemisphere="S")
         self.assertIsNone(season)
+
+class HemisphereFromSeasonTests(unittest.TestCase):
+    """Tests for MapDeduce.season.hemisphere_from_season"""
+
+    def test_nh_example(self):
+        self.assertEqual("N", hemisphere_from_season("2005-2006"))
+
+    def test_sh_example(self):
+        self.assertEqual("S", hemisphere_from_season("2014"))
+
+    def test_raises_example_1(self):
+        with self.assertRaises(ValueError):
+            hemisphere_from_season("2005-2004")
+
+    def test_raises_example_2(self):
+        with self.assertRaises(ValueError):
+            hemisphere_from_season("205")
 
 
 if __name__ == "__main__":

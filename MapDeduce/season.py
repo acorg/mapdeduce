@@ -117,3 +117,24 @@ def date_str_to_timestamp(date):
 
     else:
         return pd.to_datetime(date)
+
+def hemisphere_from_season(season):
+    """Classify a season as either N or S
+
+    Args:
+        season (str)
+
+    Returns
+        str: Either N or S.
+    """
+    msg = "Can't classify season: {}".format(season)
+    if "-" in season and len(season) == 9:
+        y1, y2 = map(int, season.split("-"))
+        if y1 + 1 == y2:
+            return "N"
+        else:
+            raise ValueError(msg)
+    elif len(str(season)) == 4 and int(season):
+        return "S"
+    else:
+        raise ValueError(msg)

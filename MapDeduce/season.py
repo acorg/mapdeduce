@@ -62,26 +62,41 @@ def in_season(season):
     return fun
 
 
-def season_from_timestamp(ts):
+def season_from_timestamp(ts, hemisphere):
     """Convert timestamp to a season
 
     Args:
         ts (pd.Timestamp)
+        hemisphere (str): "N" or "S" (northern or southern).
 
     Returns:
-        str. Like 2006-2007
+        str. Like "2006-2007" for northern hemisphere seasons or "2006" for
+        southern hemisphere seasons.
     """
     if ts is None:
         return None
 
-    elif ts.month in octToDec:
-        return "{}-{}".format(ts.year, ts.year + 1)
+    if hemisphere.upper() == "N":
 
-    elif ts.month in janToMay:
-        return "{}-{}".format(ts.year - 1, ts.year)
+        if ts.month in octToDec:
+            return "{}-{}".format(ts.year, ts.year + 1)
+
+        elif ts.month in janToMay:
+            return "{}-{}".format(ts.year - 1, ts.year)
+
+        else:
+            return "Not in main season / unknown"
+
+    elif hemisphere.upper() == "S":
+
+        if ts.month in aprToNov:
+            return str(ts.year)
+
+        else:
+            return "Not in main season / unknown"
 
     else:
-        return "Not in main season"
+        raise ValueError("hemisphere must be either 'N' or 'S'.")
 
 
 def date_str_to_timestamp(date):

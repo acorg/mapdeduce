@@ -1,4 +1,6 @@
 """Utilities and defaults for plotting."""
+from __future__ import division
+from builtins import range
 
 import numpy as np
 
@@ -15,22 +17,22 @@ def setup_ax(map):
     """
     ax = plt.gca()
     if map == 2017:
-        ax.set_xticks(range(-6, 7))
-        ax.set_yticks(range(-6, 6))
+        ax.set_xticks(list(range(-6, 7)))
+        ax.set_yticks(list(range(-6, 6)))
     elif map == 2009:
         ax.set_xlim(-10, 10)
-        ax.set_xticks(range(-10, 10))
-        ax.set_yticks(range(-13, 9))
+        ax.set_xticks(list(range(-10, 10)))
+        ax.set_yticks(list(range(-13, 9)))
     elif map == 2018:
         ax.set_xlim(-7, 7)
         ax.set_ylim(-7, 7)
-        ax.set_xticks(range(-7, 8))
-        ax.set_yticks(range(-7, 8))
+        ax.set_xticks(list(range(-7, 8)))
+        ax.set_yticks(list(range(-7, 8)))
     elif map == "cdc-melb-2017-merge":
         ax.set_xlim(-7, 7)
         ax.set_ylim(-7, 7)
-        ax.set_xticks(range(-7, 8))
-        ax.set_yticks(range(-6, 7))
+        ax.set_xticks(list(range(-7, 8)))
+        ax.set_yticks(list(range(-6, 7)))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_xlabel("")
@@ -133,7 +135,7 @@ def add_ellipses(map):
     @param map. Str. Either Pre2009 or 2017
     """
     ax = plt.gca()
-    for cluster, params in ellipse_params[map].iteritems():
+    for cluster, params in ellipse_params[map].items():
         ax.add_artist(Ellipse(zorder=15, **params))
 
         # Label the Ellipse
@@ -190,7 +192,7 @@ def add_rectangles(map):
     @param map: Str. 2009
     """
     ax = plt.gca()
-    for rectangle, params in rectangle_params[map].iteritems():
+    for rectangle, params in rectangle_params[map].items():
         ax.add_artist(Rectangle(zorder=15, **params))
 
 
@@ -233,7 +235,7 @@ def combination_label(combination):
     @returns string: E.g.:
                     "145K+189S+193G"
     """
-    comb_list = sorted("{}{}".format(k, v) for k, v in combination.iteritems())
+    comb_list = sorted("{}{}".format(k, v) for k, v in combination.items())
     return "+".join(comb_list)
 
 

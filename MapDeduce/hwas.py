@@ -1,6 +1,7 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
-from __future__ import print_function
+from __future__ import print_function, division
+from builtins import zip, map, str, object, range
 
 import numpy as np
 import pandas as pd
@@ -34,7 +35,7 @@ def shuffle_values(nperm, values):
     """
     assert values.ndim == 1
     arr = np.empty((values.shape[0], nperm))
-    for i in xrange(nperm):
+    for i in range(nperm):
         arr[:, i] = sklearn.utils.shuffle(values)
     return arr
 
@@ -104,7 +105,7 @@ def qq_plot(results, snps=None, **kwargs):
     if snps is not None:
         print("Only plotting substitutions at these positions:\n{}".format(
             ",".join(map(str, snps))))
-        df = pd.concat(map(lambda x: df.filter(regex=str(x), axis=0), snps))
+        df = pd.concat([df.filter(regex=str(x), axis=0) for x in snps])
     df.sort_values("p", inplace=True)
 
     if larger is not None:
@@ -686,7 +687,7 @@ class HwasLmm(object):
         sns.stripplot(data=df, x=x, y=y, color="black", ax=ax, **kwargs)
         # Plot the means of the groups
         means = np.empty((2, 2))
-        for i, (x, idx) in enumerate(df.groupby(snp).groups.iteritems()):
+        for i, (x, idx) in enumerate(df.groupby(snp).groups.items()):
             means[i, 0] = x
             means[i, 1] = df.loc[idx, y].mean()
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")

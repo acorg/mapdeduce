@@ -23,12 +23,12 @@ class DictFromFastaTests(unittest.TestCase):
     def test_lower_absent(self):
         """Keys should all be upper case"""
         strain = "a/zhejiang/48/2004"
-        self.assertNotIn(strain, self.dict.keys())
+        self.assertNotIn(strain, list(self.dict.keys()))
 
     def test_upper_present(self):
         """Keys should all be upper case"""
         strain = "a/zhejiang/48/2004".upper()
-        self.assertIn(strain, self.dict.keys())
+        self.assertIn(strain, list(self.dict.keys()))
 
 
 class DfFromFastaTests(unittest.TestCase):

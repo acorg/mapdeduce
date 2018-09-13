@@ -1,5 +1,7 @@
 """BLUP: Best linear unbiased predictions of a linear mixed model."""
 
+from builtins import range
+
 import numpy as np
 import pandas as pd
 
@@ -143,7 +145,7 @@ class FluLmmBlup(object):
 
         coord_df = df[["x", "y"]]
         seq_df = expand_sequences(df["seq"])
-        seq_df = seq_df[range(1, 329)]
+        seq_df = seq_df[list(range(1, 329))]
 
         ms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
         self.seq = ms.seq_in_both

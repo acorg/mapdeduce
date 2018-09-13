@@ -2,6 +2,7 @@
 
 # Source:
 #   https://www.fludb.org/brc/vaccineRecommend.spg?decorator=influenza
+from builtins import range
 seasonToVaccine = {
     '2000-2001': 'A(H3N2)/MOSCOW/10/1999',
     '2001-2002': 'A(H3N2)/MOSCOW/10/1999',
@@ -78,8 +79,8 @@ amino_acids = {
     "Y",
 }
 
-not_109_to_301 = range(1, 109) + range(302, 329)
-not_110_to_199 = range(1, 110) + range(200, 329)
+not_109_to_301 = list(range(1, 109)) + list(range(302, 329))
+not_110_to_199 = list(range(1, 110)) + list(range(200, 329))
 
 
 # Cluster difference amino acid polymorphisms for post SY97

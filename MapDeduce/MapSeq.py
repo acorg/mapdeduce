@@ -1,6 +1,8 @@
 """Contains the main class to represent maps with sequences."""
 
-from __future__ import print_function
+from __future__ import print_function, division
+
+from builtins import zip, map, str, range, object
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -25,6 +27,7 @@ from .munging import handle_duplicate_sequences
 from .data import amino_acids
 from .dataframes import CoordDf, SeqDf
 from .helper import is_not_amino_acid
+from functools import reduce
 
 
 class MapSeq(object):
@@ -233,7 +236,7 @@ class MapSeq(object):
             if len(samples[0]) > 1 and len(samples[1]) > 1:
                 h = spm1d.stats.hotellings2(*samples)
                 h_report = "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
-                    h.inference().p, h.z, *map(int, h.df))
+                    h.inference().p, h.z, *list(map(int, h.df)))
             else:
                 h_report = "[Insufficient data]"
 
@@ -335,8 +338,8 @@ class MapSeq(object):
 
         @returns Tuple
         """
-        proportions_all_variants = map(self.variant_proportions,
-                                       self.variant_positions)
+        proportions_all_variants = list(map(self.variant_proportions,
+                                       self.variant_positions))
         proportions_all_variants_sorted = sorted(proportions_all_variants,
                                                  key=lambda x: x[-1])
         return tuple(p.name for p in proportions_all_variants_sorted)
@@ -354,12 +357,12 @@ class MapSeq(object):
         @returns pd.DataFrame. Containing strains with the amino acid
             combinations.
         """
-        for k in combinations.keys():
+        for k in list(combinations.keys()):
             if k not in self.seq_in_both.columns:
                 raise ValueError("Position {} is unknown.")
 
         masks = (self.seq_in_both.loc[:, k] == v
-                 for k, v in combinations.iteritems())
+                 for k, v in combinations.items())
 
         mask = reduce(and_, masks)
 
@@ -372,7 +375,7 @@ class MapSeq(object):
 
             label = "+".join(
                 sorted(
-                    "{}{}".format(k, v) for k, v in combinations.iteritems()))
+                    "{}{}".format(k, v) for k, v in combinations.items()))
 
             warnings.warn("No strains with {}".format(label))
 
@@ -420,7 +423,7 @@ class MapSeq(object):
             without=without)
 
         label = "+".join(
-            sorted("{}{}".format(k, v) for k, v in combinations.iteritems()))
+            sorted("{}{}".format(k, v) for k, v in combinations.items()))
 
         if without:
             label = "Without " + label
@@ -602,7 +605,7 @@ class MapSeq(object):
         if positions is None:
             positions = self.seq_in_both.columns.tolist()
         groupby = self.seq_in_both.groupby(positions)
-        for sequence, strains in groupby.groups.iteritems():
+        for sequence, strains in groupby.groups.items():
             if len(strains) > 1:
                 identical.append(strains)
         return identical
@@ -649,7 +652,7 @@ class MapSeq(object):
             all positions.
         """
         error = self.error(positions=positions)
-        max_error = max(map(max, error.values()))
+        max_error = max(list(map(max, list(error.values()))))
         step = 0.5
         bins = np.arange(0, np.ceil(max_error) + step, step)
 
@@ -842,7 +845,7 @@ class OrderedMapSeq(MapSeq):
         if rename_idx:
             old_idx = self.coord.df.index
             new_idx = ["strain-{}".format(i) for i in range(old_idx.shape[0])]
-            self.strain_names = dict(zip(new_idx, old_idx))
+            self.strain_names = dict(list(zip(new_idx, old_idx)))
             self.coord.df.index = new_idx
             self.seqs.df.index = new_idx
 

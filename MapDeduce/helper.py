@@ -1,7 +1,10 @@
 """Helper functions."""
 
+from __future__ import absolute_import
+from builtins import range
+
 import pandas as pd
-from data import amino_acids
+from .data import amino_acids
 
 
 def is_not_amino_acid(a):
@@ -56,7 +59,7 @@ def expand_sequences(series):
             series.index.
     """
     df = series.apply(string_to_series)
-    df.columns = range(df.shape[1])
+    df.columns = list(range(df.shape[1]))
     df.columns += 1
     return df[df.notnull().all(axis=1)]
 

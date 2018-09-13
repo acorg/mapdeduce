@@ -1,5 +1,7 @@
 """Code for classifying dates into influenza seasons and related processes."""
 
+from builtins import str, map
+
 import pandas as pd
 
 octToDec = 10, 11, 12
@@ -12,7 +14,7 @@ def in_season(season):
 
     Args:
         season (str or int): E.g. '2006-2007' or '2005'. Northern hemisphere
-            seasons straddle two years, and are specified like '2005-2006'. 
+            seasons straddle two years, and are specified like '2005-2006'.
             Southern hemisphere seasons are fully contained within one year and
             are specified like '2005' or as ints: 2005.
 
@@ -23,7 +25,7 @@ def in_season(season):
 
     if hemisphere == "N":
         # Northern hemisphere season
-        yr1, yr2 = map(int, season.split('-'))
+        yr1, yr2 = list(map(int, season.split('-')))
 
         def fun(date):
             """Check if a date is in a northern hemisphere season.
@@ -131,7 +133,7 @@ def hemisphere_from_season(season):
     """
     msg = "Can't classify season: {}".format(season)
     if "-" in season and len(season) == 9:
-        y1, y2 = map(int, season.split("-"))
+        y1, y2 = list(map(int, season.split("-")))
         if y1 + 1 == y2:
             return "N"
         else:

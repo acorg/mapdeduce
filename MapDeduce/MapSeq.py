@@ -1,5 +1,7 @@
 """Contains the main class to represent maps with sequences."""
 
+from __future__ import print_function
+
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
@@ -189,7 +191,7 @@ class MapSeq(object):
         label = "".join(map(str, sub))
 
         if not combinations:
-            print "No pairs of strains with {}".format(label)
+            print("No pairs of strains with {}".format(label))
             return
 
         # Collect x, y of points to plot, and lines between
@@ -310,16 +312,14 @@ class MapSeq(object):
             for p in sorted_most_common:
                 fobj.write(img_tag.format(filename.format(p)))
 
-        print "Wrote .by_primary.txt and .by_most_common.txt."
+        print("Wrote .by_primary.txt and .by_most_common.txt.")
 
-        print "There are {} variant positions.".format(
-            len(self.variant_positions)
-        )
-
-        print "Doing",
+        n = len(self.variant_positions)
+        print("There are {} variant positions.".format(n))
+        print("Doing", end="")
 
         for i, p in enumerate(self.variant_positions):
-            print "{}".format(p),
+            print("{}".format(p), end="")
 
             fig, ax = plt.subplots()
             self.scatter_colored_by_amino_acid(p, **kwds)
@@ -426,7 +426,7 @@ class MapSeq(object):
             label = "Without " + label
 
         if df.empty:
-            print "No strains with {}".format(label)
+            print("No strains with {}".format(label))
 
         else:
             ax = kwargs.pop("ax", False)
@@ -435,7 +435,7 @@ class MapSeq(object):
                 fig, ax = plt.subplots()
 
             strains = df.index
-            print "{} strains with {}".format(len(strains), label)
+            print("{} strains with {}".format(len(strains), label))
 
             if plot_other:
                 self.all_coords.plot.scatter(

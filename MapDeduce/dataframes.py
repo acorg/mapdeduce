@@ -1,5 +1,7 @@
 """Classes for handling DataFrames containing coordinates and sequences"""
 
+from __future__ import print_function
+
 import numpy as np
 import pandas as pd
 
@@ -147,7 +149,7 @@ class SeqDf(object):
         """
         mask = self.df.apply(lambda x: pd.unique(x).shape[0] > 1)
         n = (~mask).sum()
-        print "Removed {} invariant sequence positions".format(n)
+        print("Removed {} invariant sequence positions".format(n))
         new = self.df.loc[:, self.df.columns[mask]]
 
         if inplace:

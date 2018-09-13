@@ -1,15 +1,19 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
+from __future__ import print_function
+
 import numpy as np
 import pandas as pd
 
 import scipy
 import sklearn
 
+import warnings
+warnings.filterwarnings("ignore", module="h5py")
+
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
-import warnings
 from tqdm import tqdm
 
 from .permp import permp
@@ -98,9 +102,8 @@ def qq_plot(results, snps=None, **kwargs):
     # phenotype
     df = results
     if snps is not None:
-        print "Only plotting substitutions at these positions:\n{}".format(
-            ",".join(map(str, snps))
-        )
+        print("Only plotting substitutions at these positions:\n{}".format(
+            ",".join(map(str, snps))))
         df = pd.concat(map(lambda x: df.filter(regex=str(x), axis=0), snps))
     df.sort_values("p", inplace=True)
 
@@ -631,9 +634,9 @@ class HwasLmm(object):
             warnings.warn("Only implemented for univariate phenotypes")
         pheno = self.pheno.columns[0]
         if "p-empirical" in results.items:
-            print "empirical pvalues already in results will be overwritten:"
+            print("empirical pvalues already in results will be overwritten:")
             ser = results.loc["p-empirical", pheno, :]
-            print ser[ser.notnull()]
+            print(ser[ser.notnull()])
 
         pvalues = results.loc["p-corrected", pheno, :]
         snps_below_cutoff = pvalues.index[pvalues < cutoff]

@@ -1,6 +1,7 @@
 """Classes for handling DataFrames containing coordinates and sequences"""
 
 from __future__ import print_function
+from builtins import range, object
 
 import numpy as np
 import pandas as pd
@@ -179,7 +180,7 @@ class SeqDf(object):
         """
         values = self.dummies.loc[:, c].values
         arr = np.empty((values.shape[0], n_shuffles))
-        for i in xrange(n_shuffles):
+        for i in range(n_shuffles):
             arr[:, i] = sklearn.utils.shuffle(values)
         return arr
 

@@ -95,8 +95,7 @@ def site_consensus(series):
     if vc.empty:  # There are only "X", "-" or null
         return "-"
     else:
-        max_count = vc.iloc[vc.values.argmax()]
-        all_highest = vc[vc == max_count]  # All sites with count == max_count
+        all_highest = vc[vc == vc.max()]  # All sites with count == max_count
         if all_highest.shape[0] == 1:
             return all_highest.index[0]
         else:

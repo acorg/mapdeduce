@@ -1,7 +1,7 @@
 .PHONY: test check
 
 test:
-	trial test/*.py
+	trial test/test_*.py
 
 check:
 	pyflakes */*.py

@@ -3,7 +3,10 @@
 """Tests for MapSeq class"""
 
 import numpy as np
-import unittest2 as unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 import pandas as pd
 
 from MapDeduce.mapseq import MapSeq

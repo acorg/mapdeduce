@@ -5,7 +5,10 @@
 import numpy as np
 import pandas as pd
 from MapDeduce.helper import expand_sequences
-import unittest2 as unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 
 class ExpandSequences(unittest.TestCase):

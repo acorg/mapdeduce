@@ -2,7 +2,10 @@
 
 """Tests for code in MapDeduce/season.py"""
 
-import unittest2 as unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 from MapDeduce.season import in_season, season_from_timestamp, \
     hemisphere_from_season

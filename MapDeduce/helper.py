@@ -93,7 +93,7 @@ def site_consensus(series):
     series = series.mask(series == "X").mask(series == "-").mask(pd.isnull)
     vc = series.value_counts()
     if vc.empty:  # There are only "X", "-" or null
-        return "-"
+        return "X"
     else:
         all_highest = vc[vc == vc.max()]  # All sites with count == max_count
         if all_highest.shape[0] == 1:

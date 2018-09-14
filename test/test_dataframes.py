@@ -115,5 +115,47 @@ class SeqDfConsensusTests(unittest.TestCase):
         cons = self.sdf.consensus()
         self.assertEqual("XNRKSE", "".join(cons))
 
+class SeqDfMergeTests(unittest.TestCase):
+    """Tests for MapDeduce.dataframes.SeqDf.consensus."""
+
+    def setUp(self):
+        """StrainC should be replaced by the consensus of the strainC seqs."""
+        df = pd.DataFrame([
+            ["A", "A", "D", "D"],
+            ["N", "X", "X", "X"],
+            ["-", "-", "-", "R"],
+            ["K", "K", "K", "K"],
+            ["S", "T", "S", "S"],
+            ["E", "E", "E",  None]
+        ], index=list(range(1, 7)),
+        columns=["strainA", "strainB", "strainC", "strainC"]).T
+        self.sdf = SeqDf(df)
+
+    def test_df_smaller(self):
+        """df should be one row shorter."""
+        sdf = self.sdf.merge_duplicate_strains()
+        self.assertEqual(3, sdf.df.shape[0])
+
+    def test_update_inplace(self):
+        self.sdf.merge_duplicate_strains(inplace=True)
+        self.assertEqual(3, self.sdf.df.shape[0])
+
+    def test_other_sequences_unchanged(self):
+        self.sdf.merge_duplicate_strains(inplace=True)
+        self.assertEqual("AN-KSE", "".join(self.sdf.df.loc["strainA"]))
+
+    def test_strainC_is_its_consensus(self):
+        self.sdf.merge_duplicate_strains(inplace=True)
+        self.assertEqual("DXRKSE", "".join(self.sdf.df.loc["strainC"]))
+
+    def test_only_single_strainC(self):
+        self.sdf.merge_duplicate_strains(inplace=True)
+        n = self.sdf.df.index.value_counts()["strainC"]
+        self.assertEqual(1, n)
+
+    def test_returns_seqdf(self):
+        sdf = self.sdf.merge_duplicate_strains(inplace=False)
+        self.assertIsInstance(sdf, SeqDf)
+
 if __name__ == "__main__":
     unittest.main()

@@ -229,3 +229,22 @@ class SeqDf(object):
         @returns pd.Series.
         """
         return self.df.apply(site_consensus, axis=0)
+
+    def merge_duplicate_strains(self, inplace=False):
+        """Replace all strains that have the same index with a single
+        consensus strain.
+
+        @param inplace: Bool.
+
+        @param returns: MapDeduce.dataframes.SeqDf, if inplace=False.
+        """
+        vc = self.df.index.value_counts()
+        dupes = (vc[vc > 1]).index
+        data = {d: SeqDf(self.df.loc[d]).consensus() for d in dupes}
+        cons = pd.DataFrame.from_dict(data, orient="index")
+        df = pd.concat([self.df.drop(dupes, axis=0), cons])
+
+        if inplace:
+            self.df = df
+        else:
+            return SeqDf(df)

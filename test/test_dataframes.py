@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Tests for dataframes."""
+"""Tests for data"""
 
 import unittest2 as unittest
 
@@ -16,10 +16,8 @@ class CoordDfPairedDistTests(unittest.TestCase):
     def test_array_returned(self):
         """Should return an np.ndarray"""
         size, ndim = 4, 2
-        df = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
-        other = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        df = pd.DataFrame(np.random.normal(size, ndim))
+        other = pd.DataFrame(np.random.normal(size, ndim))
         cdf = CoordDf(df)
         distances = cdf.paired_distances(other)
         self.assertIsInstance(distances, np.ndarray)
@@ -27,10 +25,8 @@ class CoordDfPairedDistTests(unittest.TestCase):
     def test_len_array_returned(self):
         """Should return an np.ndarray of particular length"""
         size, ndim = 4, 2
-        df = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
-        other = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        df = pd.DataFrame(np.random.normal(size, ndim))
+        other = pd.DataFrame(np.random.normal(size, ndim))
         cdf = CoordDf(df)
         distances = cdf.paired_distances(other)
         self.assertEqual(size, distances.shape[0])
@@ -41,12 +37,10 @@ class CoordDfPairedDistTests(unittest.TestCase):
         Here, index len mismatch.
         """
         size, ndim = 4, 2
-        df = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        df = pd.DataFrame(np.random.normal(size, ndim))
 
         size += 1
-        other = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        other = pd.DataFrame(np.random.normal(size, ndim))
         cdf = CoordDf(df)
 
         with self.assertRaises(ValueError):
@@ -58,12 +52,10 @@ class CoordDfPairedDistTests(unittest.TestCase):
         Here, column len mismatch.
         """
         size, ndim = 4, 2
-        df = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        df = pd.DataFrame(np.random.normal(size, ndim))
 
         ndim += 1
-        other = pd.DataFrame(
-            np.random.normal(size=size * ndim).reshape(size, ndim))
+        other = pd.DataFrame(np.random.normal(size, ndim))
         cdf = CoordDf(df)
 
         with self.assertRaises(ValueError):
@@ -95,15 +87,17 @@ class SeqDfConsensusTests(unittest.TestCase):
         Position 1 tests what happens with a tie - should produce an X.
         Position 2 tests that X doesn't contribute to consensus.
         Position 3 tests that - doesn't contribute to consensus.
+        Position 5 tests a uniform site.
         Position 5 tests the most abundant amino acid.
+        Position 6 tests that NaN does not contribute to consensus.
         """
         df = pd.DataFrame.from_dict({
             #            1    2    3    4    5
-            "strainA": ["A", "N", "_", "K", "S"],
-            "strainB": ["A", "X", "_", "K", "T"],
-            "strainC": ["D", "X", "_", "K", "S"],
-            "strainC": ["D", "X", "R", "K", "S"]},
-            orient="index", columns=list(range(1, 6)))
+            "strainA": ["A", "N", "_", "K", "S", "E"],
+            "strainB": ["A", "X", "_", "K", "T", "E"],
+            "strainC": ["D", "X", "_", "K", "S", "E"],
+            "strainC": ["D", "X", "R", "K", "S", None]},
+            orient="index", columns=list(range(1, 7)))
         self.sdf = SeqDf(df)
 
     def test_returns_series(self):
@@ -116,7 +110,7 @@ class SeqDfConsensusTests(unittest.TestCase):
 
     def test_sequence(self):
         cons = self.sdf.consensus()
-        self.assertEqual("ANRKS", "".join(cons))
+        self.assertEqual("XNRKSE", "".join(cons))
 
 if __name__ == "__main__":
     unittest.main()

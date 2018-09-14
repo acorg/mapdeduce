@@ -14,7 +14,7 @@ from scipy.spatial.distance import euclidean
 
 import matplotlib.pyplot as plt
 
-from .helper import expand_sequences
+from .helper import expand_sequences, site_consensus
 
 class CoordDf(object):
     """Class for x, y coordinate data."""
@@ -222,3 +222,10 @@ class SeqDf(object):
             self.dummies = df
         else:
             return df
+
+    def consensus(self):
+        """Compute the consensus sequence
+
+        @returns pd.Series.
+        """
+        return self.df.apply(site_consensus, axis=0)

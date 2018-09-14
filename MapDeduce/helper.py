@@ -75,3 +75,29 @@ def check_all_not_null(df):
     mask = df.isnull().all(axis=1)
     if mask.sum():
         return mask[mask].index
+
+def site_consensus(series):
+    """Return the consensus amino acid of a series.
+
+    Notes:
+        - Should return the amino acid with the highest value count in series.
+        - When two amino acids tie with the highest value count, return "X".
+        - "X", NaN and "-" should not contribute to value counts.
+
+    Args:
+        series (pd.Series)
+
+    Returns:
+        str
+    """
+    series = series.mask(series == "X").mask(series == "-").mask(pd.isnull)
+    vc = series.value_counts()
+    if vc.empty:  # There are only "X", "-" or null
+        return "-"
+    else:
+        max_count = vc.iloc[vc.values.argmax()]
+        all_highest = vc[vc == max_count]  # All sites with count == max_count
+        if all_highest.shape[0] == 1:
+            return all_highest.index[0]
+        else:
+            return "X"

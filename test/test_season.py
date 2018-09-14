@@ -76,7 +76,6 @@ class SeasonFromTimestampTests(unittest.TestCase):
         self.assertEqual("Not in main season / unknown", season)
 
     def test_ts_None(self):
-        ts = to_datetime("2005")
         season = season_from_timestamp(ts=None, hemisphere="S")
         self.assertIsNone(season)
 

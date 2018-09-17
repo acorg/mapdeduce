@@ -15,6 +15,7 @@ from scipy.spatial.distance import euclidean
 import matplotlib.pyplot as plt
 
 from .helper import expand_sequences, site_consensus
+from .munging import df_from_fasta
 
 class CoordDf(object):
     """Class for x, y coordinate data."""
@@ -22,6 +23,10 @@ class CoordDf(object):
     def __init__(self, df):
         """@param df: pd.DataFrame. Must contain x and y columns."""
         self.df = df
+
+    def __repr__(self):
+        return "CoordDf with {} samples and {} dimensions.".format(
+                    *self.df.shape)
 
     def rotate(self, a, inplace=True):
         """
@@ -133,6 +138,14 @@ class SeqDf(object):
     def __repr__(self):
         return "SeqDf with {} samples and {} sequence positions.".format(
                     *self.df.shape)
+
+    @classmethod
+    def from_fasta(cls, path):
+        """Make a SeqDf from a fasta file.
+
+        @param path: Str. Path to fasta file.
+        """
+        return cls(df_from_fasta(path=path, positions="infer"))
 
     @classmethod
     def from_series(cls, series):
@@ -248,3 +261,15 @@ class SeqDf(object):
             self.df = df
         else:
             return SeqDf(df)
+
+    def to_fasta(self, path):
+        """Write the sequences in fasta format.
+
+        @param path: Path to write file.
+        """
+        if not path.lower().endswith(".fasta"):
+            path += ".fasta"
+        with open(path, "w") as handle:
+            for row in self.df.iterrows():
+                handle.write(">{}\n".format(row.name))
+                handle.write("{}\n".format("".join(row)))

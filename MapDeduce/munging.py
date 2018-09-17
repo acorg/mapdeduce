@@ -24,10 +24,11 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
     Read fasta file specified in path.
 
     @param path: String.
-    @param positions: List-like containing integers. Specifies the numbering
-        used in the fasta file. The first item in this list specifies the
+    @param positions: List-like or "infer". If list-like, must contain integers
+        that specify the positions. The first item in this list specifies the
         first position in the fasta file. Positions in the fasta file beyond
-        the last element in this list are dropped.
+        the last element in this list are dropped. If "infer", then use
+        positions starting at 1.
 
     @returns pd.DataFrame: Indexes are record IDs in upper case, columns are
         positions
@@ -41,9 +42,12 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
 
     df = pd.DataFrame(data, index=index)
 
-    df = df.iloc[:, :len(positions)]  # Drop unwanted columns
+    if positions == "infer":
+        df.columns = list(range(1, df.shape[1] + 1))
 
-    df.columns = positions  # Rename columns
+    else:
+        df = df.iloc[:, :len(positions)]  # Drop unwanted columns
+        df.columns = positions  # Rename columns
 
     return df
 

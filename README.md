@@ -13,5 +13,7 @@ A python library for:
 
 ```bash
 git clone https://github.com/acorg/MapDeduce.git
-pip install -e ./MapDeduce
+cd ./MapDeduce
+pip install -r ./requirements-min.txt
+pip install -e .
 ```

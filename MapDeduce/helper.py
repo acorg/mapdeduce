@@ -63,6 +63,7 @@ def expand_sequences(series):
     df.columns += 1
     return df[df.notnull().all(axis=1)]
 
+
 def check_all_not_null(df):
     """Check that each row in df does not contain only null entries.
 
@@ -75,6 +76,7 @@ def check_all_not_null(df):
     mask = df.isnull().all(axis=1)
     if mask.sum():
         return mask[mask].index
+
 
 def site_consensus(series):
     """Return the consensus amino acid of a series.

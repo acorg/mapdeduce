@@ -122,6 +122,7 @@ def date_str_to_timestamp(date):
     else:
         return pd.to_datetime(date)
 
+
 def hemisphere_from_season(season):
     """Classify a season as either N or S
 

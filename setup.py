@@ -1,4 +1,30 @@
+#!/usr/bin/env python
+
 from setuptools import setup
+
+
+def version():
+    """Lookup the version.
+
+    Notes:
+        Taken from https://github.com/acorg/dark-matter/blob/master/setup.py
+
+    Returns:
+        Version (str)
+    """
+    import os
+    import re
+
+    init = os.path.join('MapDeduce', '__init__.py')
+    with open(init) as fp:
+        initData = fp.read()
+    match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]",
+                      initData, re.M)
+    if match:
+        return match.group(1)
+    else:
+        raise RuntimeError('Unable to find version string in %r.' % init)
+
 
 setup(
     name='MapDeduce',

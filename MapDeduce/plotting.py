@@ -298,6 +298,7 @@ def map_setup(ax=None):
     ax.set_aspect(1)
     return ax
 
+
 def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):
     """Plot a histogram as a line plot.
 
@@ -307,6 +308,7 @@ def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):
     """
     x, y = calc_line_hist(arr=arr, hist_kwds=hist_kwds)
     plt.plot(x, y, **plot_kwds)
+
 
 def calc_line_hist(arr, hist_kwds=dict()):
     """Calculate x, y values for line histogram.

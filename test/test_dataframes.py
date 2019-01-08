@@ -82,6 +82,7 @@ class CoordDfPairedDistTests(unittest.TestCase):
         result = tuple(cdf.paired_distances(other))
         self.assertEqual(expect, result)
 
+
 class SeqDfConsensusTests(unittest.TestCase):
     """Tests for MapDeduce.dataframes.SeqDf.consensus."""
 
@@ -115,20 +116,24 @@ class SeqDfConsensusTests(unittest.TestCase):
         cons = self.sdf.consensus()
         self.assertEqual("XNRKSE", "".join(cons))
 
+
 class SeqDfMergeTests(unittest.TestCase):
     """Tests for MapDeduce.dataframes.SeqDf.consensus."""
 
     def setUp(self):
         """StrainC should be replaced by the consensus of the strainC seqs."""
-        df = pd.DataFrame([
+        data = [
             ["A", "A", "D", "D"],
             ["N", "X", "X", "X"],
             ["-", "-", "-", "R"],
             ["K", "K", "K", "K"],
             ["S", "T", "S", "S"],
             ["E", "E", "E",  None]
-        ], index=list(range(1, 7)),
-        columns=["strainA", "strainB", "strainC", "strainC"]).T
+        ]
+        df = pd.DataFrame(
+            data,
+            index=list(range(1, 7)),
+            columns=["strainA", "strainB", "strainC", "strainC"]).T
         self.sdf = SeqDf(df)
 
     def test_df_smaller(self):
@@ -156,6 +161,7 @@ class SeqDfMergeTests(unittest.TestCase):
     def test_returns_seqdf(self):
         sdf = self.sdf.merge_duplicate_strains(inplace=False)
         self.assertIsInstance(sdf, SeqDf)
+
 
 if __name__ == "__main__":
     unittest.main()

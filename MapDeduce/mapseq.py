@@ -339,7 +339,7 @@ class MapSeq(object):
         @returns Tuple
         """
         proportions_all_variants = list(map(self.variant_proportions,
-                                       self.variant_positions))
+                                        self.variant_positions))
         proportions_all_variants_sorted = sorted(proportions_all_variants,
                                                  key=lambda x: x[-1])
         return tuple(p.name for p in proportions_all_variants_sorted)

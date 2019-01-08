@@ -1,27 +1,30 @@
 """Utilities for munging data."""
 
-from Bio import SeqIO
+from Bio.SeqIO import parse
 import pandas as pd
 import numpy as np
 import re
 
 
-def dict_from_fasta(path):
-    """
-    Read fasta file given in path.
+def dict_from_fasta(path, upper=True):
+    """Read a fasta file.
 
-    @param path: String.
-
-    @returns dict: Keys are record IDs in upper case, values are Biopython
-        sequence objects.
+    @param path (str): Path to fasta file.
+    @param upper (bool): Convert fasta header to upper case.
+    @returns dict: {Description (str): sequence (str)}
     """
     with open(path, 'r') as handle:
-        return {r.id.upper(): r.seq for r in SeqIO.parse(handle, 'fasta')}
+
+        records = parse(handle, 'fasta')
+
+        if upper:
+            return {r.description.upper(): str(r.seq) for r in records}
+        else:
+            return {r.description: str(r.seq) for r in records}
 
 
 def df_from_fasta(path, positions=tuple(range(1, 329))):
-    """
-    Read fasta file specified in path.
+    """Read fasta file specified in path.
 
     @param path: String.
     @param positions: List-like or "infer". If list-like, must contain integers
@@ -34,7 +37,7 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
         positions
     """
     with open(path, 'r') as handle:
-        seqs = [(r.id.upper(), r.seq)for r in SeqIO.parse(handle, 'fasta')]
+        seqs = [(r.id.upper(), r.seq)for r in parse(handle, 'fasta')]
 
     index = [s[0] for s in seqs]
 

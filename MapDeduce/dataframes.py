@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from .helper import expand_sequences, site_consensus
 from .munging import df_from_fasta
 
+
 class CoordDf(object):
     """Class for x, y coordinate data."""
 

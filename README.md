@@ -9,8 +9,8 @@ A python library for:
 
 ![Example](data/example.png)
 
-# Installation
+## Installation
 
 ```bash
-pip install git+https://github.com/acorg/MapDeduce.git
+pip install git@github.com:acorg/MapDeduce.git
 ```

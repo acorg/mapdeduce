@@ -28,7 +28,7 @@ def version():
 
 setup(
     name='MapDeduce',
-    version='0.1.0',
+    version=version(),
     description='Handling antigenic maps and sequence data, testing amino '
                 'acid polymorphisms associated with antigenicity.',
     author='David Pattinson',

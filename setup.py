@@ -18,8 +18,7 @@ def version():
     init = os.path.join('MapDeduce', '__init__.py')
     with open(init) as fp:
         initData = fp.read()
-    match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]",
-                      initData, re.M)
+    match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", initData, re.M)
     if match:
         return match.group(1)
     else:

@@ -47,6 +47,6 @@ setup(
         "numpy>=1.14.5",
         "optimix==1.2.21",
         "rpy2==2.7.9",
-        "seaborn==0.8.1"
+        "seaborn>=0.8.1"
     ]
 )

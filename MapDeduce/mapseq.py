@@ -31,23 +31,21 @@ from functools import reduce
 
 
 class MapSeq(object):
-    """Class for handling antigenic maps with sequence data."""
 
-    def __init__(self, seq_df, coord_df, **kwargs):
-        """
-        @param seq_df: pd.DataFrame. Indexes are strains. Columns are
-            amino acid positions.
-        @param coord_df: pd.DataFrame. Indexes are strains. Columns are
-            "x" and "y" coordinates.
+    def __init__(self, seq_df, coord_df, map=None):
+        """An antigenic map with sequence data.
 
-        Optional kwargs:
-
-        @param map: Int. 2009 or 2017. Specify which map is being worked on
-            to setup plotting cluster boundaries and plot ranges.
+        Args:
+            seq_df (pd.DataFrame): Indexes are strains. Columns are amino acid
+                positions.
+            coord_df (pd.DataFrame): Indexes are strains. Columns are "x" and
+                "y" coordinates.
+            map (int): 2009 or 2017. Optional. Specify a known map to configure
+                plotting boundaries.
         """
         self.all_seqs = handle_duplicate_sequences(seq_df)
         self.all_coords = coord_df.copy()
-        self.map = kwargs.pop("map", None)
+        self.map = map
 
         # Replace any unknown amino acids with NaN
         cond = self.all_seqs.applymap(lambda x: x not in amino_acids)
@@ -83,8 +81,12 @@ class MapSeq(object):
             if len(self.seq_in_both.loc[:, p].unique()) != 1:
                 self.variant_positions.add(p)
 
-    def scatter_with_without(self):
-        """Plot indicating which antigens do and do not have sequences."""
+    def scatter_with_without(self, **kwds):
+        """Plot indicating which antigens do and do not have sequences.
+
+        Args:
+            **kwds. Passed to pd.DataFrame.plot.scatter
+        """
         ax = plt.gca()
         kwds = dict(ax=ax, x="x", y="y")
         n_without_sequence = self.coords_excl_to_coords.shape[0]
@@ -101,11 +103,14 @@ class MapSeq(object):
         return ax
 
     def variant_proportions(self, p):
-        """
-        Return the proportion of variants at position p from the antigens that
-        have sequences.
+        """Of antigens with sequences, compute the proportion of amino acids
+        at each position, p.
 
-        @param p: Int. HA position
+        Args:
+            p (int): HA position
+
+        Returns:
+            pd.Series
         """
         series = self.seq_in_both.loc[:, p]
         value_counts = series.value_counts()
@@ -113,17 +118,17 @@ class MapSeq(object):
 
     def scatter_colored_by_amino_acid(self, p, randomz=True, ellipses=True,
                                       **kwargs):
-        """
-        Plot map colored by amino acids at position p.
+        """Plot map colored by amino acids at position p.
 
-        @param p. Int. HA position
+        Args:
+            p (int): HA position
+            randomz (bool): Given points random positions in z. This is
+                slower because marks have to plotted individually.
+            ellipses (bool). Demark clusters with ellipses.
+            **kwargs. Passed to ax.scatter for the colored strains.
 
-        @param randomz. Bool. Given points random positions in z. This is
-            slower because marks have to plotted individually.
-
-        @param ellipses. Bool. Demark clusters with ellipses.
-
-        @param kwargs. Passed to ax.scatter for the colored strains.
+        Returns:
+            matplotlib ax
         """
         ax = plt.gca()
 
@@ -178,15 +183,16 @@ class MapSeq(object):
 
     def scatter_single_substitution(self, sub, ellipses=True, filename=None,
                                     connecting_lines=True, **kwargs):
-        """
-        Plot map colored by amino acids at position p.
+        """Plot map colored by amino acids at position p.
 
-        @param sub. Tuple. E.g. ("N", 145, "K")
-        @param ellipses. Bool. Demark clusters with ellipses.
-        @param connecting_lines. Bool. Plot lines between each points that
-            differ by the substitution.
-        @param kwargs. Passed to self.single_substitutions. Use to restrict
-            to particular positions.
+        Args:
+            sub (tuple): Substitution. E.g. ("N", 145, "K")
+            ellipses (bool): Demark clusters with ellipses.
+            filename (str): Passed to plt.savefig. None does not save figure.
+            connecting_lines (bool): Plot lines between each points that
+                differ by the substitution.
+            **kwargs. Passed to self.single_substitutions. Use to restrict
+                to particular positions.
         """
         # Strains that differ by only the substituion sub
         combinations = self.single_substitutions(sub, **kwargs)
@@ -290,14 +296,14 @@ class MapSeq(object):
 
     def scatter_variant_positions_colored_by_amino_acid(self, filename,
                                                         **kwds):
-        """
-        Call scatter_colored_by_amino_acid for all variant positions
+        """Call scatter_colored_by_amino_acid for all variant positions
 
-        @param filename: Format string with one field to fill in. Each
-            position will be substituted in. E.g.:
-            "img/melb-h3-2009-coloured-by-pos/{}.png"
+        Args:
+            filename (str): A format string with one field to fill in. Each
+                position will be substituted in. E.g.:
+                "img/melb-h3-2009-coloured-by-pos/{}.png"
 
-        @param kwds: Passed to scatter_colored_by_amino_acid
+            **kwds: Keyword arguments passed to scatter_colored_by_amino_acid
         """
         # Save text file containing html of the variant positions. 1 sorted by
         # primary structure the second by most common variant
@@ -332,11 +338,10 @@ class MapSeq(object):
             plt.close()
 
     def variant_positions_sorted_by_most_common_variant(self):
-        """
-        Return a tuple of the variant positions, sorted by the most common
-        variant for each, ascending
+        """Lookup variant positions.
 
-        @returns Tuple
+        Returns:
+            tuple. Contains variant positions, sorted by most common variant.
         """
         proportions_all_variants = list(map(self.variant_proportions,
                                         self.variant_positions))
@@ -345,17 +350,16 @@ class MapSeq(object):
         return tuple(p.name for p in proportions_all_variants_sorted)
 
     def strains_with_combinations(self, combinations, without=False):
-        """
-        Return strains that have combinations of amino acids at particular
+        """Lookup strains that have combinations of amino acids at particular
         positions.
 
-        @param combinations. Dict. Keys are positions, values are amino
-            acids:  E.g. {145: "N", 189: "S"}
+        Args:
+            combinations (dict): Keys are positions, values are amino
+                acids:  E.g. {145: "N", 189: "S"}
+            without (bool): Lookup strains without the combination.
 
-        @param without. Bool. Return strains without the combination.
-
-        @returns pd.DataFrame. Containing strains with the amino acid
-            combinations.
+        Returns:
+            pd.DataFrame. Contains strains with the amino acid combinations.
         """
         for k in list(combinations.keys()):
             if k not in self.seq_in_both.columns:
@@ -389,13 +393,12 @@ class MapSeq(object):
         see: http://pandas.pydata.org/pandas-docs/stable/
             missing_data.html#na-values-in-groupby)
 
-        Optional kwargs:
+        Args:
 
-        @param positions: List / tuple / set containing ints. Return groups
-            of sequences that are identical at these positions. Default is all
-            positions.
+            positions (iterable of ints). Optional. Lookup groups of sequences identical at these positions. Default is all positions.
 
-        @returns: pd.GroupBy
+        Returns:
+            pd.GroupBy
         """
         positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
         df = self.seq_in_both
@@ -403,20 +406,17 @@ class MapSeq(object):
 
     def plot_strains_with_combinations(self, combinations, without=False,
                                        plot_other=True, **kwargs):
-        """
-        Plot a map highlighting strains with combinations of amino acids
+        """Plot a map highlighting strains with combinations of amino acids
         at particular positions.
 
-        @param combinations. Dict. Keys are positions, values are amino
-            acids:  E.g. {145: "N", 189: "S"}
-
-        @param without. Bool. Plot strains without the combination.
-
-        @param plot_other. Bool. Plot other antigens (those without the
-            combinations).
-
-        @param **kwargs. Passed to the scatter function of the strains with
-            particular combinations.
+        Args:
+            combinations (dict): Keys are positions, values are amino
+                acids:  E.g. {145: "N", 189: "S"}
+            without (bool): Plot strains without the combination.
+            plot_other (bool): Plot other antigens (those without the
+                combinations).
+            **kwargs: Optional keywords passed to the scatter function of the
+                strains with particular combinations.
         """
         df = self.strains_with_combinations(
             combinations=combinations,
@@ -457,20 +457,16 @@ class MapSeq(object):
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
                                            color="black", **kwargs):
-        """
-        Plot the countour corresponding to the region that contains c percent
+        """Plot the countour corresponding to the region that contains c percent
         of the density of a KDE over strains with combinations of amino acid
         polymorphisms specified in combinations.
 
-        @param combinations: Dictionary specifying combinations. E.g.:
-
-                    {145: "N", 133: "D"}
-
-        @param c: Number.
-
-        @param color: Mpl color for the contour line
-
-        @param **kwargs: Passed to plt.contour
+        Args:
+            combinations (dict): Dictionary specifying combinations. E.g.:
+                {145: "N", 133: "D"}
+            c (float / int)
+            color (matlplotlib colour): Colour to plot the contour line
+            **kwargs. Passed to plt.contour
         """
         df = self.strains_with_combinations(combinations)
         strains = df.index
@@ -507,10 +503,13 @@ class MapSeq(object):
             colors=color, **kwargs)
 
     def differ_by_n(self, n):
-        """
-        Return sequences that differ by n positions
+        """Lookup pairs of strains that differ by n positions.
 
-        @param n: Int.
+        Args:
+            n (int)
+
+        Returns:
+            set containing 2-tuples
         """
         keep = set()
         for a, b in itertools.combinations(self.seq_in_both.index, 2):
@@ -520,14 +519,16 @@ class MapSeq(object):
         return keep
 
     def single_substitutions_one_random_aa(self, p, aa):
-        """
-        Find pairs of strains that differ only at position p, and
-        where one has the amino acid aa at that position.
+        """Find pairs of strains that differ only at position p, and where one
+        has the amino acid aa at that position.
 
-        @param p: Int. Position
-        @param aa: Str. Amino acid. Must be in amino_acids
-        @returns List. List of pd.Series containing the amino acids
-            and corresponding strain names.
+        Args:
+            p (int): Position
+            aa (str): Amino acid. Must be in amino_acids.
+
+        Returns:
+            list of pd.Series containing the amino acids
+                and corresponding strain names.
         """
         keep = list()
         differ_by_1 = self.differ_by_n(1)
@@ -541,16 +542,16 @@ class MapSeq(object):
         return keep
 
     def single_substitutions(self, sub, **kwargs):
-        """
-        Find pairs of strains that differ by only the substitution 'sub'.
+        """Find pairs of strains that differ by only the substitution 'sub'.
 
-        @param sub: tuple. ("N", 145, "K") like. First and last elements are
-            strings referring to amino acids. Middle element is int
+        Args:
+            sub (tuple): ("N", 145, "K") like. First and last elements are
+                strings referring to amino acids. Middle element is int
+            exclude (list). Optional. Sequences only have to be identical at
+                positions in this list.
 
-        Optional kwargs:
-
-        @param exclude. List. Sequences only have to be identical at
-            positions in this list.
+        Returns:
+            set
         """
         assert len(sub) == 3
 
@@ -594,12 +595,14 @@ class MapSeq(object):
         return pairs
 
     def identical_sequences(self, positions=None):
-        """
-        Return a list of DataFrames that contain identical sequences that are
-        all in the map.
+        """Lookup strains with identical sequences.
 
-        @param positions. List of int. Only consider these positions. Default,
-            None, uses all positions.
+        Args:
+            positions (list containing ints). Only consider these positions.
+                The default, None, considers all positions.
+
+        Returns:
+            pd.DataFrame containing the identical sequences.
         """
         identical = []
         if positions is None:
@@ -625,9 +628,13 @@ class MapSeq(object):
         (There are (30^2-30)/2 = 435 pairwise distances between 30 points,
         compared to (5^2-5)/2 = 10 for 10 points).
 
-        @param positions. List of int. Only consider these positions when
-            looking for genetically identical strains. Default, None, uses
-            all positions.
+        Args:
+            positions (list containing ints) Only consider these positions when
+                looking for genetically identical strains. Default, None, uses
+                all positions.
+
+        Returns:
+            dict containing mean and median distanes.
         """
         identical_sequences = self.identical_sequences(positions=positions)
         n = len(identical_sequences)
@@ -643,13 +650,16 @@ class MapSeq(object):
         return {"means": means, "medians": medians}
 
     def plot_error(self, positions=None):
-        """
-        Plot the distribution of means and median pairwise antigenic distances
-        between genetically strains, calculated by self.error()
+        """Plot the distribution of means and median pairwise antigenic
+        distances between genetically strains, calculated by self.error()
 
-        @param positions. List of int. Only consider these positions when
-            looking for genetically identical strains. Default, None, uses
-            all positions.
+        Args:
+            positions (list of ints). Only consider these positions when
+                looking for genetically identical strains. Default, None, uses
+                all positions.
+
+        Returns:
+            matplotlib ax
         """
         error = self.error(positions=positions)
         max_error = max(list(map(max, list(error.values()))))
@@ -677,8 +687,9 @@ class MapSeq(object):
         Find strains that differ by one substitution out of the combinations
         defined in cluster_combinations
 
-        @param: cluster_diff_df: df containing cluster difference
-            substitutions. E.g.:
+        Args:
+            cluster_diff_df (pd.DataFrame): Specifies cluster difference
+                substitutions. E.g.:
 
                             CA04 FU02
                         145    N    K
@@ -687,10 +698,11 @@ class MapSeq(object):
                         226    I    V
                         227    P    S
 
-        @param: filename. If not None, save a plot with filename. Should be
-            a format string with room to substitute in a label describing
-            the substitutions found.
-        @param: kwargs. Passed to plot_strains_with_combinations
+            filename (str or None): If not None, save a plot with filename.
+                Should be a format string with room to substitute in a label
+                describing the substitutions found.
+
+            **kwargs: Passed to plot_strains_with_combinations
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -732,23 +744,21 @@ class MapSeq(object):
 
     def find_double_substitutions(self, cluster_diff_df, filename=None,
                                   **kwargs):
-        """
-        Find strains that differ by two substitutions out of the combinations
-        defined in cluster_combinations
+        """Find strains that differ by two substitutions out of the
+        combinations defined in cluster_combinations.
 
-        @param: cluster_diff_df: df containing cluster difference
-            substitutions. E.g.:
-
+        Args:
+            cluster_diff_df (pd.DataFrame): Contains cluster difference
+                substitutions. E.g.:
                             CA04 FU02
                         145    N    K
                         159    F    Y
                         189    N    S
                         226    I    V
-
-        @param: filename. If not None, save a plot with filename. Should be
-            a format string with room to substitute in a label describing
-            the substitutions found.
-        @param: kwargs. Passed to plot_strains_with_combinations
+            filename (str or None): If not None, save a plot with filename.
+                Should be a format string with room to substitute in a label
+                describing the substitutions found.
+            **kwargs passed to plot_strains_with_combinations
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -777,16 +787,25 @@ class MapSeq(object):
 
 
 class OrderedMapSeq(MapSeq):
-    """
-    Like MapSeq, but the order of the indexes of the dataframes containing
-    the coordinates and sequences are identical.
 
-    Also, positions with no amino acid diversity are removed.
-    """
+    def __init__(self, seq_df, coord_df):
+        """Like MapSeq, but the order of the indexes of the dataframes
+        containing the coordinates and sequences are identical.
 
-    def __init__(self, *args, **kwargs):
-        """This class accepts the same parameters as MapSeq"""
-        super(OrderedMapSeq, self).__init__(*args, **kwargs)
+        Notes:
+            Positions with no amino acid diversity are removed.
+
+        Args:
+            seq_df (pd.DataFrame): Indexes are strains. Columns are amino acid
+                positions.
+            coord_df (pd.DataFrame): Indexes are strains. Columns are "x" and
+                "y" coordinates.
+
+        Attributes:
+            coord (MapDeduce.dataframes.CoordDf): Contains coordinates.
+            seq (MapDeduce.dataframes.SeqDf): Contains sequences.
+        """
+        super().__init__(seq_df, coord_df)
 
         # Join the two dataframes, so they share indexes
         combined = self.coords_in_both.join(self.seq_in_both)
@@ -808,26 +827,34 @@ class OrderedMapSeq(MapSeq):
     def filter(self, patch=None, plot=True, remove_invariant=True,
                get_dummies=True, merge_duplicate_dummies=False,
                rename_idx=False):
-        """
-        Remove data where the x y coordinates are outside a matplotlib patch.
-        This updates self.coord and self.seq inplace.
+        """Remove data where the x y coordinates are outside a matplotlib
+        patch.
 
-        @param patch. matplotlib.patches.Patch instance
-        @param plot. Bool. Plot the points that have been included / excluded
-            and the patch. (Only if a patch is specified).
-        @param remove_invariant. Bool. Remove sequence positions that only have
-            a single amino acid.
-        @param get_dummies. Bool. Attach dummy variable representation of the
-            sequences
-        @param merge_duplicate_dummies. Bool. Merge dummy variables that have
-            the same profile (identical for all strains).
-        @param rename_idx. Bool. Rename strains in the format strain-X where X
-            is an integer. This is necessary for merging duplicate dummies if
-            there are duplicate strain names (which can occur if a strain was
-            titrated multiple times).
+        Notes:
+            Updates self.coord and self.seq inplace.
+
+        Args:
+            patch (matplotlib.patches.Patch): Remove strains not contained
+                in patch.
+            plot (bool): Show points that have been included / excluded
+                and the patch. (Only if a patch is specified).
+            remove_invariant (bool): Remove sequence positions that only
+                contain a single amino acid.
+            get_dummies (bool): Attach dummy variable representation of the
+                sequences.
+            merge_duplicate_dummies (bool): Merge dummy variables that have
+                the same profile (identical for all strains).
+            rename_idx (bool): Rename strains in the format strain-X where X
+                is an integer. This is necessary for merging duplicate dummies
+                if there are duplicate strain names (which can occur if a
+                strain was titrated multiple times). Attaches a strain_names
+                attribute to self which is a dict containing the new name to
+                old name mapping.
+
+        Returns:
+            matplotlib ax
         """
         # Strain removal operations first
-
         if patch is not None:
 
             if plot:

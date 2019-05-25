@@ -9,7 +9,8 @@ except ImportError:
     import unittest
 import pandas as pd
 
-from MapDeduce.mapseq import MapSeq
+import MapDeduce
+from MapDeduce.mapseq import MapSeq, OrderedMapSeq
 
 
 class MapSeqAttributes(unittest.TestCase):
@@ -220,6 +221,45 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
         strains = grouped.groups[("Q", "N", "A")]
         test = set(strains)
         self.assertEqual({"strain3"}, test)
+
+
+class OrderedMapSeqTests(unittest.TestCase):
+
+    def setUp(self):
+        """Sequences and coordinates to use in tests"""
+        seq_df = pd.DataFrame({
+            1: list("QQQQQA"),
+            2: list("KKNKNA"),
+            3: list("LLAL-A"),
+        }, index="flu1 flu2 flu3 flu5 flu6 flu7".split())
+
+        coord_df = pd.DataFrame({
+            "x": (0, 0, 1, 1, 0, np.nan),
+            "y": (0, 1, 0, 1, 0, np.nan),
+        }, index="flu2 flu1 flu3 flu4 flu6 flu7".split())
+
+        self.oms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+
+    def test_attribute_coord(self):
+        self.assertIsInstance(
+            self.oms.coord, MapDeduce.dataframes.CoordDf)
+
+    def test_indexes_contain_intersection(self):
+        """Indexes of the sequence and coordinate dataframe should contain
+        the intersection of the original dataframes.
+
+        flu7 should be dropped because it's coordinates are nan.
+        """
+        expect = set("flu1 flu2 flu3 flu6".split())
+        self.assertEqual(expect, set(self.oms.coord.df.index))
+        self.assertEqual(expect, set(self.oms.seqs.df.index))
+
+    def test_reordering(self):
+        """Sequence and coordinate dataframes should be reordered such that
+        their indexes match.
+        """
+        self.assertEqual(
+            list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
 
 
 if __name__ == "__main__":

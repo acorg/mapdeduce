@@ -1,4 +1,4 @@
-plot_"""Contains the main class to represent maps with sequences."""
+"""Contains the main class to represent maps with sequences."""
 
 from __future__ import print_function, division
 

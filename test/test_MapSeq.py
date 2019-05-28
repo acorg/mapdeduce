@@ -35,16 +35,16 @@ class MapSeqAttributes(unittest.TestCase):
         intersection of the strains in the sequence and coordinate dfs
         """
         expect = {"strain1", "strain2", "strain3"}
-        self.assertEqual(expect, self.ms.strains_in_both)
+        self.assertEqual(expect, self.ms.strains_with_both)
 
     def test_seq_in_both_indexes(self):
-        """Indexes of self.seq_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both,
-                         set(self.ms.seq_in_both.index))
+        """Indexes of self.seq_in_both should match strains_with_both"""
+        self.assertEqual(self.ms.strains_with_both,
+            set(self.ms.seq_in_both.index))
 
     def test_coords_in_both_indexes(self):
-        """Indexes of self.coords_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both,
+        """Indexes of self.coords_in_both should match strains_with_both"""
+        self.assertEqual(self.ms.strains_with_both,
                          set(self.ms.coords_in_both.index))
 
     def test_unkown_sequence(self):
@@ -52,7 +52,7 @@ class MapSeqAttributes(unittest.TestCase):
         Anything in fasta that isn't one of the 20 standard amino acids
         should be NaN.
         """
-        self.assertTrue(np.isnan(self.ms.all_seqs.loc["strain5", 3]))
+        self.assertTrue(np.isnan(self.ms.sequence_df.loc["strain5", 3]))
 
 
 class MapSeqDuplicates(unittest.TestCase):
@@ -86,7 +86,7 @@ class MapSeqDuplicates(unittest.TestCase):
         be kept.
         """
         for test in "strain1", "strain2":
-            self.assertIn(test, set(self.ms.all_seqs.index))
+            self.assertIn(test, set(self.ms.sequence_df.index))
 
     def test_different_sequences_same_index_len(self):
         """
@@ -95,7 +95,7 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIsInstance(self.ms.all_seqs.loc["strain3", :],
+        self.assertIsInstance(self.ms.sequence_df.loc["strain3", :],
                               pd.core.frame.Series)
 
     def test_different_sequences_same_index_value(self):
@@ -105,12 +105,12 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIs(np.nan, self.ms.all_seqs.loc["strain3", 3])
+        self.assertIs(np.nan, self.ms.sequence_df.loc["strain3", 3])
 
     def test_same_sequences_same_index(self):
         """Strains with duplicate index and sequence should be removed."""
         for test in "strain1", "strain4":
-            self.assertIn(test, set(self.ms.all_seqs.index))
+            self.assertIn(test, set(self.ms.sequence_df.index))
 
 
 class MapSeqStrainsWithCombinations(unittest.TestCase):

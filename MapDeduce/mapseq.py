@@ -42,44 +42,65 @@ class MapSeq(object):
                 "y" coordinates.
             map (int): 2009 or 2017. Optional. Specify a known map to configure
                 plotting boundaries.
+
+        Attributes:
+            sequence_df (pd.DataFrame): Columns are sites. Rows are strains.
+                Cells contain amino acids.
+            coord_df (pd.DataFrame): Columns are coordinate dimensions. rows
+                are strains. Cells contain numbers.
+            strains_with_seq (set): Strains that have a sequence.
+            strains_with_coords (set): Strains that have antigenic coordinates.
+            strains_with_both (set): Strains that have both antigenic
+                coordinates and a sequence.
+            strains_with_only_coords (set): Strains that have coordinates, but
+                don't have a sequence.
+            seq_in_both (pd.DataFrame): Like self.sequence_df, but only for
+                strains that have a sequence and coordinates.
+            coords_in_both (pd.DataFrame): Like self.coord_df, but only for
+                strains that have a sequence and coordinates.
+            variant_positions (set): Column names in sequence_df that contain
+                more than one unqique element.
+            map (int): Optional. Integer encoding which antigenic map this is.
         """
-        self.all_seqs = handle_duplicate_sequences(seq_df)
-        self.all_coords = coord_df.copy()
+        self.sequence_df = handle_duplicate_sequences(seq_df)
+        self.coord_df = coord_df.copy()
         self.map = map
 
         # Replace any unknown amino acids with NaN
-        cond = self.all_seqs.applymap(lambda x: x not in amino_acids)
-        self.all_seqs.mask(cond, inplace=True)
+        cond = self.sequence_df.applymap(lambda x: x not in amino_acids)
+        self.sequence_df.mask(cond, inplace=True)
 
         # Remove any rows that contain NaN coords
-        mask = self.all_coords.notnull().any(axis=1)
-        self.all_coords = self.all_coords.loc[mask, :]
+        mask = self.coord_df.notnull().any(axis=1)
+        self.coord_df = self.coord_df.loc[mask, :]
 
         # Strains in the sequences and coordinates dataframes
-        self.strains_in_seq = set(self.all_seqs.index)
-        self.strains_in_coords = set(self.all_coords.index)
+        self.strains_with_seq = set(self.sequence_df.index)
+        self.strains_with_coords = set(self.coord_df.index)
 
         # Strains in both sequence and coordinate dataframes
-        self.strains_in_both = self.strains_in_seq & self.strains_in_coords
+        self.strains_with_both = \
+            self.strains_with_seq & self.strains_with_coords
 
-        # Strains exclusively in sequence df
-        self.strains_excl_to_seq = self.strains_in_seq - self.strains_in_coords
-
-        # Strains exclusively in coords df
-        self.strains_excl_to_coords = \
-            self.strains_in_coords - self.strains_in_seq
-        self.coords_excl_to_coords = \
-            self.all_coords.loc[self.strains_excl_to_coords, :]
+        # Strains that only have coordinates
+        self.strains_with_only_coords = \
+            self.strains_with_coords - self.strains_with_seq
 
         # Coordinates and sequences of strains in both
-        self.seq_in_both = self.all_seqs.loc[self.strains_in_both, :]
-        self.coords_in_both = self.all_coords.loc[self.strains_in_both, :]
+        self.seq_in_both = self.sequence_df.loc[self.strains_with_both, :]
+        self.coords_in_both = self.coord_df.loc[self.strains_with_both, :]
 
-        # Find variant positions (i.e. which positions have substitutions)
-        self.variant_positions = set()
+        self.coords_of_strains_without_sequence = \
+            self.coord_df.loc[self.strains_with_only_coords]
+
+    @property
+    def variant_positions(self):
+        """Positions that have different amino acids."""
+        _variant_positions = set()
         for p in self.seq_in_both.columns:
             if len(self.seq_in_both.loc[:, p].unique()) != 1:
-                self.variant_positions.add(p)
+                _variant_positions.add(p)
+        return _variant_positions
 
     def plot_with_without(self, **kwds):
         """Plot indicating which antigens do and do not have sequences.
@@ -89,8 +110,8 @@ class MapSeq(object):
         """
         ax = plt.gca()
         kwds = dict(ax=ax, x="x", y="y")
-        n_without_sequence = self.coords_excl_to_coords.shape[0]
-        self.coords_excl_to_coords.plot.scatter(
+        n_without_sequence = self.coords_of_strains_without_sequence.shape[0]
+        self.coords_of_strains_without_sequence.plot.scatter(
             color="darkgrey",
             label="Without sequence ({})".format(n_without_sequence),
             **kwds)
@@ -134,8 +155,8 @@ class MapSeq(object):
         ax = plt.gca()
 
         # Antigens without a known sequence
-        if not self.coords_excl_to_coords.empty:
-            self.coords_excl_to_coords.plot.scatter(
+        if not self.coords_of_strains_without_sequence.empty:
+            self.coords_of_strains_without_sequence.plot.scatter(
                 ax=ax, x="x", y="y", s=5, color="darkgrey",
                 label="Unknown sequence")
 
@@ -212,7 +233,7 @@ class MapSeq(object):
             fig, ax = plt.subplots()
 
             # Antigens without a known sequence
-            self.coords_excl_to_coords.plot.scatter(
+            self.coords_of_strains_without_sequence.plot.scatter(
                 ax=ax, x="x", y="y", s=5, color="lightgrey",
                 label="Unknown sequence")
 
@@ -447,13 +468,13 @@ class MapSeq(object):
             print("{} strains with {}".format(len(strains), label))
 
             if plot_other:
-                self.all_coords.plot.scatter(
+                self.coord_df.plot.scatter(
                     x="x", y="y", s=10, color="darkgrey", ax=ax)
 
-            # self.all_coords.loc[strains, :] may be a Series, hence ax.scatter
+            # self.coord_df.loc[strains, :] may be a Series, hence ax.scatter
             plt.scatter(
-                self.all_coords.loc[strains, "x"],
-                self.all_coords.loc[strains, "y"],
+                self.coord_df.loc[strains, "x"],
+                self.coord_df.loc[strains, "y"],
                 label=label, **kwds)
             plt.legend()
 
@@ -478,7 +499,7 @@ class MapSeq(object):
         df = self.strains_with_combinations(combinations)
         strains = df.index
 
-        dataset = self.all_coords.loc[strains, :]
+        dataset = self.coord_df.loc[strains, :]
 
         grid = sklearn.model_selection.GridSearchCV(
             estimator=sklearn.neighbors.KernelDensity(kernel="gaussian"),
@@ -891,10 +912,6 @@ class OrderedMapSeq(MapSeq):
             self.seqs.merge_duplicate_dummies(inplace=True)
 
         if plot and patch is not None:
-
-            self.coord.df.plot.scatter(
-                x="x", y="y", label="Included", ax=ax)
-
+            self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)
             map_setup(ax)
-
             return ax

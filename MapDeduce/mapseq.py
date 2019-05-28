@@ -116,12 +116,12 @@ class MapSeq(object):
         value_counts = series.value_counts()
         return (value_counts / value_counts.sum()).sort_values()
 
-    def plot_colored_by_amino_acid(self, p, randomz=True, ellipses=True,
-                                      **kwargs):
-        """Plot map colored by amino acids at position p.
+    def plot_amino_acids_at_site(self, p, randomz=True, ellipses=True,
+                                 **kwargs):
+        """Plot map colored by amino acids at site p.
 
         Args:
-            p (int): HA position
+            p (int): HA site.
             randomz (bool): Given points random positions in z. This is
                 slower because marks have to plotted individually.
             ellipses (bool). Demark clusters with ellipses.
@@ -171,7 +171,7 @@ class MapSeq(object):
                 coord_group.plot.scatter(
                     label=label, x='x', y='y', ax=ax, **kwds)
 
-        if ellipses:
+        if ellipses and self.map is not None:
             add_ellipses(self.map)
 
         setup_ax(self.map)
@@ -182,8 +182,8 @@ class MapSeq(object):
         return ax
 
     def plot_single_substitution(self, sub, ellipses=True, filename=None,
-                                    connecting_lines=True, **kwargs):
-        """Plot map colored by amino acids at position p.
+                                 connecting_lines=True, **kwargs):
+        """Plot map showing strains that differ by sub.
 
         Args:
             sub (tuple): Substitution. E.g. ("N", 145, "K")
@@ -296,14 +296,14 @@ class MapSeq(object):
 
     def plot_variant_positions_colored_by_amino_acid(self, filename,
                                                         **kwds):
-        """Call plot_colored_by_amino_acid for all variant positions
+        """Call plot_amino_acids_at_site for all variant positions
 
         Args:
             filename (str): A format string with one field to fill in. Each
                 position will be substituted in. E.g.:
                 "img/melb-h3-2009-coloured-by-pos/{}.png"
 
-            **kwds: Keyword arguments passed to plot_colored_by_amino_acid
+            **kwds: Keyword arguments passed to plot_amino_acids_at_site
         """
         # Save text file containing html of the variant positions. 1 sorted by
         # primary structure the second by most common variant

@@ -256,10 +256,10 @@ class MapSeq(object):
             # Plot the group with more samples first
             # Prevents over plotting
             for sample in sorted(samples, key=lambda x: len(x))[::-1]:
-                    sample.plot.scatter(
-                        x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
-                        edgecolor="white", linewidth=1, zorder=20, ax=ax,
-                        label="{}{}".format(aas[j], sub[1]))
+                sample.plot.scatter(
+                    x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
+                    edgecolor="white", linewidth=1, zorder=20, ax=ax,
+                    label="{}{}".format(aas[j], sub[1]))
 
             # Compute Hotelling's T-squared statistic on the two samples
             if len(samples[0]) > 1 and len(samples[1]) > 1:
@@ -318,8 +318,7 @@ class MapSeq(object):
                 plt.tight_layout()
                 plt.savefig(filename.format(title.replace(" ", "")))
 
-    def plot_variant_positions_colored_by_amino_acid(self, filename,
-                                                        **kwds):
+    def plot_variant_positions_colored_by_amino_acid(self, filename, **kwds):
         """Call plot_amino_acids_at_site for all variant positions
 
         Args:
@@ -418,8 +417,8 @@ class MapSeq(object):
             missing_data.html#na-values-in-groupby)
 
         Args:
-
-            positions (iterable of ints). Optional. Lookup groups of sequences identical at these positions. Default is all positions.
+            positions (iterable of ints). Optional. Lookup groups of sequences
+                identical at these positions. Default is all positions.
 
         Returns:
             pd.GroupBy
@@ -485,9 +484,9 @@ class MapSeq(object):
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
                                            color="black", **kwds):
-        """Plot the countour corresponding to the region that contains c percent
-        of the density of a KDE over strains with combinations of amino acid
-        polymorphisms specified in combinations.
+        """Plot the countour corresponding to the region that contains c
+        percent of the density of a KDE over strains with combinations of amino
+        acid polymorphisms specified in combinations.
 
         Args:
             combinations (dict): Dictionary specifying combinations. E.g.:

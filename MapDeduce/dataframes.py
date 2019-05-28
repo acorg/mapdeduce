@@ -30,7 +30,7 @@ class CoordDf(object):
 
     def __repr__(self):
         return "CoordDf with {} samples and {} dimensions:\n{}".format(
-                    *self.df.shape, repr(self.df))
+            *self.df.shape, repr(self.df))
 
     def rotate(self, a, inplace=True):
         """Rotate points a degrees around the origin anticlockwise.
@@ -322,4 +322,7 @@ class SeqDf(object):
         Returns:
             (dict): Maps amino acid -> set containing strain names.
         """
-        pass
+        if p not in self.df.columns:
+            raise ValueError("{} not in self.df.columns".format(p))
+        return {amino_acid: set(group.index)
+                for amino_acid, group in self.df.groupby(self.df.loc[:, p])}

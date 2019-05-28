@@ -39,13 +39,13 @@ class MapSeqAttributes(unittest.TestCase):
 
     def test_seq_in_both_indexes(self):
         """Indexes of self.seq_in_both should match strains_with_both"""
-        self.assertEqual(self.ms.strains_with_both,
-            set(self.ms.seq_in_both.index))
+        self.assertEqual(
+            self.ms.strains_with_both, set(self.ms.seq_in_both.index))
 
     def test_coords_in_both_indexes(self):
         """Indexes of self.coords_in_both should match strains_with_both"""
-        self.assertEqual(self.ms.strains_with_both,
-                         set(self.ms.coords_in_both.index))
+        self.assertEqual(
+            self.ms.strains_with_both, set(self.ms.coords_in_both.index))
 
     def test_unkown_sequence(self):
         """

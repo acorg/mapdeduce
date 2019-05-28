@@ -117,15 +117,15 @@ class MapSeq(object):
         return (value_counts / value_counts.sum()).sort_values()
 
     def plot_amino_acids_at_site(self, p, randomz=True, ellipses=True,
-                                 **kwargs):
+                                 **kwds):
         """Plot map colored by amino acids at site p.
 
         Args:
             p (int): HA site.
-            randomz (bool): Given points random positions in z. This is
+            randomz (bool): Given points random sites in z. This is
                 slower because marks have to plotted individually.
             ellipses (bool). Demark clusters with ellipses.
-            **kwargs. Passed to ax.scatter for the colored strains.
+            **kwds. Passed to ax.scatter for the colored strains.
 
         Returns:
             matplotlib ax
@@ -141,7 +141,7 @@ class MapSeq(object):
         # Antigens with a known sequence
         kwds = dict(
             lw=1, edgecolor="white",
-            s=3 * point_size(self.seq_in_both.shape[0]), **kwargs)
+            s=3 * point_size(self.seq_in_both.shape[0]), **kwds)
 
         proportions = self.variant_proportions(p=p) * 100
         seq_grouped = self.seq_in_both.groupby(p)
@@ -182,7 +182,7 @@ class MapSeq(object):
         return ax
 
     def plot_single_substitution(self, sub, ellipses=True, filename=None,
-                                 connecting_lines=True, **kwargs):
+                                 connecting_lines=True, **kwds):
         """Plot map showing strains that differ by sub.
 
         Args:
@@ -191,11 +191,11 @@ class MapSeq(object):
             filename (str): Passed to plt.savefig. None does not save figure.
             connecting_lines (bool): Plot lines between each points that
                 differ by the substitution.
-            **kwargs. Passed to self.single_substitutions. Use to restrict
-                to particular positions.
+            **kwds. Passed to self.single_substitutions. Use to restrict
+                to particular sites.
         """
         # Strains that differ by only the substituion sub
-        combinations = self.single_substitutions(sub, **kwargs)
+        combinations = self.single_substitutions(sub, **kwds)
 
         label = "".join(map(str, sub))
 
@@ -385,7 +385,7 @@ class MapSeq(object):
 
         return df
 
-    def duplicate_sequences(self, **kwargs):
+    def duplicate_sequences(self, **kwds):
         """Find groups of duplicate sequences.
 
         Any element in self.seq_in_both that is not one of the standard 20
@@ -400,12 +400,12 @@ class MapSeq(object):
         Returns:
             pd.GroupBy
         """
-        positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
+        positions = kwds.pop("positions", self.seq_in_both.columns.tolist())
         df = self.seq_in_both
         return df.mask(df.applymap(is_not_amino_acid)).groupby(positions)
 
     def plot_strains_with_combinations(self, combinations, without=False,
-                                       plot_other=True, **kwargs):
+                                       plot_other=True, **kwds):
         """Plot a map highlighting strains with combinations of amino acids
         at particular positions.
 
@@ -415,7 +415,7 @@ class MapSeq(object):
             without (bool): Plot strains without the combination.
             plot_other (bool): Plot other antigens (those without the
                 combinations).
-            **kwargs: Optional keywords passed to the scatter function of the
+            **kwds: Optional keywords passed to the scatter function of the
                 strains with particular combinations.
 
                 ax (matplotlib ax) is an optional kwarg. If passed, the plot
@@ -435,7 +435,7 @@ class MapSeq(object):
             print("No strains with {}".format(label))
 
         else:
-            ax = kwargs.pop("ax", False)
+            ax = kwds.pop("ax", False)
 
             if not ax:
                 fig, ax = plt.subplots()
@@ -451,7 +451,7 @@ class MapSeq(object):
             plt.scatter(
                 self.all_coords.loc[strains, "x"],
                 self.all_coords.loc[strains, "y"],
-                label=label, **kwargs)
+                label=label, **kwds)
             plt.legend()
 
             if self.map:
@@ -459,7 +459,7 @@ class MapSeq(object):
                 setup_ax(self.map)
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
-                                           color="black", **kwargs):
+                                           color="black", **kwds):
         """Plot the countour corresponding to the region that contains c percent
         of the density of a KDE over strains with combinations of amino acid
         polymorphisms specified in combinations.
@@ -469,7 +469,7 @@ class MapSeq(object):
                 {145: "N", 133: "D"}
             c (float / int)
             color (matlplotlib colour): Colour to plot the contour line
-            **kwargs. Passed to plt.contour
+            **kwds. Passed to plt.contour
         """
         df = self.strains_with_combinations(combinations)
         strains = df.index
@@ -503,7 +503,7 @@ class MapSeq(object):
 
         plt.contour(
             Xgrid, Ygrid, Z.reshape(Xgrid.shape), levels=[dens, ],
-            colors=color, **kwargs)
+            colors=color, **kwds)
 
     def differ_by_n(self, n):
         """Lookup pairs of strains that differ by n positions.
@@ -544,7 +544,7 @@ class MapSeq(object):
                 keep.append(aas)
         return keep
 
-    def single_substitutions(self, sub, **kwargs):
+    def single_substitutions(self, sub, **kwds):
         """Find pairs of strains that differ by only the substitution 'sub'.
 
         Args:
@@ -567,7 +567,7 @@ class MapSeq(object):
         assert pos in self.seq_in_both.columns
 
         # Drop unwanted positions
-        df = self.seq_in_both.drop(kwargs.pop("exclude", list()), axis=1)
+        df = self.seq_in_both.drop(kwds.pop("exclude", list()), axis=1)
 
         # Drop the position of the substitution
         if pos in df.columns:
@@ -685,7 +685,7 @@ class MapSeq(object):
         return ax
 
     def find_single_substitutions(self, cluster_diff_df, filename=None,
-                                  **kwargs):
+                                  **kwds):
         """
         Find strains that differ by one substitution out of the combinations
         defined in cluster_combinations
@@ -705,7 +705,7 @@ class MapSeq(object):
                 Should be a format string with room to substitute in a label
                 describing the substitutions found.
 
-            **kwargs: Passed to plot_strains_with_combinations
+            **kwds: Passed to plot_strains_with_combinations
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -720,7 +720,7 @@ class MapSeq(object):
 
                 # Find strains that have this combination of amino acids
                 # and plot them
-                if self.plot_strains_with_combinations(combinations, **kwargs):
+                if self.plot_strains_with_combinations(combinations, **kwds):
                     # The c1 amino acid
                     label = "{}-like_{}{}".format(c1, str(p), combinations[p])
 
@@ -738,7 +738,7 @@ class MapSeq(object):
         for c in clusters:
             combinations = cluster_diff_df.loc[:, c].to_dict()
             aas = combination_label(combinations)
-            if self.plot_strains_with_combinations(combinations, **kwargs):
+            if self.plot_strains_with_combinations(combinations, **kwds):
                 label = "{}-like_{}".format(c, aas)
                 plt.title(label.replace("_", " "))
                 plt.tight_layout()
@@ -746,7 +746,7 @@ class MapSeq(object):
                 plt.close()
 
     def find_double_substitutions(self, cluster_diff_df, filename=None,
-                                  **kwargs):
+                                  **kwds):
         """Find strains that differ by two substitutions out of the
         combinations defined in cluster_combinations.
 
@@ -761,7 +761,7 @@ class MapSeq(object):
             filename (str or None): If not None, save a plot with filename.
                 Should be a format string with room to substitute in a label
                 describing the substitutions found.
-            **kwargs passed to plot_strains_with_combinations
+            **kwds passed to plot_strains_with_combinations
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -777,7 +777,7 @@ class MapSeq(object):
 
                 # Find strains that have this combination of amino acids
                 # and plot them
-                if self.plot_strains_with_combinations(combinations, **kwargs):
+                if self.plot_strains_with_combinations(combinations, **kwds):
                     # Label
                     subs = "+".join(sorted("{}{}".format(str(p),
                                                          combinations[p])

@@ -843,9 +843,7 @@ class OrderedMapSeq(MapSeq):
         mask = combined.notnull().any(axis=1)
         n_with_nan = (~mask).sum()
         if n_with_nan:
-            tqdm.write(
-                "Removed {} strains with NaN values".format(n_with_nan)
-            )
+            tqdm.write("Removed {} strains with NaN values".format(n_with_nan))
             combined = combined[mask]
 
         phenotypes = self.coords_in_both.columns

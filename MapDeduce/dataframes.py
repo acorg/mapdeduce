@@ -130,15 +130,18 @@ class CoordDf(object):
 
 
 class SeqDf(object):
-    """Class for DataFrames containing amino acid sequences."""
+    """DataFrames containing amino acid sequences."""
 
     def __init__(self, df):
         """@param df: pd.DataFrame. Columns are amino acid positions."""
         self.df = df
 
     def __repr__(self):
-        return "SeqDf with {} samples and {} sequence positions.".format(
-                    *self.df.shape)
+        return "SeqDf with {} samples and {} sites\n{}:".format(
+            *self.df.shape, repr(self.df))
+
+    def __str__(self):
+        return str(self.df)
 
     @classmethod
     def from_fasta(cls, path):

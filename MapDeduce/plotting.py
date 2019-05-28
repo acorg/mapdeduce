@@ -2,6 +2,7 @@
 from __future__ import division
 from builtins import range
 
+import math
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -10,8 +11,7 @@ from matplotlib.patches import Ellipse, Rectangle
 
 
 def setup_ax(map):
-    """
-    Sets up layout of some ax settings.
+    """Sets up ax for maps with known dimensions.
 
     @param map: String. 2017 or Pre2009
     """
@@ -33,11 +33,6 @@ def setup_ax(map):
         ax.set_ylim(-7, 7)
         ax.set_xticks(list(range(-7, 8)))
         ax.set_yticks(list(range(-6, 7)))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_xlabel("")
-    ax.set_ylabel("")
-    ax.set_aspect(1)
 
 
 # Define ellipses to demark clusters on maps
@@ -295,6 +290,9 @@ def map_setup(ax=None):
     ax.set_yticklabels([])
     ax.set_ylabel("")
     ax.set_xlabel("")
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    ax.set_xlim(math.floor(xlim[0]), math.ceil(xlim[1]))
+    ax.set_ylim(math.floor(ylim[0]), math.ceil(ylim[1]))
     ax.set_aspect(1)
     return ax
 

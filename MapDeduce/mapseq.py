@@ -100,6 +100,7 @@ class MapSeq(object):
             label="With sequence ({})".format(n_with_sequence),
             **kwds)
         setup_ax(map=self.map)
+        map_setup()
         return ax
 
     def variant_proportions(self, p):
@@ -179,6 +180,7 @@ class MapSeq(object):
         ax.legend()
         ax.text(x=0.5, y=1, s=p, fontsize=25, va="top", transform=ax.transAxes)
 
+        map_setup()
         return ax
 
     def plot_single_substitution(self, sub, ellipses=True, filename=None,
@@ -290,6 +292,7 @@ class MapSeq(object):
             ax.legend()
             title = "{} ({})".format(label, i + 1)
             ax.set_title(title)
+            map_setup()
             if filename is not None:
                 plt.tight_layout()
                 plt.savefig(filename.format(title.replace(" ", "")))
@@ -457,6 +460,7 @@ class MapSeq(object):
             if self.map:
                 add_ellipses(self.map)
                 setup_ax(self.map)
+            map_setup()
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
                                            color="black", **kwds):
@@ -504,6 +508,7 @@ class MapSeq(object):
         plt.contour(
             Xgrid, Ygrid, Z.reshape(Xgrid.shape), levels=[dens, ],
             colors=color, **kwds)
+        map_setup()
 
     def differ_by_n(self, n):
         """Lookup pairs of strains that differ by n positions.

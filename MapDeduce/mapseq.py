@@ -1,4 +1,4 @@
-"""Contains the main class to represent maps with sequences."""
+plot_"""Contains the main class to represent maps with sequences."""
 
 from __future__ import print_function, division
 
@@ -81,7 +81,7 @@ class MapSeq(object):
             if len(self.seq_in_both.loc[:, p].unique()) != 1:
                 self.variant_positions.add(p)
 
-    def scatter_with_without(self, **kwds):
+    def plot_with_without(self, **kwds):
         """Plot indicating which antigens do and do not have sequences.
 
         Args:
@@ -116,7 +116,7 @@ class MapSeq(object):
         value_counts = series.value_counts()
         return (value_counts / value_counts.sum()).sort_values()
 
-    def scatter_colored_by_amino_acid(self, p, randomz=True, ellipses=True,
+    def plot_colored_by_amino_acid(self, p, randomz=True, ellipses=True,
                                       **kwargs):
         """Plot map colored by amino acids at position p.
 
@@ -181,7 +181,7 @@ class MapSeq(object):
 
         return ax
 
-    def scatter_single_substitution(self, sub, ellipses=True, filename=None,
+    def plot_single_substitution(self, sub, ellipses=True, filename=None,
                                     connecting_lines=True, **kwargs):
         """Plot map colored by amino acids at position p.
 
@@ -294,16 +294,16 @@ class MapSeq(object):
                 plt.tight_layout()
                 plt.savefig(filename.format(title.replace(" ", "")))
 
-    def scatter_variant_positions_colored_by_amino_acid(self, filename,
+    def plot_variant_positions_colored_by_amino_acid(self, filename,
                                                         **kwds):
-        """Call scatter_colored_by_amino_acid for all variant positions
+        """Call plot_colored_by_amino_acid for all variant positions
 
         Args:
             filename (str): A format string with one field to fill in. Each
                 position will be substituted in. E.g.:
                 "img/melb-h3-2009-coloured-by-pos/{}.png"
 
-            **kwds: Keyword arguments passed to scatter_colored_by_amino_acid
+            **kwds: Keyword arguments passed to plot_colored_by_amino_acid
         """
         # Save text file containing html of the variant positions. 1 sorted by
         # primary structure the second by most common variant
@@ -417,6 +417,9 @@ class MapSeq(object):
                 combinations).
             **kwargs: Optional keywords passed to the scatter function of the
                 strains with particular combinations.
+
+                ax (matplotlib ax) is an optional kwarg. If passed, the plot
+                will be put on this matplotlib ax.
         """
         df = self.strains_with_combinations(
             combinations=combinations,

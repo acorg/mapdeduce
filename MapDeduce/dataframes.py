@@ -19,24 +19,26 @@ from .munging import df_from_fasta
 
 
 class CoordDf(object):
-    """Class for x, y coordinate data."""
 
     def __init__(self, df):
-        """@param df: pd.DataFrame. Must contain x and y columns."""
+        """Coordinate data.
+
+        Args:
+            df (pd.DataFrame): Must contain x and y columns.
+        """
         self.df = df
 
     def __repr__(self):
-        return "CoordDf with {} samples and {} dimensions.".format(
-                    *self.df.shape)
+        return "CoordDf with {} samples and {} dimensions:\n{}".format(
+                    *self.df.shape, repr(self.df))
 
     def rotate(self, a, inplace=True):
-        """
-        Rotate points specified by the xy coordinates in the DataFrame
-        a degrees around the origin anticlockwise.
+        """Rotate points a degrees around the origin anticlockwise.
 
-        @param a: Number. Arc degrees to rotate the dataframe by
-        @param inplace: Bool. Rotate the data inplace, or return a rotated
-            copy of the data.
+        Args:
+            a (Number): Arc degrees to rotate the dataframe by.
+            inplace (bool): Rotate the data inplace, or return a rotated
+                copy of the data.
         """
         theta = np.radians(a)
         c, s = np.cos(theta), np.sin(theta)
@@ -50,10 +52,13 @@ class CoordDf(object):
             return CoordDf(df=df)
 
     def points_in_patch(self, patch):
-        """
-        Return points in df contained in a matplotlib patch
+        """Points in sel.df contained in a matplotlib patch.
 
-        @param patch. matplotlib.patches.Patch instance
+        Args:
+            patch (matplotlib.patches.Patch)
+
+        Returns:
+            Strains in patch.
         """
         fig, ax = plt.subplots()
         self.df.plot.scatter(x="x", y="y", ax=ax)
@@ -64,11 +69,11 @@ class CoordDf(object):
         return mask
 
     def pca_rotate(self, inplace=True):
-        """
-        Rotate the coordinates along first and second principal components.
+        """Rotate coordinates along first and second principal components.
 
-        @param inplace: Bool. Rotate the data inplace, or return a rotated
-            copy of the data.
+        Args:
+            inplace (bool): Rotate the data inplace, or return a rotated
+                copy of the data.
         """
         n_components = self.df.shape[1]
         coord_pca = PCA(n_components=n_components).fit(self.df)
@@ -81,12 +86,15 @@ class CoordDf(object):
             return CoordDf(df=df)
 
     def quantile_transform(self, inplace=True):
-        """
-        Transform features using quantile information. See
-        http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.
-        quantile_transform.html#sklearn.preprocessing.quantile_transform
+        """Transform features using quantile information.
 
-        @param inplace: Bool.
+        Notes:
+            http://scikit-learn.org/stable/modules/generated/
+            sklearn.preprocessing.quantile_transform.html#sklearn.
+                preprocessing.quantile_transform
+
+        Args:
+            inplace (bool)
         """
         arr = quantile_transform(self.df, output_distribution="normal")
         df = pd.DataFrame(arr, index=self.df.index, columns=self.df.columns)
@@ -96,20 +104,21 @@ class CoordDf(object):
         else:
             return CoordDf(df=df)
 
-    def paired_distances(self, other_df):
-        """
-        Compute euclidean distances between points in self.df and paired
+    def paired_distances(self, other):
+        """Compute euclidean distances between points in self.df and paired
         points in another dataframe. The other dataframe must have the same
         dimensions as self.df
 
-        @param other_df: pd.DataFrame
+        Args:
+            other (pd.DataFrame)
 
-        @returns ndarray: Euclidean distances.
+        Returns:
+            (ndarray): Euclidean distances.
         """
-        if self.df.index.shape != other_df.index.shape:
+        if self.df.index.shape != other.index.shape:
             raise ValueError("Index lengths mismatched.")
 
-        if self.df.columns.shape != other_df.columns.shape:
+        if self.df.columns.shape != other.columns.shape:
             raise ValueError("Column lengths mismatched.")
 
         n = self.df.shape[0]
@@ -121,7 +130,7 @@ class CoordDf(object):
             try:
                 distances[i] = euclidean(
                     u=self.df.iloc[i, :],
-                    v=other_df.iloc[i, :])
+                    v=other.iloc[i, :])
 
             except ValueError:
                 distances[i] = np.nan
@@ -130,10 +139,14 @@ class CoordDf(object):
 
 
 class SeqDf(object):
-    """DataFrames containing amino acid sequences."""
 
     def __init__(self, df):
-        """@param df: pd.DataFrame. Columns are amino acid positions."""
+        """DataFrames containing amino acid sequences.
+
+        Args:
+            df (pd.DataFrame): Columns are amino acid positions, rows are
+                samples, cells contain amino acids.
+        """
         self.df = df
 
     def __repr__(self):
@@ -147,23 +160,32 @@ class SeqDf(object):
     def from_fasta(cls, path):
         """Make a SeqDf from a fasta file.
 
-        @param path: Str. Path to fasta file.
+        Args:
+            path (str): Path to fasta file.
+
+        Returns:
+            (SeqDf)
         """
         return cls(df_from_fasta(path=path, positions="infer"))
 
     @classmethod
     def from_series(cls, series):
-        """Make new SeqDf from a series.
+        """Make SeqDf from a series.
 
-        @param series: pd.Series. Each element in series is a string. See
-            MapDeduce.helper.expand_sequences for more details.
+        Args:
+            series (pd.Series): Each element in series is a string. See
+                MapDeduce.helper.expand_sequences for more details.
+
+        Returns:
+            (SeqDf)
         """
         return cls(expand_sequences(series))
 
     def remove_invariant(self, inplace=True):
         """Remove positions (columns) that contain only one amino acid.
 
-        @param inplace: Bool.
+        Args:
+            inplace (bool).
         """
         mask = self.df.apply(lambda x: pd.unique(x).shape[0] > 1)
         n = (~mask).sum()
@@ -176,9 +198,10 @@ class SeqDf(object):
             return new
 
     def get_dummies(self, inplace=True):
-        """Get dummy variable representation of the sequences.
+        """Get dummy representation of the sequences.
 
-        @param inplace: Bool.
+        Args:
+            inplace (bool).
         """
         d = pd.get_dummies(self.df, prefix_sep="").astype(float)
 
@@ -190,10 +213,12 @@ class SeqDf(object):
     def shuffle_dummies(self, n_shuffles, c):
         """Return a DataFrame containing n shuffles of the data in column c
 
-        @param n_shuffles: Int. Number of shuffles
-        @param c: Must lookup column in self.dummies
+        Args:
+            n_shuffles (int): Number of shuffles.
+            c (str): Must be column in self.dummies.
 
-        @returns (N, n_shuffles) ndarray
+        Returns:
+            (ndarray): Shape [N, n_shuffles]
         """
         values = self.dummies.loc[:, c].values
         arr = np.empty((values.shape[0], n_shuffles))
@@ -204,11 +229,16 @@ class SeqDf(object):
     def get_dummies_at_positions(self, positions):
         """Return set of dummy variable names at HA positions.
 
-        Dummy variable names are either singles (e.g. 135K), or compound
-        (e.g. 7D|135K|265E). For compound dummy variable names return the
-        entire compound name if any constituent SNP is in positions.
+        Notes:
+            Dummy variable names are either singles (e.g. 135K), or compound
+            (e.g. 7D|135K|265E). For compound dummy variable names return the
+            entire compound name if any constituent SNP is in positions.
 
-        @param positions: List of positions.
+        Args:
+            positions (iterable containing positions
+
+        Returns:
+            (set) containing dummy variable names.
         """
         dummies = set()
         add = dummies.add
@@ -227,7 +257,8 @@ class SeqDf(object):
     def merge_duplicate_dummies(self, inplace=False):
         """Merge SNPs that are identical in all strains.
 
-        @param inplace: Bool.
+        Args:
+            inplace (bool)
         """
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
 
@@ -243,7 +274,8 @@ class SeqDf(object):
     def consensus(self):
         """Compute the consensus sequence
 
-        @returns pd.Series.
+        Returns:
+            (pd.Series)
         """
         return self.df.apply(site_consensus, axis=0)
 
@@ -251,9 +283,11 @@ class SeqDf(object):
         """Replace all strains that have the same index with a single
         consensus strain.
 
-        @param inplace: Bool.
+        Args:
+            inplace (bool).
 
-        @param returns: MapDeduce.dataframes.SeqDf, if inplace=False.
+        Returns
+            (MapDeduce.dataframes.SeqDf) if inplace=False.
         """
         vc = self.df.index.value_counts()
         dupes = (vc[vc > 1]).index
@@ -269,7 +303,8 @@ class SeqDf(object):
     def to_fasta(self, path):
         """Write the sequences in fasta format.
 
-        @param path: Path to write file.
+        Args:
+            path (str): Path to write file.
         """
         if not path.lower().endswith(".fasta"):
             path += ".fasta"
@@ -277,3 +312,14 @@ class SeqDf(object):
             for row in self.df.iterrows():
                 handle.write(">{}\n".format(row.name))
                 handle.write("{}\n".format("".join(row)))
+
+    def groupby_amino_acid_at_site(self, p):
+        """Lookup groups of strains that have the same amino acid at site p.
+
+        Args:
+            p (int): Site. Must be a column in self.df.
+
+        Returns:
+            (dict): Maps amino acid -> set containing strain names.
+        """
+        pass

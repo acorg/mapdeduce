@@ -365,16 +365,17 @@ class MapSeq(object):
             plt.savefig(filename.format(p), bbox_inches="tight")
             plt.close()
 
+    @property
     def variant_positions_sorted_by_most_common_variant(self):
         """Lookup variant positions.
 
         Returns:
             tuple. Contains variant positions, sorted by most common variant.
         """
-        proportions_all_variants = list(map(self.variant_proportions,
-                                        self.variant_positions))
-        proportions_all_variants_sorted = sorted(proportions_all_variants,
-                                                 key=lambda x: x[-1])
+        proportions_all_variants = list(
+            map(self.variant_proportions, self.variant_positions))
+        proportions_all_variants_sorted = sorted(
+            proportions_all_variants, key=lambda x: x[-1])
         return tuple(p.name for p in proportions_all_variants_sorted)
 
     def strains_with_combinations(self, combinations, without=False):

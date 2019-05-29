@@ -22,6 +22,7 @@ warnings.filterwarnings(action="ignore", message="No strains with 1K",
 warnings.filterwarnings(action="ignore", message="No strains with 1L",
                         category=UserWarning)
 
+
 class MapSeqAttributes(unittest.TestCase):
     """Tests for MapSeq class attributes"""
 

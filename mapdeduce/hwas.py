@@ -9,9 +9,6 @@ import pandas as pd
 import scipy
 import sklearn
 
-import warnings
-warnings.filterwarnings("ignore", module="h5py")
-
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
 
@@ -23,6 +20,9 @@ from .dataframes import CoordDf
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+import warnings
+warnings.filterwarnings("ignore", module="h5py")
 
 
 def shuffle_values(nperm, values):

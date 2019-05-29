@@ -17,6 +17,7 @@ warnings.filterwarnings(action="ignore", module="rpy2",
                         message="Error in 1:total.nperm : result would be too "
                                 "long a vector")
 
+
 class Permp(unittest.TestCase):
     """Tests for permp function"""
 

@@ -102,13 +102,14 @@ class MapSeq(object):
                 _variant_positions.add(p)
         return _variant_positions
 
-    def plot_with_without(self, **kwds):
+    def plot_with_without(self, ax=None, **kwds):
         """Plot indicating which antigens do and do not have sequences.
 
         Args:
+            ax (matplotlib ax): Optional matplotlib ax.
             **kwds. Passed to pd.DataFrame.plot.scatter
         """
-        ax = plt.gca()
+        ax = plt.gca() if ax is None else ax
         kwds = dict(ax=ax, x="x", y="y")
         n_without_sequence = self.coords_of_strains_without_sequence.shape[0]
         self.coords_of_strains_without_sequence.plot.scatter(
@@ -139,20 +140,22 @@ class MapSeq(object):
         return (value_counts / value_counts.sum()).sort_values()
 
     def plot_amino_acids_at_site(self, p, randomz=True, ellipses=True,
-                                 **kwds):
+                                 title=True, ax=None, **kwds):
         """Plot map colored by amino acids at site p.
 
         Args:
             p (int): HA site.
             randomz (bool): Given points random sites in z. This is
                 slower because marks have to plotted individually.
-            ellipses (bool). Demark clusters with ellipses.
+            ellipses (bool): Demark clusters with ellipses.
+            title (bool): Add a title to the figure.
+            ax (matplotlib ax): Plot figure on this ax.
             **kwds. Passed to ax.scatter for the colored strains.
 
         Returns:
             matplotlib ax
         """
-        ax = plt.gca()
+        ax = plt.gca() if ax is None else ax
 
         # Antigens without a known sequence
         if not self.coords_of_strains_without_sequence.empty:
@@ -199,9 +202,11 @@ class MapSeq(object):
         setup_ax(self.map)
 
         ax.legend()
-        ax.text(x=0.5, y=1, s=p, fontsize=25, va="top", transform=ax.transAxes)
+        if title:
+            ax.text(x=0.5, y=1, s=p, fontsize=25, va="top",
+                    transform=ax.transAxes, ha="center")
 
-        map_setup()
+        map_setup(ax)
         return ax
 
     def plot_single_substitution(self, sub, ellipses=True, filename=None,

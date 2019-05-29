@@ -3,6 +3,8 @@
 from __future__ import print_function
 from builtins import range, object
 
+from itertools import combinations
+
 import numpy as np
 import pandas as pd
 
@@ -326,3 +328,33 @@ class SeqDf(object):
             raise ValueError("{} not in self.df.columns".format(p))
         return {amino_acid: set(group.index)
                 for amino_acid, group in self.df.groupby(self.df.loc[:, p])}
+
+    def substitutions_at_site(self, p, min_strains=0):
+        """Find substitutions that occur at site p.
+
+        Args:
+            p (int). Must be in self.df.
+            min_strains (int). Minimum number of strains that must posses a
+                given amino acid to be included. Default=0 to include all
+                strains.
+
+        Returns:
+            (dict): Maps substituion -> pd.Series containing profile of
+                substitution. Strains with 0 have the aa0. Strains with 1 have
+                the aa1.
+        """
+        groups = self.groupby_amino_acid_at_site(p)
+        rv = {}
+        for aa0, aa1 in combinations(groups, 2):
+            aa0, aa1 = sorted((aa0, aa1))
+            if len(groups[aa0]) < min_strains:
+                continue
+            elif len(groups[aa1]) < min_strains:
+                continue
+            else:
+                data = [0.0] * len(groups[aa0]) + [1.0] * len(groups[aa1])
+                index = list(groups[aa0]) + list(groups[aa1])
+                series = pd.Series(data=data, index=index)
+                series.name = "{}{}{}".format(aa0, str(p), aa1)
+                rv[str(series.name)] = series
+        return rv

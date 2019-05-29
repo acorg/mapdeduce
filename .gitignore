@@ -1,5 +1,6 @@
 **.pyc
-_trial_temp
-MapDeduce.egg-info
 **.py.bak
-MapDeduce/__pycache__
+_trial_temp
+mapdeduce.egg-info
+mapdeduce/__pycache__
+test/__pycache__

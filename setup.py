@@ -15,7 +15,7 @@ def version():
     import os
     import re
 
-    init = os.path.join('MapDeduce', '__init__.py')
+    init = os.path.join('mapdeduce', '__init__.py')
     with open(init) as fp:
         initData = fp.read()
     match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", initData, re.M)
@@ -26,13 +26,13 @@ def version():
 
 
 setup(
-    name='MapDeduce',
+    name='mapdeduce',
     version=version(),
     description='Handling antigenic maps and sequence data, testing amino '
                 'acid polymorphisms associated with antigenicity.',
     author='David Pattinson',
     author_email='djp65@cam.ac.uk',
-    packages=['MapDeduce'],
+    packages=['mapdeduce'],
     install_requires=[
         "sklearn==0.0",
         "matplotlib==3.0.2",

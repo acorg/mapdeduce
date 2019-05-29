@@ -692,33 +692,35 @@ class HwasLmm(object):
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
         return ax
 
-    def plot_antigens(self, color_dict=None, **kwargs):
-        """
-        2D scatter plot of antigens
+    def plot_antigens(self, color_dict=None, ax=None, **kwargs):
+        """2D scatter plot of antigens.
 
-        @param color_dict: Dict / None. Values are mpl color for each antigen.
-            Overrides c, if c passed as a kwarg.
+        Args:
+            color_dict (dict or None): Values are mpl color for each antigen.
+                Overrides c, if c passed as a kwarg.
+            ax (matplotlib ax)
+            kwargs: Passed to self.pheno.plot.scatter.
 
-        @param **kwargs. Passed to self.pheno.plot.scatter
+        Returns:
+            (matplotlib ax)
         """
+        ax = plt.gca() if ax is None else ax
+
         if color_dict is not None:
             c = [color_dict[i] for i in self.pheno.index]
-
         else:
             c = kwargs.pop("c", "black")
 
-        map_setup()
-
-        return self.pheno.plot.scatter(
-            x=self.P0,
-            y=self.P1,
-            c=c,
+        self.pheno.plot.scatter(
+            x=self.P0, y=self.P1, c=c,
             s=kwargs.pop("s", 60),
             lw=kwargs.pop("lw", 0.25),
             edgecolor=kwargs.pop("edgecolor", "white"),
-            ax=plt.gca(),
-            **kwargs
-        )
+            ax=ax, **kwargs)
+
+        map_setup()
+
+        return ax
 
     def summarise_joint(self, min_effect=0, max_p=1):
         """Make a summary dataframe of the joint effects. Columns comprise

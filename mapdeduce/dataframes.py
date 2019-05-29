@@ -176,7 +176,7 @@ class SeqDf(object):
 
         Args:
             series (pd.Series): Each element in series is a string. See
-                MapDeduce.helper.expand_sequences for more details.
+                mapdeduce.helper.expand_sequences for more details.
 
         Returns:
             (SeqDf)
@@ -289,7 +289,7 @@ class SeqDf(object):
             inplace (bool).
 
         Returns
-            (MapDeduce.dataframes.SeqDf) if inplace=False.
+            (mapdeduce.dataframes.SeqDf) if inplace=False.
         """
         vc = self.df.index.value_counts()
         dupes = (vc[vc > 1]).index

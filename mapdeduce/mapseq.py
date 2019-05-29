@@ -835,8 +835,8 @@ class OrderedMapSeq(MapSeq):
                 "y" coordinates.
 
         Attributes:
-            coord (MapDeduce.dataframes.CoordDf): Contains coordinates.
-            seq (MapDeduce.dataframes.SeqDf): Contains sequences.
+            coord (mapdeduce.dataframes.CoordDf): Contains coordinates.
+            seq (mapdeduce.dataframes.SeqDf): Contains sequences.
         """
         super().__init__(seq_df, coord_df)
 

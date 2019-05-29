@@ -9,8 +9,8 @@ except ImportError:
 import pandas as pd
 import os
 
-import MapDeduce
-from MapDeduce.munging import dict_from_fasta, df_from_fasta
+import mapdeduce
+from mapdeduce.munging import dict_from_fasta, df_from_fasta
 
 
 class DictFromFastaTests(unittest.TestCase):
@@ -18,7 +18,7 @@ class DictFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        module_directory = os.path.dirname(MapDeduce.__path__[0])
+        module_directory = os.path.dirname(mapdeduce.__path__[0])
         fasta_path = os.path.join(module_directory, 'data', 'test',
                                   'fasta-sample.fa')
         self.dict = dict_from_fasta(path=fasta_path)
@@ -39,7 +39,7 @@ class DfFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        module_directory = os.path.dirname(MapDeduce.__path__[0])
+        module_directory = os.path.dirname(mapdeduce.__path__[0])
         fasta_path = os.path.join(module_directory, 'data', 'test',
                                   'fasta-sample.fa')
         self.df = df_from_fasta(path=fasta_path, positions=(1, 2, 3, 4, 5))

@@ -9,8 +9,8 @@ except ImportError:
     import unittest
 import pandas as pd
 
-import MapDeduce
-from MapDeduce.mapseq import MapSeq, OrderedMapSeq
+import mapdeduce
+from mapdeduce.mapseq import MapSeq, OrderedMapSeq
 
 
 class MapSeqAttributes(unittest.TestCase):
@@ -242,7 +242,7 @@ class OrderedMapSeqTests(unittest.TestCase):
 
     def test_attribute_coord(self):
         self.assertIsInstance(
-            self.oms.coord, MapDeduce.dataframes.CoordDf)
+            self.oms.coord, mapdeduce.dataframes.CoordDf)
 
     def test_indexes_contain_intersection(self):
         """Indexes of the sequence and coordinate dataframe should contain

@@ -10,6 +10,12 @@ except ImportError:
     import unittest
 from rpy2.rinterface import RRuntimeError
 
+import warnings
+
+# Permp.test_too_many_combinations_for_exact raises this warning
+warnings.filterwarnings(action="ignore", module="rpy2",
+                        message="Error in 1:total.nperm : result would be too "
+                                "long a vector")
 
 class Permp(unittest.TestCase):
     """Tests for permp function"""

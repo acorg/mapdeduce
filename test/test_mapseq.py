@@ -12,6 +12,15 @@ import pandas as pd
 import mapdeduce
 from mapdeduce.mapseq import MapSeq, OrderedMapSeq
 
+import warnings
+# MapSeqStrainsWithCombinations.test_correct_strains_2 raises this user warning
+warnings.filterwarnings(action="ignore", message="No strains with 1K",
+                        category=UserWarning)
+
+# MapSeqStrainsWithCombinations.test_returns_df_combinations_absent raises
+# this warning
+warnings.filterwarnings(action="ignore", message="No strains with 1L",
+                        category=UserWarning)
 
 class MapSeqAttributes(unittest.TestCase):
     """Tests for MapSeq class attributes"""
@@ -152,7 +161,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         self.assertEqual(set(("strain1", "strain2", "strain3")),
                          set(output.index))
 
-    def test_correct_strains_3(self):
+    def test_correct_strains_2(self):
         """
         Test correct strains returned.
         Expect no strains.

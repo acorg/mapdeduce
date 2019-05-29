@@ -77,7 +77,7 @@ def effective_tests(snps):
     return (np.sum(np.sqrt(eigenvalues)) ** 2) / np.sum(eigenvalues)
 
 
-def qq_plot(results, snps=None, **kwargs):
+def qq_plot(results, snps=None, **kwds):
     """
     Plot a quantile-quantile comparison plot of p-values
 
@@ -90,14 +90,14 @@ def qq_plot(results, snps=None, **kwargs):
         DataFrame indexes are SNPs.
     @param snps: List. Plot only these snps
 
-        Optional kwargs
+        Optional kwds
 
     @param larger: List. SNPs to plot larger.
     @param very_large: List. SNPs to plot very large.
     """
     ax = plt.gca()
-    larger = kwargs.pop("larger", None)
-    very_large = kwargs.pop("very_large", None)
+    larger = kwds.pop("larger", None)
+    very_large = kwds.pop("very_large", None)
 
     # Get 2D DataFrame contianing pvalues and effect sizes for this
     # phenotype
@@ -597,14 +597,14 @@ class HwasLmm(object):
             columns=effects.columns
         )
 
-    def lmm_permute(self, n, K_without_snp=False, **kwargs):
+    def lmm_permute(self, n, K_without_snp=False, **kwds):
         """Run lmm on n shuffled permutations of snps.
 
         @param n. Int. Number of permutations.
         @param K_without_snp. Bool. For each snp, use a covariance matrix
             computed with that snp ommitted.
 
-            Optional kwargs:
+            Optional kwds:
 
         @param snps. df (N, S). N individuals, S snps.
 
@@ -612,7 +612,7 @@ class HwasLmm(object):
             are the p-value for that permutation
         """
         pvalues = np.empty((n, self.S))
-        snps = kwargs.pop("snps", self.snps)
+        snps = kwds.pop("snps", self.snps)
 
         for i in range(n):
             results = self.lmm(snps=sklearn.utils.shuffle(snps),
@@ -668,14 +668,14 @@ class HwasLmm(object):
         results.loc["p-empirical", pheno, :] = pd.Series(empirical_pvalues)
         return results
 
-    def snp_stripplot(self, snp, **kwargs):
+    def snp_stripplot(self, snp, **kwds):
         """
         Stripplot showing the value of the phenotype for the two values of the
         snp
 
         @param snp: Str. Column name of the snp to plot
 
-        @param kwargs: Passed to sns.stripplot.
+        @param kwds: Passed to sns.stripplot.
         """
         ax = plt.gca()
         x, y = snp, "Phenotype"
@@ -683,7 +683,7 @@ class HwasLmm(object):
             y: self.pheno.values[:, 0],
             x: self.snps.loc[:, snp].values
         })
-        sns.stripplot(data=df, x=x, y=y, color="black", ax=ax, **kwargs)
+        sns.stripplot(data=df, x=x, y=y, color="black", ax=ax, **kwds)
         # Plot the means of the groups
         means = np.empty((2, 2))
         for i, (x, idx) in enumerate(df.groupby(snp).groups.items()):
@@ -692,14 +692,14 @@ class HwasLmm(object):
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
         return ax
 
-    def plot_antigens(self, color_dict=None, ax=None, **kwargs):
+    def plot_antigens(self, color_dict=None, ax=None, **kwds):
         """2D scatter plot of antigens.
 
         Args:
             color_dict (dict or None): Values are mpl color for each antigen.
                 Overrides c, if c passed as a kwarg.
             ax (matplotlib ax)
-            kwargs: Passed to self.pheno.plot.scatter.
+            kwds: Passed to self.pheno.plot.scatter.
 
         Returns:
             (matplotlib ax)
@@ -709,14 +709,14 @@ class HwasLmm(object):
         if color_dict is not None:
             c = [color_dict[i] for i in self.pheno.index]
         else:
-            c = kwargs.pop("c", "black")
+            c = kwds.pop("c", "black")
 
         self.pheno.plot.scatter(
             x=self.P0, y=self.P1, c=c,
-            s=kwargs.pop("s", 60),
-            lw=kwargs.pop("lw", 0.25),
-            edgecolor=kwargs.pop("edgecolor", "white"),
-            ax=ax, **kwargs)
+            s=kwds.pop("s", 60),
+            lw=kwds.pop("lw", 0.25),
+            edgecolor=kwds.pop("edgecolor", "white"),
+            ax=ax, **kwds)
 
         map_setup()
 
@@ -749,7 +749,7 @@ class HwasLmm(object):
 
         return df
 
-    def plot_antigens_with_snp(self, snp, jitter=0, randomz=None, **kwargs):
+    def plot_antigens_with_snp(self, snp, jitter=0, randomz=None, **kwds):
         """Plot antigens that have a snp.
 
         @param snp. Must specify a column in self.snps
@@ -761,7 +761,7 @@ class HwasLmm(object):
         @param randomz. None / Number. If not None, then each point gets a
             random z value within +/- 0.5 units of randomz
         """
-        ax = kwargs.pop("ax", plt.gca())
+        ax = kwds.pop("ax", plt.gca())
 
         mask = self.snps.loc[:, snp] == 1
         n = mask.sum()
@@ -787,7 +787,7 @@ class HwasLmm(object):
                     x=row[self.P0],
                     y=row[self.P1],
                     zorder=row["z"],
-                    **kwargs
+                    **kwds
                 )
 
         else:
@@ -795,7 +795,7 @@ class HwasLmm(object):
                 x=self.P0,
                 y=self.P1,
                 ax=ax,
-                **kwargs
+                **kwds
             )
 
         map_setup(ax)

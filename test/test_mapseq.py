@@ -9,18 +9,24 @@ except ImportError:
     import unittest
 import pandas as pd
 
+import matplotlib.pyplot as plt
+from matplotlib.testing.decorators import image_comparison
+
 import mapdeduce
 from mapdeduce.mapseq import MapSeq, OrderedMapSeq
 
 import warnings
 # MapSeqStrainsWithCombinations.test_correct_strains_2 raises this user warning
-warnings.filterwarnings(action="ignore", message="No strains with 1K",
-                        category=UserWarning)
+warnings.filterwarnings(
+    action="ignore", message="No strains with 1K", category=UserWarning)
 
 # MapSeqStrainsWithCombinations.test_returns_df_combinations_absent raises
 # this warning
-warnings.filterwarnings(action="ignore", message="No strains with 1L",
-                        category=UserWarning)
+warnings.filterwarnings(
+    action="ignore", message="No strains with 1L", category=UserWarning)
+
+warnings.filterwarnings(
+    action="ignore", message="The default of the `iid` parameter")
 
 
 class MapSeqAttributes(unittest.TestCase):
@@ -271,6 +277,29 @@ class OrderedMapSeqTests(unittest.TestCase):
         self.assertEqual(
             list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
 
+
+class PlottingTests(unittest.TestCase):
+
+    def setUp(self):
+        """Sequences and coordinates to use in tests"""
+        seq_df = pd.DataFrame({
+            1: ("Q", "Q", "Q", "Q", "Q"),
+            2: ("K", "K", "N", "K", "N"),
+            3: ("L", "L", "A", "L", "-"),
+        }, index=("strain1", "strain2", "strain3", "strain5", "strain6"))
+        coord_df = pd.DataFrame({
+            "x": (0, 0, 1, 1, 0),
+            "y": (0, 1, 0, 1, 0),
+        }, index=("strain1", "strain2", "strain3", "strain4", "strain6"))
+        self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
+
+    def test_plot_strains_with_combinations_kde(self):
+        self.ms.plot_strains_with_combinations_kde({1: "Q"})
+        plt.close()
+
+    def test_plot_with_without(self):
+        self.ms.plot_with_without()
+        plt.close()
 
 if __name__ == "__main__":
     unittest.main()

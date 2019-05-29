@@ -757,6 +757,8 @@ class HwasLmm(object):
         Returns:
             (pd.DataFrame): Containing the summary.
         """
+        if not hasattr(self, "results"):
+            raise ValueError("No results to summarise. Run HwasLmm.fit")
         df = self.results["beta"].apply(pd.Series)
         df.columns = ["b{}".format(i) for i in range(df.shape[1])]
         df["joint"] = self.results["beta"].apply(np.linalg.norm)

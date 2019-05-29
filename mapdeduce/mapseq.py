@@ -15,6 +15,7 @@ import spm1d
 from scipy import spatial
 
 import sklearn
+from sklearn import neighbors
 
 from operator import and_
 import itertools
@@ -507,7 +508,7 @@ class MapSeq(object):
         dataset = self.coord_df.loc[strains, :]
 
         grid = sklearn.model_selection.GridSearchCV(
-            estimator=sklearn.neighbors.KernelDensity(kernel="gaussian"),
+            estimator=neighbors.KernelDensity(kernel="gaussian"),
             param_grid=dict(bandwidth=np.linspace(0.01, 2, 20)),
             cv=3
         )

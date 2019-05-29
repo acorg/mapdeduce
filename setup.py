@@ -34,7 +34,7 @@ setup(
     author_email="djp65@cam.ac.uk",
     packages=["mapdeduce"],
     install_requires=[
-        "sklearn==0.0",
+        "scikit-learn==0.21.2",
         "matplotlib==3.0.2",
         "spm1d==0.4.0",
         "tqdm==4.28.1",

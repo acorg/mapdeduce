@@ -220,13 +220,12 @@ def qq_plot(results, snps=None, **kwargs):
 
 
 class HwasLmm(object):
-    """
-    Linear mixed models to look for associations between amino acid - position
-    combinations on antigenic phenotypes.
-    """
 
     def __init__(self, snps, pheno, covs=None):
         """
+        Linear mixed models to test associations between amino acid -
+        position combinations on antigenic phenotypes.
+
         @param snps: pd.DataFrame. (N, S). S snps for N individuals.
 
         @param pheno: pd.DataFrame. (N, P). P phenotypes for N individuals.
@@ -708,6 +707,8 @@ class HwasLmm(object):
         else:
             c = kwargs.pop("c", "black")
 
+        map_setup()
+
         return self.pheno.plot.scatter(
             x=self.P0,
             y=self.P1,
@@ -794,6 +795,10 @@ class HwasLmm(object):
                 ax=ax,
                 **kwargs
             )
+
+        map_setup(ax)
+
+        return ax
 
     def plot_multi_effects(self, min_effect=0, max_p=1, snps=None,
                            label_arrows=False, plot_strains_with_snps=False,

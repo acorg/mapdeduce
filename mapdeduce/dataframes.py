@@ -1,4 +1,4 @@
-"""Classes for handling DataFrames containing coordinates and sequences"""
+"""Classes for handling DataFrames containing coordinates and sequences."""
 
 from __future__ import print_function
 from builtins import range, object
@@ -187,7 +187,7 @@ class SeqDf(object):
         """Remove positions (columns) that contain only one amino acid.
 
         Args:
-            inplace (bool).
+            inplace (bool)
         """
         mask = self.df.apply(lambda x: pd.unique(x).shape[0] > 1)
         n = (~mask).sum()
@@ -203,7 +203,7 @@ class SeqDf(object):
         """Get dummy representation of the sequences.
 
         Args:
-            inplace (bool).
+            inplace (bool)
         """
         d = pd.get_dummies(self.df, prefix_sep="").astype(float)
 
@@ -220,7 +220,7 @@ class SeqDf(object):
             c (str): Must be column in self.dummies.
 
         Returns:
-            (ndarray): Shape [N, n_shuffles]
+            (ndarray): Shape [N, n_shuffles].
         """
         values = self.dummies.loc[:, c].values
         arr = np.empty((values.shape[0], n_shuffles))
@@ -237,7 +237,7 @@ class SeqDf(object):
             entire compound name if any constituent SNP is in positions.
 
         Args:
-            positions (iterable containing positions
+            positions (iterable) containing positions.
 
         Returns:
             (set) containing dummy variable names.
@@ -274,7 +274,7 @@ class SeqDf(object):
             return df
 
     def consensus(self):
-        """Compute the consensus sequence
+        """Compute the consensus sequence.
 
         Returns:
             (pd.Series)
@@ -288,7 +288,7 @@ class SeqDf(object):
         Args:
             inplace (bool).
 
-        Returns
+        Returns:
             (mapdeduce.dataframes.SeqDf) if inplace=False.
         """
         vc = self.df.index.value_counts()

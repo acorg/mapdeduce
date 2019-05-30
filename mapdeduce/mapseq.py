@@ -108,7 +108,7 @@ class MapSeq(object):
 
         Args:
             ax (matplotlib ax): Optional matplotlib ax.
-            **kwds. Passed to pd.DataFrame.plot.scatter
+            **kwds passed to pd.DataFrame.plot.scatter
         """
         ax = plt.gca() if ax is None else ax
         kwds = dict(ax=ax, x="x", y="y")
@@ -151,7 +151,7 @@ class MapSeq(object):
             ellipses (bool): Demark clusters with ellipses.
             title (bool): Add a title to the figure.
             ax (matplotlib ax): Plot figure on this ax.
-            **kwds. Passed to ax.scatter for the colored strains.
+            **kwds passed to ax.scatter for the colored strains.
 
         Returns:
             matplotlib ax
@@ -220,7 +220,7 @@ class MapSeq(object):
             filename (str): Passed to plt.savefig. None does not save figure.
             connecting_lines (bool): Plot lines between each points that
                 differ by the substitution.
-            **kwds. Passed to self.single_substitutions. Use to restrict
+            **kwds passed to self.single_substitutions. Use to restrict
                 to particular sites.
         """
         # Strains that differ by only the substituion sub
@@ -490,18 +490,27 @@ class MapSeq(object):
             map_setup()
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
-                                           color="black", **kwds):
-        """Plot the countour corresponding to the region that contains c
-        percent of the density of a KDE over strains with combinations of amino
-        acid polymorphisms specified in combinations.
+                                           color="black", ax=None,
+                                           label=False, clabel_kwds=dict(),
+                                            **kwds):
+        """Plot a countour that contains c percent of the density of a KDE of
+        strains with combinations of AAPs specified in combinations.
 
         Args:
             combinations (dict): Dictionary specifying combinations. E.g.:
                 {145: "N", 133: "D"}
-            c (float / int)
+            c (number): Range 0-1. The contour contains c percent of the KDE
+                density.
             color (matlplotlib colour): Colour to plot the contour line
-            **kwds. Passed to plt.contour
+            ax (matplotlib ax): Optional.
+            label (bool): Label the contour.
+            clabel_kwds (dict): Optional kwds for ax.clabel if label is True.
+            **kwds passed to plt.contour.
+
+        Returns:
+            (matplotlib ax)
         """
+        ax = plt.gca() if ax is None else ax
         df = self.strains_with_combinations(combinations)
         strains = df.index
 
@@ -526,16 +535,24 @@ class MapSeq(object):
             np.linspace(ymin, ymax, num=ynum))
 
         Z = np.exp(
-            kde.score_samples(
-                np.vstack([Xgrid.ravel(), Ygrid.ravel()]).T))
+            kde.score_samples(np.vstack([Xgrid.ravel(), Ygrid.ravel()]).T))
 
         zsort = np.sort(Z)[::-1]
         dens = zsort[np.argmax(np.cumsum(zsort) > Z.sum() * c)]
 
-        plt.contour(
+        contour_set = ax.contour(
             Xgrid, Ygrid, Z.reshape(Xgrid.shape), levels=[dens, ],
             colors=color, **kwds)
-        map_setup()
+
+        if label:
+            # fmt arg of clabel can be dict mapping level value to str
+            fmt = {contour_set.levels[0]: combination_label(combinations)}
+            ax.clabel(contour_set, fmt=fmt, inline=True, use_clabeltext=True,
+                      **clabel_kwds)
+
+        map_setup(ax)
+
+        return ax
 
     def differ_by_n(self, n):
         """Lookup pairs of strains that differ by n positions.

@@ -108,7 +108,7 @@ class MapSeq(object):
 
         Args:
             ax (matplotlib ax): Optional matplotlib ax.
-            **kwds passed to pd.DataFrame.plot.scatter
+            **kwds passed to pd.DataFrame.plot.scatter.
         """
         ax = plt.gca() if ax is None else ax
         kwds = dict(ax=ax, x="x", y="y")
@@ -154,7 +154,7 @@ class MapSeq(object):
             **kwds passed to ax.scatter for the colored strains.
 
         Returns:
-            matplotlib ax
+            (matplotlib ax)
         """
         ax = plt.gca() if ax is None else ax
 
@@ -435,7 +435,7 @@ class MapSeq(object):
         return df.mask(df.applymap(is_not_amino_acid)).groupby(positions)
 
     def plot_strains_with_combinations(self, combinations, without=False,
-                                       plot_other=True, **kwds):
+                                       plot_other=True, ax=None, **kwds):
         """Plot a map highlighting strains with combinations of amino acids
         at particular positions.
 
@@ -445,31 +445,23 @@ class MapSeq(object):
             without (bool): Plot strains without the combination.
             plot_other (bool): Plot other antigens (those without the
                 combinations).
-            **kwds: Optional keywords passed to the scatter function of the
-                strains with particular combinations.
+            ax (matplotlib ax): Optional.
+            **kwds passed to the plt.scatter.
 
-                ax (matplotlib ax) is an optional kwarg. If passed, the plot
-                will be put on this matplotlib ax.
+        Returns:
+            (matplotlib ax)
         """
-        df = self.strains_with_combinations(
-            combinations=combinations,
-            without=without)
+        ax = plt.gca() if ax is None else ax
+        df = self.strains_with_combinations(combinations, without=without)
 
-        label = "+".join(
-            sorted("{}{}".format(k, v) for k, v in combinations.items()))
-
-        if without:
-            label = "Without " + label
+        label = "+".join(sorted("{}{}".format(k, v)
+                                for k, v in combinations.items()))
+        label = "Without {}".format(label) if without else label
 
         if df.empty:
             print("No strains with {}".format(label))
 
         else:
-            ax = kwds.pop("ax", False)
-
-            if not ax:
-                fig, ax = plt.subplots()
-
             strains = df.index
             print("{} strains with {}".format(len(strains), label))
 
@@ -487,7 +479,8 @@ class MapSeq(object):
             if self.map:
                 add_ellipses(self.map)
                 setup_ax(self.map)
-            map_setup()
+            map_setup(ax)
+            return ax
 
     def plot_strains_with_combinations_kde(self, combinations, c=0.9,
                                            color="black", ax=None,
@@ -603,7 +596,7 @@ class MapSeq(object):
                 positions in this list.
 
         Returns:
-            set
+            (set)
         """
         assert len(sub) == 3
 
@@ -654,7 +647,7 @@ class MapSeq(object):
                 The default, None, considers all positions.
 
         Returns:
-            pd.DataFrame containing the identical sequences.
+            (pd.DataFrame) containing the identical sequences.
         """
         identical = []
         if positions is None:
@@ -686,7 +679,7 @@ class MapSeq(object):
                 all positions.
 
         Returns:
-            dict containing mean and median distanes.
+            (dict) containing mean and median distanes.
         """
         identical_sequences = self.identical_sequences(positions=positions)
         n = len(identical_sequences)
@@ -711,7 +704,7 @@ class MapSeq(object):
                 all positions.
 
         Returns:
-            matplotlib ax
+            (matplotlib ax)
         """
         error = self.error(positions=positions)
         max_error = max(list(map(max, list(error.values()))))
@@ -754,7 +747,7 @@ class MapSeq(object):
                 Should be a format string with room to substitute in a label
                 describing the substitutions found.
 
-            **kwds: Passed to plot_strains_with_combinations
+            **kwds passed to plot_strains_with_combinations.
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -810,7 +803,7 @@ class MapSeq(object):
             filename (str or None): If not None, save a plot with filename.
                 Should be a format string with room to substitute in a label
                 describing the substitutions found.
-            **kwds passed to plot_strains_with_combinations
+            **kwds passed to plot_strains_with_combinations.
         """
         clusters = cluster_diff_df.columns
         positions = cluster_diff_df.index
@@ -902,7 +895,7 @@ class OrderedMapSeq(MapSeq):
                 old name mapping.
 
         Returns:
-            matplotlib ax
+            (matplotlib ax)
         """
         # Strain removal operations first
         if patch is not None:

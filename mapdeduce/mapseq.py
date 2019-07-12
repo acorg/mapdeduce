@@ -441,7 +441,7 @@ class MapSeq(object):
 
         Args:
             combinations (dict): Keys are positions, values are amino
-                acids:  E.g. {145: "N", 189: "S"}
+                acids:  E.g. {145: "N", 189: "S"}.
             without (bool): Plot strains without the combination.
             plot_other (bool): Plot other antigens (those without the
                 combinations).
@@ -459,26 +459,26 @@ class MapSeq(object):
         label = "Without {}".format(label) if without else label
 
         if df.empty:
-            print("No strains with {}".format(label))
+            raise ValueError("No strains with {}".format(label))
 
         else:
             strains = df.index
-            print("{} strains with {}".format(len(strains), label))
 
             if plot_other:
-                self.coord_df.plot.scatter(
+                other = set(coord_df.index) - set(strains)
+                self.coord_df.loc[list(other), :].plot.scatter(
                     x="x", y="y", s=10, color="darkgrey", ax=ax)
 
-            # self.coord_df.loc[strains, :] may be a Series, hence ax.scatter
-            plt.scatter(
+            ax.scatter(
                 self.coord_df.loc[strains, "x"],
                 self.coord_df.loc[strains, "y"],
                 label=label, **kwds)
-            plt.legend()
+            ax.legend()
 
             if self.map:
                 add_ellipses(self.map)
                 setup_ax(self.map)
+
             map_setup(ax)
             return ax
 
@@ -786,6 +786,23 @@ class MapSeq(object):
                 plt.tight_layout()
                 plt.savefig(filename.format(label))
                 plt.close()
+
+    def plot(self, ax=None, **kwds):
+        """Plot the map.
+
+        Args:
+            ax (matplotlib ax): Optional.
+            **kwds passed to ax.scatter
+
+        Returns:
+            (matplotlib ax)
+        """
+        ax = plt.gca() if ax is None else ax
+        x = self.coord_df.iloc[:, 0]
+        y = self.coord_df.iloc[:, 1]
+        ax.scatter(x, y, **kwds)
+        map_setup(ax)
+        return ax
 
     def find_double_substitutions(self, cluster_diff_df, filename=None,
                                   **kwds):

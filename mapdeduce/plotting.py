@@ -4,6 +4,8 @@ from builtins import range
 
 import math
 import numpy as np
+from scipy.spatial.distance import euclidean
+from itertools import combinations
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -323,3 +325,57 @@ def calc_line_hist(arr, hist_kwds=dict()):
     right = bin_edges[1:]
     mid = np.vstack((left, right)).mean(axis=0)
     return mid, hist
+
+
+def label_scatter_plot(df, group_dist=0.05, ax=None, **kwds):
+    """Add labels to an xy scatter plot.
+
+    Args:
+        df (pd.DataFrame): Shape [n, 2]. 1st column contains x, 2nd contains y.
+            Labels are the index of the df.
+        group_dist (number): Use single label for points that are this close
+            or closer.
+        ax (mpl ax)
+        **kwds passed to plt.annotate
+
+    Notes:
+        Simple algorithm alert: If a point is within group_dist to multiple
+            other points, it's label will be grouped only with the first. A
+            more complex algorithm for grouping labels could use a clustering
+            algorithm to find clusters of points to use the same label for.
+    """
+    if df.shape[1] != 2:
+        raise ValueError("df must have only 2 columns.")
+
+    ax = plt.gca() if ax is None else ax
+
+    xytext = kwds.pop("xytext", (5, 0))
+    textcoords = kwds.pop("textcoords", "offset points")
+    va = kwds.pop("va", "center")
+
+    # Points to make combined labels for
+    combined = set()
+    for a, b in combinations(df.index, 2):
+        if euclidean(df.loc[a, :], df.loc[b, :]) < 0.05:
+            combined.add((a, b))
+
+    # Points to make single labels for
+    singles = set(df.index)
+
+    for group in combined:
+
+        # Members in a group aren't singles
+        for member in group:
+            if member in singles:
+                singles.remove(member)
+
+        # Annotate last member with whole group in label
+        s = ",".join(group)
+        xy = df.loc[member, :]
+        ax.annotate(
+            s=s, xy=xy, xytext=xytext, textcoords=textcoords, va=va, **kwds)
+
+    for s in singles:
+        xy = df.loc[s, :]
+        ax.annotate(
+            s=s, xy=xy, xytext=xytext, textcoords=textcoords, va=va, **kwds)

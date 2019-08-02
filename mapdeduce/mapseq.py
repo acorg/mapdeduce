@@ -113,15 +113,17 @@ class MapSeq(object):
         ax = plt.gca() if ax is None else ax
         kwds = dict(ax=ax, x="x", y="y")
         n_without_sequence = self.coords_of_strains_without_sequence.shape[0]
-        self.coords_of_strains_without_sequence.plot.scatter(
-            color="darkgrey",
-            label="Without sequence ({})".format(n_without_sequence),
-            **kwds)
+        if n_without_sequence:
+            self.coords_of_strains_without_sequence.plot.scatter(
+                color="darkgrey",
+                label="Without sequence ({})".format(n_without_sequence),
+                **kwds)
         n_with_sequence = self.coords_in_both.shape[0]
-        self.coords_in_both.plot.scatter(
-            color="#b72467",
-            label="With sequence ({})".format(n_with_sequence),
-            **kwds)
+        if n_with_sequence:
+            self.coords_in_both.plot.scatter(
+                color="#b72467",
+                label="With sequence ({})".format(n_with_sequence),
+                **kwds)
         setup_ax(map=self.map)
         map_setup()
         return ax
@@ -166,8 +168,10 @@ class MapSeq(object):
 
         # Antigens with a known sequence
         kwds = dict(
-            lw=1, edgecolor="white",
-            s=3 * point_size(self.seq_in_both.shape[0]), **kwds)
+            lw=kwds.pop("lw", 0.5),
+            edgecolor="white",
+            s=kwds.pop("s", 5),
+            **kwds)
 
         proportions = self.variant_proportions(p=p) * 100
         seq_grouped = self.seq_in_both.groupby(p)
@@ -210,16 +214,22 @@ class MapSeq(object):
         map_setup(ax)
         return ax
 
-    def plot_single_substitution(self, sub, ellipses=True, filename=None,
-                                 connecting_lines=True, **kwds):
-        """Plot map showing strains that differ by sub.
+    def plot_single_substitution(self, sub, ellipses=True,
+                                 connecting_lines=True, max_cols=4,
+                                 axsize=(4, 4), hotellings=True,
+                                 subplots_kwds={}, **kwds):
+        """Showing strains that differ only by the given substitution.
 
         Args:
             sub (tuple): Substitution. E.g. ("N", 145, "K")
             ellipses (bool): Demark clusters with ellipses.
-            filename (str): Passed to plt.savefig. None does not save figure.
             connecting_lines (bool): Plot lines between each points that
                 differ by the substitution.
+            axsize (tuple): Approximate size for a single ax. (x, y)
+            hotellings (bool): Compute Hotelling's T-squared statistic on the
+                two samples, and report the results.
+            subplots_kwds (dict): Passed to plt.subplots.
+
             **kwds passed to self.single_substitutions. Use to restrict
                 to particular sites.
         """
@@ -229,24 +239,40 @@ class MapSeq(object):
         label = "".join(map(str, sub))
 
         if not combinations:
-            print("No pairs of strains with {}".format(label))
-            return
+            raise ValueError("No pairs of strains with {}".format(label))
 
         # Collect x, y of points to plot, and lines between
         aas = sub[0], sub[2]
+
+        n_combinations = len(combinations)
+        if n_combinations <= max_cols:
+            nrows = 1
+            ncols = n_combinations
+        else:
+            nrows = (n_combinations // max_cols) + 1
+            ncols = max_cols
+
+        fig, _ = plt.subplots(
+            nrows=nrows, ncols=ncols,
+            figsize=(axsize[0] * ncols, axsize[1] * nrows),
+            **subplots_kwds)
+        axes = iter(fig.axes)
+
         for i, pairs in enumerate(combinations):
 
-            fig, ax = plt.subplots()
+            ax = next(axes)
 
             # Antigens without a known sequence
-            self.coords_of_strains_without_sequence.plot.scatter(
-                ax=ax, x="x", y="y", s=5, color="lightgrey",
-                label="Unknown sequence")
+            if not self.coords_of_strains_without_sequence.empty:
+                self.coords_of_strains_without_sequence.plot.scatter(
+                    ax=ax, x="x", y="y", s=5, color="lightgrey",
+                    label="Unknown sequence")
 
             # Antigens with a known sequence
-            self.coords_in_both.plot.scatter(
-                ax=ax, x="x", y="y", s=10, color="darkgrey",
-                label="Known sequence")
+            if not self.coords_in_both.empty:
+                self.coords_in_both.plot.scatter(
+                    ax=ax, x="x", y="y", s=10, color="darkgrey",
+                    label="Known sequence")
 
             # More transparent lines when there are more points
             alpha = 0.95 ** len(pairs)
@@ -256,28 +282,38 @@ class MapSeq(object):
             samples = [None, None]
             for j in 0, 1:
                 strains = set(pair[j] for pair in pairs)
-
                 samples[j] = self.coords_in_both.loc[strains, :]
 
             # Plot the group with more samples first
             # Prevents over plotting
-            for sample in sorted(samples, key=lambda x: len(x))[::-1]:
+            if len(samples[1]) > len(samples[0]):
+                samples = list(reversed(samples))
+                aas = list(reversed(aas))
+
+            for aa, sample in zip(aas, samples):
                 sample.plot.scatter(
-                    x="x", y="y", s=150, c=amino_acid_colors[aas[j]],
+                    x="x", y="y", s=75, c=amino_acid_colors[aa],
                     edgecolor="white", linewidth=1, zorder=20, ax=ax,
-                    label="{}{}".format(aas[j], sub[1]))
+                    label="{}{}".format(aa, sub[1]))
 
-            # Compute Hotelling's T-squared statistic on the two samples
-            if len(samples[0]) > 1 and len(samples[1]) > 1:
-                h = spm1d.stats.hotellings2(*samples)
-                h_report = "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
-                    h.inference().p, h.z, *list(map(int, h.df)))
-            else:
-                h_report = "[Insufficient data]"
+            # Plot both means above the rest of the data
+            for aa, sample in zip(aas, samples):
+                mean_x, mean_y = sample.mean()
+                ax.scatter(
+                    mean_x, mean_y, s=150, c=amino_acid_colors[aa], zorder=20,
+                    marker="X", lw=1.5, edgecolor="white")
 
-            ax.text(
-                x=0, y=1, ha="left", va="top", transform=ax.transAxes,
-                s=r"2 sample Hotelling's T$^2$" + "\n" + h_report)
+            if hotellings:
+                if len(samples[0]) > 1 and len(samples[1]) > 1:
+                    h = spm1d.stats.hotellings2(*samples)
+                    h_report = "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
+                        h.inference().p, h.z, *list(map(int, h.df)))
+                else:
+                    h_report = "[Insufficient data]"
+
+                ax.text(
+                    x=0, y=1, ha="left", va="top", transform=ax.transAxes,
+                    s=r"2 sample Hotelling's T$^2$" + "\n" + h_report)
 
             if connecting_lines:
                 for pair in pairs:
@@ -319,10 +355,11 @@ class MapSeq(object):
             ax.legend()
             title = "{} ({})".format(label, i + 1)
             ax.set_title(title)
-            map_setup()
-            if filename is not None:
-                plt.tight_layout()
-                plt.savefig(filename.format(title.replace(" ", "")))
+            map_setup(ax)
+
+        # Turn remaining axes off
+        for ax in axes:
+            ax.set_axis_off()
 
     def plot_variant_positions_colored_by_amino_acid(self, filename, **kwds):
         """Call plot_amino_acids_at_site for all variant positions
@@ -465,7 +502,7 @@ class MapSeq(object):
             strains = df.index
 
             if plot_other:
-                other = set(coord_df.index) - set(strains)
+                other = set(self.coord_df.index) - set(strains)
                 self.coord_df.loc[list(other), :].plot.scatter(
                     x="x", y="y", s=10, color="darkgrey", ax=ax)
 

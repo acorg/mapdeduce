@@ -39,7 +39,7 @@ setup(
         "spm1d==0.4.0",
         "tqdm==4.28.1",
         "biopython==1.72",
-        "pandas==0.23.4",
+        "pandas>=0.23.4",
         "glimix-core==1.3.7",
         "limix==1.0.12",
         "limix-core==1.0.2",

@@ -1,0 +1,8 @@
+``mapdeduce``
+=============
+
+.. autoclass:: mapdeduce.MapSeq
+   :members:
+
+.. automodule:: mapdeduce
+   :members:

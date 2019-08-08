@@ -1,0 +1,546 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>mapdeduce &#8212; mapdeduce 1.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="mapdeduce" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="mapdeduce">
+<h1><code class="docutils literal notranslate"><span class="pre">mapdeduce</span></code><a class="headerlink" href="#mapdeduce" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mapdeduce.MapSeq">
+<em class="property">class </em><code class="sig-prename descclassname">mapdeduce.</code><code class="sig-name descname">MapSeq</code><span class="sig-paren">(</span><em class="sig-param">seq_df</em>, <em class="sig-param">coord_df</em>, <em class="sig-param">map=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="mapdeduce.MapSeq.differ_by_n">
+<code class="sig-name descname">differ_by_n</code><span class="sig-paren">(</span><em class="sig-param">n</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.differ_by_n" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lookup pairs of strains that differ by n positions.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>n (int)</p>
+</dd>
+<dt>Returns:</dt><dd><p>set containing 2-tuples</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.duplicate_sequences">
+<code class="sig-name descname">duplicate_sequences</code><span class="sig-paren">(</span><em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.duplicate_sequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find groups of duplicate sequences.</p>
+<p>Any element in self.seq_in_both that is not one of the standard 20
+1-letter amino acid abbreviations is ignored. (It is treated as NaN,
+see: <a class="reference external" href="http://pandas.pydata.org/pandas-docs/stable/">http://pandas.pydata.org/pandas-docs/stable/</a>
+missing_data.html#na-values-in-groupby)</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>positions (iterable of ints). Optional. Lookup groups of sequences</dt><dd><p>identical at these positions. Default is all positions.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>pd.GroupBy</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.error">
+<code class="sig-name descname">error</code><span class="sig-paren">(</span><em class="sig-param">positions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assuming in a perfect system (sequencing, laboratory, cartography)
+genetically identical strains should be in an identical position in the
+map. This method returns the distribution of pairwise distances between
+genetically identical strains.</p>
+<p>Some groups of genetically identical strains are larger than others.
+E.g. some groups can have ~30 strains, whilst lots of others have 2-5.
+This methods computes the mean and median pairwise distance for each
+group, so that one group does not dominate the distribution.</p>
+<p>(There are (30^2-30)/2 = 435 pairwise distances between 30 points,
+compared to (5^2-5)/2 = 10 for 10 points).</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>positions (list containing ints) Only consider these positions when</dt><dd><p>looking for genetically identical strains. Default, None, uses
+all positions.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(dict) containing mean and median distanes.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.find_double_substitutions">
+<code class="sig-name descname">find_double_substitutions</code><span class="sig-paren">(</span><em class="sig-param">cluster_diff_df</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.find_double_substitutions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find strains that differ by two substitutions out of the
+combinations defined in cluster_combinations.</p>
+<dl>
+<dt>Args:</dt><dd><dl>
+<dt>cluster_diff_df (pd.DataFrame): Contains cluster difference</dt><dd><p>substitutions. E.g.:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Site</p></th>
+<th class="head"><p>CA04</p></th>
+<th class="head"><p>FU02</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>145</p></td>
+<td><p>N</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-odd"><td><p>159</p></td>
+<td><p>F</p></td>
+<td><p>Y</p></td>
+</tr>
+<tr class="row-even"><td><p>189</p></td>
+<td><p>N</p></td>
+<td><p>S</p></td>
+</tr>
+<tr class="row-odd"><td><p>226</p></td>
+<td><p>I</p></td>
+<td><p>V</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd>
+<dt>filename (str or None): If not None, save a plot with filename.</dt><dd><p>Should be a format string with room to substitute in a label
+describing the substitutions found.</p>
+</dd>
+</dl>
+<p><a href="#id1"><span class="problematic" id="id2">**</span></a>kwds passed to plot_strains_with_combinations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.find_single_substitutions">
+<code class="sig-name descname">find_single_substitutions</code><span class="sig-paren">(</span><em class="sig-param">cluster_diff_df</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.find_single_substitutions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find strains that differ by one substitution out of the combinations
+defined in cluster_combinations</p>
+<dl>
+<dt>Args:</dt><dd><dl>
+<dt>cluster_diff_df (pd.DataFrame): Specifies cluster difference</dt><dd><p>substitutions. E.g.:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Site</p></th>
+<th class="head"><p>CA04</p></th>
+<th class="head"><p>FU02</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>145</p></td>
+<td><p>N</p></td>
+<td><p>K</p></td>
+</tr>
+<tr class="row-odd"><td><p>159</p></td>
+<td><p>F</p></td>
+<td><p>Y</p></td>
+</tr>
+<tr class="row-even"><td><p>189</p></td>
+<td><p>N</p></td>
+<td><p>S</p></td>
+</tr>
+<tr class="row-odd"><td><p>226</p></td>
+<td><p>I</p></td>
+<td><p>V</p></td>
+</tr>
+<tr class="row-even"><td><p>227</p></td>
+<td><p>P</p></td>
+<td><p>S</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd>
+<dt>filename (str or None): If not None, save a plot with filename.</dt><dd><p>Should be a format string with room to substitute in a label
+describing the substitutions found.</p>
+</dd>
+</dl>
+<p><a href="#id3"><span class="problematic" id="id4">**</span></a>kwds passed to plot_strains_with_combinations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.identical_sequences">
+<code class="sig-name descname">identical_sequences</code><span class="sig-paren">(</span><em class="sig-param">positions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.identical_sequences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lookup strains with identical sequences.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>positions (list containing ints). Only consider these positions.</dt><dd><p>The default, None, considers all positions.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(pd.DataFrame) containing the identical sequences.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">ax=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the map.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>ax (matplotlib ax): Optional.
+<a href="#id5"><span class="problematic" id="id6">**</span></a>kwds passed to ax.scatter</p>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_amino_acids_at_site">
+<code class="sig-name descname">plot_amino_acids_at_site</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">randomz=True</em>, <em class="sig-param">ellipses=True</em>, <em class="sig-param">title=True</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_amino_acids_at_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot map colored by amino acids at site p.</p>
+<dl>
+<dt>Args:</dt><dd><p>p (int): HA site.
+randomz (bool): Given points random sites in z. This is</p>
+<blockquote>
+<div><p>slower because marks have to plotted individually.</p>
+</div></blockquote>
+<p>ellipses (bool): Demark clusters with ellipses.
+title (bool): Add a title to the figure.
+ax (matplotlib ax): Plot figure on this ax.
+<a href="#id7"><span class="problematic" id="id8">**</span></a>kwds passed to ax.scatter for the colored strains.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_error">
+<code class="sig-name descname">plot_error</code><span class="sig-paren">(</span><em class="sig-param">positions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the distribution of means and median pairwise antigenic
+distances between genetically strains, calculated by self.error()</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>positions (list of ints). Only consider these positions when</dt><dd><p>looking for genetically identical strains. Default, None, uses
+all positions.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_single_substitution">
+<code class="sig-name descname">plot_single_substitution</code><span class="sig-paren">(</span><em class="sig-param">sub</em>, <em class="sig-param">ellipses=True</em>, <em class="sig-param">connecting_lines=True</em>, <em class="sig-param">max_cols=4</em>, <em class="sig-param">axsize=(4</em>, <em class="sig-param">4)</em>, <em class="sig-param">hotellings=True</em>, <em class="sig-param">subplots_kwds={}</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_single_substitution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Showing strains that differ only by the given substitution.</p>
+<dl>
+<dt>Args:</dt><dd><p>sub (tuple): Substitution. E.g. (“N”, 145, “K”)
+ellipses (bool): Demark clusters with ellipses.
+connecting_lines (bool): Plot lines between each points that</p>
+<blockquote>
+<div><p>differ by the substitution.</p>
+</div></blockquote>
+<p>axsize (tuple): Approximate size for a single ax. (x, y)
+hotellings (bool): Compute Hotelling’s T-squared statistic on the</p>
+<blockquote>
+<div><p>two samples, and report the results.</p>
+</div></blockquote>
+<p>subplots_kwds (dict): Passed to plt.subplots.</p>
+<dl class="simple">
+<dt><a href="#id9"><span class="problematic" id="id10">**</span></a>kwds passed to self.single_substitutions. Use to restrict</dt><dd><p>to particular sites.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_strains_with_combinations">
+<code class="sig-name descname">plot_strains_with_combinations</code><span class="sig-paren">(</span><em class="sig-param">combinations</em>, <em class="sig-param">without=False</em>, <em class="sig-param">plot_other=True</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_strains_with_combinations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map highlighting strains with combinations of amino acids
+at particular positions.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>combinations (dict): Keys are positions, values are amino</dt><dd><p>acids:  E.g. {145: “N”, 189: “S”}.</p>
+</dd>
+</dl>
+<p>without (bool): Plot strains without the combination.
+plot_other (bool): Plot other antigens (those without the</p>
+<blockquote>
+<div><p>combinations).</p>
+</div></blockquote>
+<p>ax (matplotlib ax): Optional.
+<a href="#id11"><span class="problematic" id="id12">**</span></a>kwds passed to the plt.scatter.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_strains_with_combinations_kde">
+<code class="sig-name descname">plot_strains_with_combinations_kde</code><span class="sig-paren">(</span><em class="sig-param">combinations</em>, <em class="sig-param">c=0.9</em>, <em class="sig-param">color='black'</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">label=False</em>, <em class="sig-param">clabel_kwds={}</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_strains_with_combinations_kde" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a countour that contains c percent of the density of a KDE of
+strains with combinations of AAPs specified in combinations.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>combinations (dict): Dictionary specifying combinations. E.g.:</dt><dd><p>{145: “N”, 133: “D”}</p>
+</dd>
+<dt>c (number): Range 0-1. The contour contains c percent of the KDE</dt><dd><p>density.</p>
+</dd>
+</dl>
+<p>color (matlplotlib colour): Colour to plot the contour line
+ax (matplotlib ax): Optional.
+label (bool): Label the contour.
+clabel_kwds (dict): Optional kwds for ax.clabel if label is True.
+<a href="#id13"><span class="problematic" id="id14">**</span></a>kwds passed to plt.contour.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_variant_positions_colored_by_amino_acid">
+<code class="sig-name descname">plot_variant_positions_colored_by_amino_acid</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_variant_positions_colored_by_amino_acid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call plot_amino_acids_at_site for all variant positions</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>filename (str): A format string with one field to fill in. Each</dt><dd><p>position will be substituted in. E.g.:
+“img/melb-h3-2009-coloured-by-pos/{}.png”</p>
+</dd>
+</dl>
+<p><a href="#id15"><span class="problematic" id="id16">**</span></a>kwds: Keyword arguments passed to plot_amino_acids_at_site</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.plot_with_without">
+<code class="sig-name descname">plot_with_without</code><span class="sig-paren">(</span><em class="sig-param">ax=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.plot_with_without" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot indicating which antigens do and do not have sequences.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>ax (matplotlib ax): Optional matplotlib ax.
+<a href="#id17"><span class="problematic" id="id18">**</span></a>kwds passed to pd.DataFrame.plot.scatter.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.single_substitutions">
+<code class="sig-name descname">single_substitutions</code><span class="sig-paren">(</span><em class="sig-param">sub</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.single_substitutions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find pairs of strains that differ by only the substitution ‘sub’.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>sub (tuple): (“N”, 145, “K”) like. First and last elements are</dt><dd><p>strings referring to amino acids. Middle element is int</p>
+</dd>
+<dt>exclude (list). Optional. Sequences only have to be identical at</dt><dd><p>positions in this list.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(set)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.single_substitutions_one_random_aa">
+<code class="sig-name descname">single_substitutions_one_random_aa</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">aa</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.single_substitutions_one_random_aa" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find pairs of strains that differ only at position p, and where one
+has the amino acid aa at that position.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>p (int): Position
+aa (str): Amino acid. Must be in amino_acids.</p>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>list of pd.Series containing the amino acids</dt><dd><p>and corresponding strain names.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.strains_with_combinations">
+<code class="sig-name descname">strains_with_combinations</code><span class="sig-paren">(</span><em class="sig-param">combinations</em>, <em class="sig-param">without=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.strains_with_combinations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lookup strains that have combinations of amino acids at particular
+positions.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>combinations (dict): Keys are positions, values are amino</dt><dd><p>acids:  E.g. {145: “N”, 189: “S”}</p>
+</dd>
+</dl>
+<p>without (bool): Lookup strains without the combination.</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.DataFrame. Contains strains with the amino acid combinations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.variant_positions">
+<em class="property">property </em><code class="sig-name descname">variant_positions</code><a class="headerlink" href="#mapdeduce.MapSeq.variant_positions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Positions that have different amino acids.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.variant_positions_sorted_by_most_common_variant">
+<em class="property">property </em><code class="sig-name descname">variant_positions_sorted_by_most_common_variant</code><a class="headerlink" href="#mapdeduce.MapSeq.variant_positions_sorted_by_most_common_variant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lookup variant positions.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>tuple. Contains variant positions, sorted by most common variant.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.MapSeq.variant_proportions">
+<code class="sig-name descname">variant_proportions</code><span class="sig-paren">(</span><em class="sig-param">p</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.MapSeq.variant_proportions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Of antigens with sequences, compute the proportion of amino acids
+at each position, p.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>p (int): HA position</p>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-mapdeduce"></span><dl class="function">
+<dt id="mapdeduce.map_setup">
+<code class="sig-prename descclassname">mapdeduce.</code><code class="sig-name descname">map_setup</code><span class="sig-paren">(</span><em class="sig-param">ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.map_setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure a plot to be an antigenic map.</p>
+<p>Maps have integer spaced grids, an aspect ratio of 1, and no axis labels.</p>
+<p>&#64;param ax. Matplotlib ax.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="mapdeduce.label_scatter_plot">
+<code class="sig-prename descclassname">mapdeduce.</code><code class="sig-name descname">label_scatter_plot</code><span class="sig-paren">(</span><em class="sig-param">df</em>, <em class="sig-param">group_dist=0.05</em>, <em class="sig-param">ax=None</em>, <em class="sig-param">**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.label_scatter_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add labels to an xy scatter plot.</p>
+<dl>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>df (pd.DataFrame): Shape [n, 2]. 1st column contains x, 2nd contains y.</dt><dd><p>Labels are the index of the df.</p>
+</dd>
+<dt>group_dist (number): Use single label for points that are this close</dt><dd><p>or closer.</p>
+</dd>
+</dl>
+<p>ax (mpl ax)
+<a href="#id19"><span class="problematic" id="id20">**</span></a>kwds passed to plt.annotate</p>
+</dd>
+<dt>Notes:</dt><dd><dl class="simple">
+<dt>Simple algorithm alert: If a point is within group_dist to multiple</dt><dd><p>other points, it’s label will be grouped only with the first. A
+more complex algorithm for grouping labels could use a clustering
+algorithm to find clusters of points to use the same label for.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mapdeduce</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">mapdeduce</span></code></a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter"><code class="docutils literal notranslate"><span class="pre">mapdeduce</span></code></a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, David Pattinson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/mapdeduce.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

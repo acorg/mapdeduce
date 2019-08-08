@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>SeqDf &#8212; mapdeduce 1.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CoordDf" href="coorddf.html" />
+    <link rel="prev" title="OrderedMapSeq" href="orderedmapseq.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="seqdf">
+<h1><code class="docutils literal notranslate"><span class="pre">SeqDf</span></code><a class="headerlink" href="#seqdf" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mapdeduce.SeqDf">
+<em class="property">class </em><code class="sig-prename descclassname">mapdeduce.</code><code class="sig-name descname">SeqDf</code><span class="sig-paren">(</span><em class="sig-param">df</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="mapdeduce.SeqDf.consensus">
+<code class="sig-name descname">consensus</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.consensus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the consensus sequence.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>(pd.Series)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.from_fasta">
+<em class="property">classmethod </em><code class="sig-name descname">from_fasta</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.from_fasta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a SeqDf from a fasta file.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>path (str): Path to fasta file.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(SeqDf)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.from_series">
+<em class="property">classmethod </em><code class="sig-name descname">from_series</code><span class="sig-paren">(</span><em class="sig-param">series</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.from_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make SeqDf from a series.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>series (pd.Series): Each element in series is a string. See</dt><dd><p>mapdeduce.helper.expand_sequences for more details.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(SeqDf)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.get_dummies">
+<code class="sig-name descname">get_dummies</code><span class="sig-paren">(</span><em class="sig-param">inplace=True</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.get_dummies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get dummy representation of the sequences.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>inplace (bool)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.get_dummies_at_positions">
+<code class="sig-name descname">get_dummies_at_positions</code><span class="sig-paren">(</span><em class="sig-param">positions</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.get_dummies_at_positions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return set of dummy variable names at HA positions.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><p>Dummy variable names are either singles (e.g. 135K), or compound
+(e.g. 7D|135K|265E). For compound dummy variable names return the
+entire compound name if any constituent SNP is in positions.</p>
+</dd>
+<dt>Args:</dt><dd><p>positions (iterable) containing positions.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(set) containing dummy variable names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.groupby_amino_acid_at_site">
+<code class="sig-name descname">groupby_amino_acid_at_site</code><span class="sig-paren">(</span><em class="sig-param">p</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.groupby_amino_acid_at_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lookup groups of strains that have the same amino acid at site p.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>p (int): Site. Must be a column in self.df.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(dict): Maps amino acid -&gt; set containing strain names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.merge_duplicate_dummies">
+<code class="sig-name descname">merge_duplicate_dummies</code><span class="sig-paren">(</span><em class="sig-param">inplace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.merge_duplicate_dummies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge SNPs that are identical in all strains.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>inplace (bool)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.merge_duplicate_strains">
+<code class="sig-name descname">merge_duplicate_strains</code><span class="sig-paren">(</span><em class="sig-param">inplace=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.merge_duplicate_strains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace all strains that have the same index with a single
+consensus strain.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>inplace (bool).</p>
+</dd>
+<dt>Returns:</dt><dd><p>(mapdeduce.dataframes.SeqDf) if inplace=False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.remove_invariant">
+<code class="sig-name descname">remove_invariant</code><span class="sig-paren">(</span><em class="sig-param">inplace=True</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.remove_invariant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove positions (columns) that contain only one amino acid.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>inplace (bool)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.shuffle_dummies">
+<code class="sig-name descname">shuffle_dummies</code><span class="sig-paren">(</span><em class="sig-param">n_shuffles</em>, <em class="sig-param">c</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.shuffle_dummies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a DataFrame containing n shuffles of the data in column c</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>n_shuffles (int): Number of shuffles.
+c (str): Must be column in self.dummies.</p>
+</dd>
+<dt>Returns:</dt><dd><p>(ndarray): Shape [N, n_shuffles].</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.substitutions_at_site">
+<code class="sig-name descname">substitutions_at_site</code><span class="sig-paren">(</span><em class="sig-param">p</em>, <em class="sig-param">min_strains=0</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.substitutions_at_site" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find substitutions that occur at site p.</p>
+<dl>
+<dt>Args:</dt><dd><p>p (int). Must be in self.df.
+min_strains (int). Minimum number of strains that must posses a</p>
+<blockquote>
+<div><p>given amino acid to be included. Default=0 to include all
+strains.</p>
+</div></blockquote>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>(dict): Maps substituion -&gt; pd.Series containing profile of</dt><dd><p>substitution. Strains with 0 have the aa0. Strains with 1 have
+the aa1.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="mapdeduce.SeqDf.to_fasta">
+<code class="sig-name descname">to_fasta</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.SeqDf.to_fasta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the sequences in fasta format.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>path (str): Path to write file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mapdeduce</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mapseq.html"><code class="docutils literal notranslate"><span class="pre">MapSeq</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="orderedmapseq.html"><code class="docutils literal notranslate"><span class="pre">OrderedMapSeq</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">SeqDf</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="coorddf.html"><code class="docutils literal notranslate"><span class="pre">CoordDf</span></code></a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="orderedmapseq.html" title="previous chapter"><code class="docutils literal notranslate"><span class="pre">OrderedMapSeq</span></code></a></li>
+      <li>Next: <a href="coorddf.html" title="next chapter"><code class="docutils literal notranslate"><span class="pre">CoordDf</span></code></a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, David Pattinson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/seqdf.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

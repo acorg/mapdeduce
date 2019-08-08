@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>OrderedMapSeq &#8212; mapdeduce 1.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SeqDf" href="seqdf.html" />
+    <link rel="prev" title="MapSeq" href="mapseq.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="orderedmapseq">
+<h1><code class="docutils literal notranslate"><span class="pre">OrderedMapSeq</span></code><a class="headerlink" href="#orderedmapseq" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mapdeduce.OrderedMapSeq">
+<em class="property">class </em><code class="sig-prename descclassname">mapdeduce.</code><code class="sig-name descname">OrderedMapSeq</code><span class="sig-paren">(</span><em class="sig-param">seq_df</em>, <em class="sig-param">coord_df</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.OrderedMapSeq" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="mapdeduce.OrderedMapSeq.filter">
+<code class="sig-name descname">filter</code><span class="sig-paren">(</span><em class="sig-param">patch=None</em>, <em class="sig-param">plot=True</em>, <em class="sig-param">remove_invariant=True</em>, <em class="sig-param">get_dummies=True</em>, <em class="sig-param">merge_duplicate_dummies=False</em>, <em class="sig-param">rename_idx=False</em><span class="sig-paren">)</span><a class="headerlink" href="#mapdeduce.OrderedMapSeq.filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove data where the x y coordinates are outside a matplotlib
+patch.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><p>Updates self.coord and self.seq inplace.</p>
+</dd>
+<dt>Args:</dt><dd><dl class="simple">
+<dt>patch (matplotlib.patches.Patch): Remove strains not contained</dt><dd><p>in patch.</p>
+</dd>
+<dt>plot (bool): Show points that have been included / excluded</dt><dd><p>and the patch. (Only if a patch is specified).</p>
+</dd>
+<dt>remove_invariant (bool): Remove sequence positions that only</dt><dd><p>contain a single amino acid.</p>
+</dd>
+<dt>get_dummies (bool): Attach dummy variable representation of the</dt><dd><p>sequences.</p>
+</dd>
+<dt>merge_duplicate_dummies (bool): Merge dummy variables that have</dt><dd><p>the same profile (identical for all strains).</p>
+</dd>
+<dt>rename_idx (bool): Rename strains in the format strain-X where X</dt><dd><p>is an integer. This is necessary for merging duplicate dummies
+if there are duplicate strain names (which can occur if a
+strain was titrated multiple times). Attaches a strain_names
+attribute to self which is a dict containing the new name to
+old name mapping.</p>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt><dd><p>(matplotlib ax)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mapdeduce</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mapseq.html"><code class="docutils literal notranslate"><span class="pre">MapSeq</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">OrderedMapSeq</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="seqdf.html"><code class="docutils literal notranslate"><span class="pre">SeqDf</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="coorddf.html"><code class="docutils literal notranslate"><span class="pre">CoordDf</span></code></a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="mapseq.html" title="previous chapter"><code class="docutils literal notranslate"><span class="pre">MapSeq</span></code></a></li>
+      <li>Next: <a href="seqdf.html" title="next chapter"><code class="docutils literal notranslate"><span class="pre">SeqDf</span></code></a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, David Pattinson.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/orderedmapseq.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

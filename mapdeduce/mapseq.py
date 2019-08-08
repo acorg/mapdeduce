@@ -458,7 +458,7 @@ class MapSeq(object):
         Any element in self.seq_in_both that is not one of the standard 20
         1-letter amino acid abbreviations is ignored. (It is treated as NaN,
         see: http://pandas.pydata.org/pandas-docs/stable/
-            missing_data.html#na-values-in-groupby)
+        missing_data.html#na-values-in-groupby)
 
         Args:
             positions (iterable of ints). Optional. Lookup groups of sequences
@@ -773,12 +773,15 @@ class MapSeq(object):
             cluster_diff_df (pd.DataFrame): Specifies cluster difference
                 substitutions. E.g.:
 
-                            CA04 FU02
-                        145    N    K
-                        159    F    Y
-                        189    N    S
-                        226    I    V
-                        227    P    S
+                        ==== ==== ====
+                        Site CA04 FU02
+                        ==== ==== ====
+                        145  N    K
+                        159  F    Y
+                        189  N    S
+                        226  I    V
+                        227  P    S
+                        ==== ==== ====
 
             filename (str or None): If not None, save a plot with filename.
                 Should be a format string with room to substitute in a label
@@ -849,11 +852,16 @@ class MapSeq(object):
         Args:
             cluster_diff_df (pd.DataFrame): Contains cluster difference
                 substitutions. E.g.:
-                            CA04 FU02
-                        145    N    K
-                        159    F    Y
-                        189    N    S
-                        226    I    V
+
+                        ==== ==== ====
+                        Site CA04 FU02
+                        ==== ==== ====
+                        145  N    K
+                        159  F    Y
+                        189  N    S
+                        226  I    V
+                        ==== ==== ====
+
             filename (str or None): If not None, save a plot with filename.
                 Should be a format string with room to substitute in a label
                 describing the substitutions found.

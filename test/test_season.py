@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-"""Tests for code in MapDeduce/season.py"""
+"""Tests for code in mapdeduce/season.py"""
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from MapDeduce.season import in_season, season_from_timestamp, hemisphere_from_season
+from mapdeduce.season import in_season, season_from_timestamp, hemisphere_from_season
 from pandas import to_datetime
 
 
 class InSeasonTests(unittest.TestCase):
-    """Tests for MapDeduce.season.in_season"""
+    """Tests for mapdeduce.season.in_season"""
 
     def test_returns_fun_nh(self):
         fun = in_season("2005-2006")
@@ -54,7 +54,7 @@ class InSeasonTests(unittest.TestCase):
 
 
 class SeasonFromTimestampTests(unittest.TestCase):
-    """Tests for MapDeduce.season.season_from_timestamp"""
+    """Tests for mapdeduce.season.season_from_timestamp"""
 
     def test_throws_without_hemisphere(self):
         """Must give a hemisphere"""
@@ -82,7 +82,7 @@ class SeasonFromTimestampTests(unittest.TestCase):
 
 
 class HemisphereFromSeasonTests(unittest.TestCase):
-    """Tests for MapDeduce.season.hemisphere_from_season"""
+    """Tests for mapdeduce.season.hemisphere_from_season"""
 
     def test_nh_example(self):
         self.assertEqual("N", hemisphere_from_season("2005-2006"))

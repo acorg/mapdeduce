@@ -10,7 +10,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-from MapDeduce.dataframes import CoordDf, SeqDf
+from mapdeduce.dataframes import CoordDf, SeqDf
 
 
 class CoordDfPairedDistTests(unittest.TestCase):
@@ -84,7 +84,7 @@ class CoordDfPairedDistTests(unittest.TestCase):
 
 
 class SeqDfConsensusTests(unittest.TestCase):
-    """Tests for MapDeduce.dataframes.SeqDf.consensus."""
+    """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 
     def setUp(self):
         """
@@ -122,7 +122,7 @@ class SeqDfConsensusTests(unittest.TestCase):
 
 
 class SeqDfMergeTests(unittest.TestCase):
-    """Tests for MapDeduce.dataframes.SeqDf.consensus."""
+    """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 
     def setUp(self):
         """StrainC should be replaced by the consensus of the strainC seqs."""

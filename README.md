@@ -1,4 +1,4 @@
-# MapDeduce
+# mapdeduce
 
 A python library for:
 
@@ -12,5 +12,7 @@ A python library for:
 ## Installation
 
 ```bash
-pip install git+https://github.com/acorg/MapDeduce.git
+pip install git+https://github.com/acorg/mapdeduce.git
 ```
+
+R is also required, with the "statmod" library.

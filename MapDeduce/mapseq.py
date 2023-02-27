@@ -72,11 +72,13 @@ class MapSeq(object):
 
         # Strains exclusively in coords df
         self.strains_excl_to_coords = self.strains_in_coords - self.strains_in_seq
-        self.coords_excl_to_coords = self.all_coords.loc[self.strains_excl_to_coords, :]
+        self.coords_excl_to_coords = self.all_coords.loc[
+            list(self.strains_excl_to_coords)
+        ]
 
         # Coordinates and sequences of strains in both
-        self.seq_in_both = self.all_seqs.loc[self.strains_in_both, :]
-        self.coords_in_both = self.all_coords.loc[self.strains_in_both, :]
+        self.seq_in_both = self.all_seqs.loc[list(self.strains_in_both)]
+        self.coords_in_both = self.all_coords.loc[list(self.strains_in_both)]
 
         # Find variant positions (i.e. which positions have substitutions)
         self.variant_positions = set()
@@ -826,8 +828,8 @@ class OrderedMapSeq(MapSeq):
                 "y" coordinates.
 
         Attributes:
-            coord (MapDeduce.dataframes.CoordDf): Contains coordinates.
-            seq (MapDeduce.dataframes.SeqDf): Contains sequences.
+            coord (mapdeduce.dataframes.CoordDf): Contains coordinates.
+            seq (mapdeduce.dataframes.SeqDf): Contains sequences.
         """
         super().__init__(seq_df, coord_df)
 

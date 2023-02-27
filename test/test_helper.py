@@ -4,7 +4,7 @@
 
 import numpy as np
 import pandas as pd
-from MapDeduce.helper import expand_sequences
+from mapdeduce.helper import expand_sequences
 
 try:
     import unittest2 as unittest
@@ -13,7 +13,7 @@ except ImportError:
 
 
 class ExpandSequences(unittest.TestCase):
-    """Tests for MapDeduce.helper.expand_sequences"""
+    """Tests for mapdeduce.helper.expand_sequences"""
 
     def test_returns_df(self):
         series = pd.Series(["abc", "def"])

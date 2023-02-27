@@ -2,7 +2,7 @@
 
 """Tests for permp function that computes empirical p-values"""
 
-from MapDeduce.permp import permp
+from mapdeduce.permp import permp
 import numpy as np
 
 try:

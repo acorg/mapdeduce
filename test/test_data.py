@@ -7,7 +7,7 @@ try:
 except ImportError:
     import unittest
 
-from MapDeduce.data import not_109_to_301, not_110_to_199
+from mapdeduce.data import not_109_to_301, not_110_to_199
 
 
 class MapSeqData(unittest.TestCase):

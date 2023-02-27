@@ -148,7 +148,7 @@ class SeqDf(object):
         """Make new SeqDf from a series.
 
         @param series: pd.Series. Each element in series is a string. See
-            MapDeduce.helper.expand_sequences for more details.
+            mapdeduce.helper.expand_sequences for more details.
         """
         return cls(expand_sequences(series))
 
@@ -244,7 +244,7 @@ class SeqDf(object):
 
         @param inplace: Bool.
 
-        @param returns: MapDeduce.dataframes.SeqDf, if inplace=False.
+        @param returns: mapdeduce.dataframes.SeqDf, if inplace=False.
         """
         vc = self.df.index.value_counts()
         dupes = (vc[vc > 1]).index

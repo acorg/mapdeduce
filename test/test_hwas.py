@@ -10,8 +10,8 @@ except ImportError:
 import numpy as np
 import pandas as pd
 
-import MapDeduce
-from MapDeduce.hwas import HwasLmm
+import mapdeduce
+from mapdeduce.hwas import HwasLmm
 
 
 class HwasLmmCrossValidation(unittest.TestCase):
@@ -47,7 +47,7 @@ class HwasLmmCrossValidation(unittest.TestCase):
         hwas = HwasLmm(snps=snps, pheno=pheno)
         hwas.cross_validate(n_splits=2)
         fold = hwas.folds[0]
-        self.assertIsInstance(fold[0], MapDeduce.hwas.HwasLmm)
+        self.assertIsInstance(fold[0], mapdeduce.hwas.HwasLmm)
         self.assertIsInstance(fold[1], pd.core.frame.DataFrame)
         self.assertIsInstance(fold[2], pd.core.frame.DataFrame)
 

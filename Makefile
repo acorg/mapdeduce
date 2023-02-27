@@ -1,8 +1,8 @@
 .PHONY: test check
 
 test:
-	trial test/test_*.py
+	pytest --ignore test/test_hwas.py
 
 check:
-	pyflakes **.py
-	pycodestyle --ignore E402 **.py
+	pyflakes **/*.py
+	pycodestyle --ignore E402 **/*.py

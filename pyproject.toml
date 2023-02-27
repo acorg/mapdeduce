@@ -19,13 +19,14 @@ classifiers = [
 ]
 keywords = ["influenza", "lmm", "antigenic cartography"]
 dependencies = [
-    "scikit-learn",
-    "matplotlib",
-    "tqdm",
-    "pandas",
     "biopython",
-    "rpy2",
+    "matplotlib",
+    "pandas",
+    "rpy2>=3.0.0",
+    "scikit-learn",
     "seaborn",
+    "spm1d",
+    "tqdm",
 ]
 requires-python = ">=3.6"
 

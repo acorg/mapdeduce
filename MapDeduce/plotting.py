@@ -4,8 +4,8 @@ from builtins import range
 
 import numpy as np
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
 from matplotlib.patches import Ellipse, Rectangle
 
 
@@ -281,22 +281,30 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     return anno.arrow_patch
 
 
-def map_setup(ax=None):
-    """Configure a plot to be an antigenic map.
+def make_ax_a_map(ax=None):
+    """
+    Configure a matplotlib ax to be an antigenic map. Maps have integer
+    spaced grids, an aspect ratio of 1, and no axis labels.
 
-    Maps have integer spaced grids, an aspect ratio of 1, and no axis labels.
+    Args:
+        ax (matplotlib ax)
 
-    @param ax. Matplotlib ax.
+    Returns
+        matplotlib ax
     """
     ax = plt.gca() if ax is None else ax
-    ax.get_xaxis().set_major_locator(MultipleLocator(base=1.0))
-    ax.get_yaxis().set_major_locator(MultipleLocator(base=1.0))
+    ax.get_xaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
+    ax.get_yaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_ylabel("")
     ax.set_xlabel("")
+    xlim, ylim = ax.get_xlim(), ax.get_ylim()
+    ax.set_xlim(math.floor(xlim[0]), math.ceil(xlim[1]))
+    ax.set_ylim(math.floor(ylim[0]), math.ceil(ylim[1]))
     ax.set_aspect(1)
     return ax
+
 
 
 def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):

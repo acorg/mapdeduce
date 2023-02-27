@@ -22,7 +22,7 @@ import itertools
 import tqdm
 
 from .plotting import setup_ax, amino_acid_colors, add_ellipses, \
-    combination_label, point_size, map_setup
+    combination_label, point_size, make_ax_a_map
 from .munging import handle_duplicate_sequences
 from .data import amino_acids
 from .dataframes import CoordDf, SeqDf
@@ -332,7 +332,7 @@ class MapSeq(object):
 
             fig, ax = plt.subplots()
             self.scatter_colored_by_amino_acid(p, **kwds)
-            map_setup()
+            make_ax_a_map()
             plt.tight_layout()
             plt.savefig(filename.format(p), bbox_inches="tight")
             plt.close()
@@ -887,6 +887,6 @@ class OrderedMapSeq(MapSeq):
             self.coord.df.plot.scatter(
                 x="x", y="y", label="Included", ax=ax)
 
-            map_setup(ax)
+            make_ax_a_map(ax)
 
             return ax

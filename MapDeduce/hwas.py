@@ -18,7 +18,7 @@ from limix.vardec import VarianceDecomposition
 from tqdm import tqdm
 
 from .permp import permp
-from .plotting import plot_arrow, map_setup
+from .plotting import plot_arrow, make_ax_a_map
 from .dataframes import CoordDf
 
 import seaborn as sns
@@ -455,7 +455,7 @@ class HwasLmm(object):
                         zorder=1,
                         lw=0.3
                     )
-            map_setup()
+            make_ax_a_map()
 
             return residual, ax
 
@@ -978,7 +978,7 @@ class HwasLmm(object):
             loc="center left",
         )
 
-        map_setup(ax)
+        make_ax_a_map(ax)
 
         return ax
 

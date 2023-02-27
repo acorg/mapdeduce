@@ -9,7 +9,8 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from rpy2.rinterface import RRuntimeError
+
+from rpy2.rinterface_lib.embedded import RRuntimeError
 
 
 class Permp(unittest.TestCase):

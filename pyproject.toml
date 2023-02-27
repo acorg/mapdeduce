@@ -1,0 +1,39 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mapdeduce"
+version = "2.0.0"
+description = """Handling antigenic maps and sequence data, testing amino \
+    acid polymorphisms associated with antigenicity."""
+readme = "README.md"
+authors = [{ name = "David Pattinson", email = "david.pattinson@wisc.edu" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["influenza", "lmm", "antigenic cartography"]
+dependencies = [
+    "scikit-learn",
+    "matplotlib",
+    "tqdm",
+    "pandas",
+    "biopython",
+    "rpy2",
+    "seaborn",
+]
+requires-python = ">=3.6"
+
+[project.optional-dependencies]
+dev = ["black", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/acorg/mapdeduce"
+
+[tool.setuptools]
+packages = ["mapdeduce"]

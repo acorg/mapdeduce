@@ -2,15 +2,12 @@
 
 """Tests for permp function that computes empirical p-values"""
 
-from mapdeduce.permp import permp
+import unittest
+
 import numpy as np
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
 from rpy2.rinterface_lib.embedded import RRuntimeError
+
+from mapdeduce.permp import permp
 
 
 class Permp(unittest.TestCase):

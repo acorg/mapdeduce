@@ -2,14 +2,12 @@
 
 """Tests for helper functions."""
 
+import unittest
+
 import numpy as np
 import pandas as pd
-from mapdeduce.helper import expand_sequences
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+from mapdeduce.helper import expand_sequences
 
 
 class ExpandSequences(unittest.TestCase):

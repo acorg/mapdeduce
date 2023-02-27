@@ -2,10 +2,7 @@
 
 """Tests for code in mapdeduce/season.py"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from mapdeduce.season import in_season, season_from_timestamp, hemisphere_from_season
 from pandas import to_datetime

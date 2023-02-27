@@ -2,10 +2,7 @@
 
 """Tests for data"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 import pandas as pd

@@ -2,10 +2,8 @@
 
 """Tests for data munginig functions"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
+
 import pandas as pd
 import os
 

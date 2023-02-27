@@ -2,10 +2,7 @@
 
 """Tests for data"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from mapdeduce.data import not_109_to_301, not_110_to_199
 

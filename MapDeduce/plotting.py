@@ -44,86 +44,30 @@ def setup_ax(map):
 kwds = dict(fc="None", color="black", lw=1)
 ellipse_params = {
     2009: {
-        "SY97": dict(xy=(-6, 3.5),
-                     width=3,
-                     height=5,
-                     angle=-45,
-                     **kwds),
-        "FU02": dict(xy=(-1.9, 1),
-                     width=3.5,
-                     height=6,
-                     angle=-40,
-                     **kwds),
-        "CA04": dict(xy=(0.6, -1),
-                     width=2.8,
-                     height=6,
-                     angle=-40,
-                     **kwds),
-        "WI05": dict(xy=(3.5, -2.5),
-                     width=3.5,
-                     height=6.5,
-                     angle=-40,
-                     **kwds),
-        "PE09": dict(xy=(6, -7),
-                     width=3,
-                     height=6,
-                     angle=-40,
-                     **kwds),
+        "SY97": dict(xy=(-6, 3.5), width=3, height=5, angle=-45, **kwds),
+        "FU02": dict(xy=(-1.9, 1), width=3.5, height=6, angle=-40, **kwds),
+        "CA04": dict(xy=(0.6, -1), width=2.8, height=6, angle=-40, **kwds),
+        "WI05": dict(xy=(3.5, -2.5), width=3.5, height=6.5, angle=-40, **kwds),
+        "PE09": dict(xy=(6, -7), width=3, height=6, angle=-40, **kwds),
     },
     2017: {
-        "PE09": dict(xy=(-4.5, -0.75),
-                     width=2,
-                     height=3,
-                     angle=20,
-                     **kwds),
-        "SW13": dict(xy=(-2.5, 0.75),
-                     width=2.5,
-                     height=4,
-                     angle=0,
-                     **kwds),
-        "HK14": dict(xy=(0.5, -0.5),
-                     width=3.5,
-                     height=5,
-                     angle=-25,
-                     **kwds),
+        "PE09": dict(xy=(-4.5, -0.75), width=2, height=3, angle=20, **kwds),
+        "SW13": dict(xy=(-2.5, 0.75), width=2.5, height=4, angle=0, **kwds),
+        "HK14": dict(xy=(0.5, -0.5), width=3.5, height=5, angle=-25, **kwds),
     },
     # Ugly hack
     # Need to specify different ellipses for CDC vs MELB
     # 2017 key in this dict refers to MELB 2017 data
     # 2018 key is for CDC 2017 data
     2018: {
-        "PE09": dict(xy=(-2.7, -2),
-                     width=2.5,
-                     height=3.5,
-                     angle=-10,
-                     **kwds),
-        "SW13": dict(xy=(0.5, 1.75),
-                     width=2,
-                     height=4,
-                     angle=-70,
-                     **kwds),
-        "HK14": dict(xy=(1, -0.75),
-                     width=2.5,
-                     height=5,
-                     angle=-70,
-                     **kwds),
+        "PE09": dict(xy=(-2.7, -2), width=2.5, height=3.5, angle=-10, **kwds),
+        "SW13": dict(xy=(0.5, 1.75), width=2, height=4, angle=-70, **kwds),
+        "HK14": dict(xy=(1, -0.75), width=2.5, height=5, angle=-70, **kwds),
     },
     "cdc-melb-2017-merge": {
-        "PE09": dict(xy=(-2.5, 1.75),
-                     width=2.25,
-                     height=3.25,
-                     angle=345,
-                     **kwds),
-        "SW13": dict(xy=(0.5, -2.25),
-                     width=1.75,
-                     height=3.5,
-                     angle=90,
-                     **kwds),
-        "HK14": dict(xy=(0.75, 0.25),
-                     width=3,
-                     height=4.5,
-                     angle=85,
-                     **kwds),
+        "PE09": dict(xy=(-2.5, 1.75), width=2.25, height=3.25, angle=345, **kwds),
+        "SW13": dict(xy=(0.5, -2.25), width=1.75, height=3.5, angle=90, **kwds),
+        "HK14": dict(xy=(0.75, 0.25), width=3, height=4.5, angle=85, **kwds),
     },
 }
 
@@ -175,13 +119,7 @@ def add_ellipses(map):
 
 
 rectangle_params = {
-    2009: {
-        "FU02-CA04": dict(xy=(-5, -0.5),
-                          width=6.5,
-                          height=7.5,
-                          angle=-35,
-                          **kwds)
-    }
+    2009: {"FU02-CA04": dict(xy=(-5, -0.5), width=6.5, height=7.5, angle=-35, **kwds)}
 }
 
 
@@ -217,7 +155,7 @@ amino_acid_colors = {
     "V": "#00939f",
     "W": "#ED93BD",
     "X": "#777777",  # unknown AA
-    "Y": "#a5b8c7"
+    "Y": "#a5b8c7",
 }
 
 
@@ -275,8 +213,8 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
             width=lw,
             headwidth=5 * lw,
             headlength=4 * lw,
-            **kwargs
-        )
+            **kwargs,
+        ),
     )
     return anno.arrow_patch
 
@@ -304,7 +242,6 @@ def make_ax_a_map(ax=None):
     ax.set_ylim(math.floor(ylim[0]), math.ceil(ylim[1]))
     ax.set_aspect(1)
     return ax
-
 
 
 def line_hist(arr, hist_kwds=dict(), plot_kwds=dict()):

@@ -51,8 +51,9 @@ class HwasLmmCrossValidation(unittest.TestCase):
         self.assertIsInstance(fold[1], pd.core.frame.DataFrame)
         self.assertIsInstance(fold[2], pd.core.frame.DataFrame)
 
-    @unittest.skip("Test currently failing, but don't currently need this "
-                   "functionality")
+    @unittest.skip(
+        "Test currently failing, but don't currently need this " "functionality"
+    )
     def test_phenotype_offset(self):
         """Test phenotype offset does not"""
         np.random.seed(1234)
@@ -62,7 +63,11 @@ class HwasLmmCrossValidation(unittest.TestCase):
         hwas = HwasLmm(snps=snps, pheno=pheno)
         hwas.cross_validate(n_splits=2)
         # Include all snps
-        pn = hwas.cross_validation_predictions(p_grid=[1, ])
+        pn = hwas.cross_validation_predictions(
+            p_grid=[
+                1,
+            ]
+        )
 
         # Predictions by chance should be small (pheno drawn from normal dist,
         # with scale = 1, loc = 0.
@@ -78,13 +83,13 @@ class HwasLmmRegressOut(unittest.TestCase):
         pheno = pd.DataFrame(
             np.array(((0, 0), (1, 0), (2, 0))),
             columns=["x", "y"],
-            index=["a", "b", "c"]
+            index=["a", "b", "c"],
         )
 
         snps = pd.DataFrame(
             np.array(((0, 0), (1, 1), (0, 1))),
             columns=["SNP-1", "SNP-2"],
-            index=["a", "b", "c"]
+            index=["a", "b", "c"],
         )
 
         self.hwas = HwasLmm(snps=snps, pheno=pheno)
@@ -92,9 +97,12 @@ class HwasLmmRegressOut(unittest.TestCase):
         # Specify effects with known vectors, to test that they are regressed
         # out correctly. Dataframe with beta column in same format as
         # Hwas.results
-        self.hwas.results = pd.DataFrame({
-            "beta": [np.array((1, 0)), np.array((2, 2))],
-        }, index=["SNP-1", "SNP-2"])
+        self.hwas.results = pd.DataFrame(
+            {
+                "beta": [np.array((1, 0)), np.array((2, 2))],
+            },
+            index=["SNP-1", "SNP-2"],
+        )
 
     def test_returns_df(self):
         """HwasLmm.regress_out should return a DataFrame"""

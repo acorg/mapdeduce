@@ -3,6 +3,7 @@
 """Tests for MapSeq class"""
 
 import numpy as np
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -18,15 +19,21 @@ class MapSeqAttributes(unittest.TestCase):
 
     def setUp(self):
         """Sequences and coordinates to use in tests"""
-        seq_df = pd.DataFrame({
-            1: ("Q", "Q", "Q", "Q"),
-            2: ("K", "K", "N", "K"),
-            3: ("L", "P", "A", "-"),
-        }, index=("strain1", "strain2", "strain3", "strain5"))
-        coord_df = pd.DataFrame({
-            "x": (0, 0, 1, 1),
-            "y": (0, 1, 0, 1),
-        }, index=("strain1", "strain2", "strain3", "strain4"))
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q"),
+                2: ("K", "K", "N", "K"),
+                3: ("L", "P", "A", "-"),
+            },
+            index=("strain1", "strain2", "strain3", "strain5"),
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1),
+                "y": (0, 1, 0, 1),
+            },
+            index=("strain1", "strain2", "strain3", "strain4"),
+        )
         self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
 
     def test_common_strains(self):
@@ -39,13 +46,11 @@ class MapSeqAttributes(unittest.TestCase):
 
     def test_seq_in_both_indexes(self):
         """Indexes of self.seq_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both,
-                         set(self.ms.seq_in_both.index))
+        self.assertEqual(self.ms.strains_in_both, set(self.ms.seq_in_both.index))
 
     def test_coords_in_both_indexes(self):
         """Indexes of self.coords_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both,
-                         set(self.ms.coords_in_both.index))
+        self.assertEqual(self.ms.strains_in_both, set(self.ms.coords_in_both.index))
 
     def test_unkown_sequence(self):
         """
@@ -69,15 +74,21 @@ class MapSeqDuplicates(unittest.TestCase):
             "strain4",
             "strain4",
         )
-        seq_df = pd.DataFrame({
-            1: ("Q", "Q", "Q", "Q", "Q", "D", "D"),
-            2: ("K", "K", "K", "K", "K", "A", "A"),
-            3: ("L", "L", "L", "L", "A", "V", "V"),
-        }, index=index)
-        coord_df = pd.DataFrame({
-            "x": (0, 0, 0, 1, 0, 1, 0),
-            "y": (0, 1, 0, 1, 1, 0, 1),
-        }, index=index)
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q", "Q", "D", "D"),
+                2: ("K", "K", "K", "K", "K", "A", "A"),
+                3: ("L", "L", "L", "L", "A", "V", "V"),
+            },
+            index=index,
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 0, 1, 0, 1, 0),
+                "y": (0, 1, 0, 1, 1, 0, 1),
+            },
+            index=index,
+        )
         self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
 
     def test_same_sequences_different_index(self):
@@ -95,8 +106,7 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIsInstance(self.ms.all_seqs.loc["strain3", :],
-                              pd.core.frame.Series)
+        self.assertIsInstance(self.ms.all_seqs.loc["strain3", :], pd.core.frame.Series)
 
     def test_different_sequences_same_index_value(self):
         """
@@ -118,29 +128,37 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
 
     def setUp(self):
         """Sequences and coordinates to use in tests"""
-        seq_df = pd.DataFrame({
-            1: ("Q", "Q", "Q", "Q"),
-            2: ("K", "K", "N", "K"),
-            3: ("L", "P", "A", "L"),
-        }, index=("strain1", "strain2", "strain3", "strain5"))
-        coord_df = pd.DataFrame({
-            "x": (0, 0, 1, 1),
-            "y": (0, 1, 0, 1),
-        }, index=("strain1", "strain2", "strain3", "strain4"))
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q"),
+                2: ("K", "K", "N", "K"),
+                3: ("L", "P", "A", "L"),
+            },
+            index=("strain1", "strain2", "strain3", "strain5"),
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1),
+                "y": (0, 1, 0, 1),
+            },
+            index=("strain1", "strain2", "strain3", "strain4"),
+        )
         self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
 
     def test_returns_df(self):
         """Should return a df"""
-        self.assertIsInstance(self.ms.strains_with_combinations({1: "Q"}),
-                              pd.core.frame.DataFrame)
+        self.assertIsInstance(
+            self.ms.strains_with_combinations({1: "Q"}), pd.core.frame.DataFrame
+        )
 
     def test_returns_df_combinations_absent(self):
         """
         Should return a df, even if no strains have the requested
         combination
         """
-        self.assertIsInstance(self.ms.strains_with_combinations({1: "L"}),
-                              pd.core.frame.DataFrame)
+        self.assertIsInstance(
+            self.ms.strains_with_combinations({1: "L"}), pd.core.frame.DataFrame
+        )
 
     def test_correct_strains_1(self):
         """
@@ -149,8 +167,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         (I.e. out of "strain1", "strain2", "strain3")
         """
         output = self.ms.strains_with_combinations({1: "Q"})
-        self.assertEqual(set(("strain1", "strain2", "strain3")),
-                         set(output.index))
+        self.assertEqual(set(("strain1", "strain2", "strain3")), set(output.index))
 
     def test_correct_strains_3(self):
         """
@@ -172,21 +189,28 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
 
     def setUp(self):
         """Sequences and coordinates to use in tests"""
-        seq_df = pd.DataFrame({
-            1: ("Q", "Q", "Q", "Q", "Q"),
-            2: ("K", "K", "N", "K", "N"),
-            3: ("L", "L", "A", "L", "-"),
-        }, index=("strain1", "strain2", "strain3", "strain5", "strain6"))
-        coord_df = pd.DataFrame({
-            "x": (0, 0, 1, 1, 0),
-            "y": (0, 1, 0, 1, 0),
-        }, index=("strain1", "strain2", "strain3", "strain4", "strain6"))
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q", "Q"),
+                2: ("K", "K", "N", "K", "N"),
+                3: ("L", "L", "A", "L", "-"),
+            },
+            index=("strain1", "strain2", "strain3", "strain5", "strain6"),
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1, 0),
+                "y": (0, 1, 0, 1, 0),
+            },
+            index=("strain1", "strain2", "strain3", "strain4", "strain6"),
+        )
         self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
 
     def test_returns_pd_groupby(self):
         """Should return pd.core.groupby.DataFrameGroupBy"""
-        self.assertIsInstance(self.ms.duplicate_sequences(),
-                              pd.core.groupby.DataFrameGroupBy)
+        self.assertIsInstance(
+            self.ms.duplicate_sequences(), pd.core.groupby.DataFrameGroupBy
+        )
 
     def test_correct_groups_1(self):
         """
@@ -208,7 +232,12 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
         grouped = self.ms.duplicate_sequences()
         strains = grouped.groups[("Q", "N", "A")]
         test = set(strains)
-        self.assertEqual({"strain3", }, test)
+        self.assertEqual(
+            {
+                "strain3",
+            },
+            test,
+        )
 
     def test_unknown_sequence(self):
         """
@@ -224,25 +253,29 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
 
 
 class OrderedMapSeqTests(unittest.TestCase):
-
     def setUp(self):
         """Sequences and coordinates to use in tests"""
-        seq_df = pd.DataFrame({
-            1: list("QQQQQA"),
-            2: list("KKNKNA"),
-            3: list("LLAL-A"),
-        }, index="flu1 flu2 flu3 flu5 flu6 flu7".split())
+        seq_df = pd.DataFrame(
+            {
+                1: list("QQQQQA"),
+                2: list("KKNKNA"),
+                3: list("LLAL-A"),
+            },
+            index="flu1 flu2 flu3 flu5 flu6 flu7".split(),
+        )
 
-        coord_df = pd.DataFrame({
-            "x": (0, 0, 1, 1, 0, np.nan),
-            "y": (0, 1, 0, 1, 0, np.nan),
-        }, index="flu2 flu1 flu3 flu4 flu6 flu7".split())
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1, 0, np.nan),
+                "y": (0, 1, 0, 1, 0, np.nan),
+            },
+            index="flu2 flu1 flu3 flu4 flu6 flu7".split(),
+        )
 
         self.oms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
 
     def test_attribute_coord(self):
-        self.assertIsInstance(
-            self.oms.coord, MapDeduce.dataframes.CoordDf)
+        self.assertIsInstance(self.oms.coord, MapDeduce.dataframes.CoordDf)
 
     def test_indexes_contain_intersection(self):
         """Indexes of the sequence and coordinate dataframe should contain
@@ -258,8 +291,7 @@ class OrderedMapSeqTests(unittest.TestCase):
         """Sequence and coordinate dataframes should be reordered such that
         their indexes match.
         """
-        self.assertEqual(
-            list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
+        self.assertEqual(list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
 
 
 if __name__ == "__main__":

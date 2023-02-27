@@ -13,9 +13,8 @@ def dict_from_fasta(path, upper=True):
     @param upper (bool): Convert fasta header to upper case.
     @returns dict: {Description (str): sequence (str)}
     """
-    with open(path, 'r') as handle:
-
-        records = parse(handle, 'fasta')
+    with open(path, "r") as handle:
+        records = parse(handle, "fasta")
 
         if upper:
             return {r.description.upper(): str(r.seq) for r in records}
@@ -36,8 +35,8 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
     @returns pd.DataFrame: Indexes are record IDs in upper case, columns are
         positions
     """
-    with open(path, 'r') as handle:
-        seqs = [(r.id.upper(), r.seq)for r in parse(handle, 'fasta')]
+    with open(path, "r") as handle:
+        seqs = [(r.id.upper(), r.seq) for r in parse(handle, "fasta")]
 
     index = [s[0] for s in seqs]
 
@@ -49,7 +48,7 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
         df.columns = list(range(1, df.shape[1] + 1))
 
     else:
-        df = df.iloc[:, :len(positions)]  # Drop unwanted columns
+        df = df.iloc[:, : len(positions)]  # Drop unwanted columns
         df.columns = positions  # Rename columns
 
     return df
@@ -64,12 +63,14 @@ def read_eu_coordinate_layout(path):
     @returns pd.DataFrame: Indexes are strain names, columns are x, y
         coordinates. DataFrame contains only the antigens.
     """
-    df = pd.read_csv(filepath_or_buffer=path,
-                     sep=' ',
-                     index_col=(0, 1),
-                     header=None,
-                     names=('type', 'strain', 'x', 'y'))
-    return df.loc['AG', :]
+    df = pd.read_csv(
+        filepath_or_buffer=path,
+        sep=" ",
+        index_col=(0, 1),
+        header=None,
+        names=("type", "strain", "x", "y"),
+    )
+    return df.loc["AG", :]
 
 
 # Compile once
@@ -100,7 +101,7 @@ def clean_strain_name(strain_name):
     strain_name = re.sub(pattern=ah3n2_regex, repl="A/", string=strain_name)
     match = re.match(pattern=strain_regex, string=strain_name)
     try:
-        return match.group().strip('_')
+        return match.group().strip("_")
     except AttributeError:
         return strain_name
 
@@ -121,9 +122,9 @@ def clean_df_strain_names(df, filename):
     # Write file for inspecting name changes
     len_longest_strain_name = max(map(len, new_names))
     col_width = len_longest_strain_name if len_longest_strain_name > 3 else 3
-    format_string = '{{:{}}} {{}}\n'.format(col_width)
-    with open(filename, 'w') as fobj:
-        fobj.write(format_string.format('New', 'Original'))
+    format_string = "{{:{}}} {{}}\n".format(col_width)
+    with open(filename, "w") as fobj:
+        fobj.write(format_string.format("New", "Original"))
         for n, o in zip(new_names, orig_names):
             fobj.write(format_string.format(n, o))
 
@@ -148,8 +149,10 @@ def handle_duplicate_sequences(df):
     # Merge these groups of sequences
     remaining_dupe_idx = df.index.duplicated(keep=False)
     if remaining_dupe_idx.any():
-        merged = {i: df.loc[i, :].apply(merge_amino_acids)
-                  for i in df.index[remaining_dupe_idx]}
+        merged = {
+            i: df.loc[i, :].apply(merge_amino_acids)
+            for i in df.index[remaining_dupe_idx]
+        }
         merged = pd.DataFrame.from_dict(merged, orient="index")
         merged.columns = df.columns
 

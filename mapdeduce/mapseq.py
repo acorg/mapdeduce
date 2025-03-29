@@ -28,7 +28,6 @@ from .plotting import (
     add_ellipses,
     combination_label,
     point_size,
-    setup_ax,
     make_ax_a_map,
 )
 from .munging import handle_duplicate_sequences
@@ -131,7 +130,7 @@ class MapSeq(object):
                 label="With sequence ({})".format(n_with_sequence),
                 **kwds,
             )
-        setup_ax(map=self.map)
+        set_ax_limits(map=self.map)
         make_ax_a_map()
         return ax
 

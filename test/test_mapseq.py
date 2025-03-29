@@ -3,12 +3,27 @@
 """Tests for MapSeq class"""
 
 import unittest
+import warnings
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 import mapdeduce
 from mapdeduce.mapseq import MapSeq, OrderedMapSeq
+
+# MapSeqStrainsWithCombinations.test_correct_strains_2 raises this user warning
+warnings.filterwarnings(
+    action="ignore", message="No strains with 1K", category=UserWarning
+)
+
+# MapSeqStrainsWithCombinations.test_returns_df_combinations_absent raises
+# this warning
+warnings.filterwarnings(
+    action="ignore", message="No strains with 1L", category=UserWarning
+)
+
+warnings.filterwarnings(action="ignore", message="The default of the `iid` parameter")
 
 
 class MapSeqAttributes(unittest.TestCase):
@@ -39,7 +54,7 @@ class MapSeqAttributes(unittest.TestCase):
         intersection of the strains in the sequence and coordinate dfs
         """
         expect = {"strain1", "strain2", "strain3"}
-        self.assertEqual(expect, self.ms.strains_in_both)
+        self.assertEqual(expect, self.ms.strains_with_both)
 
     def test_seq_in_both_indexes(self):
         """Indexes of self.seq_in_both should match strains_in_both"""
@@ -49,12 +64,12 @@ class MapSeqAttributes(unittest.TestCase):
         """Indexes of self.coords_in_both should match strains_in_both"""
         self.assertEqual(self.ms.strains_in_both, set(self.ms.coords_in_both.index))
 
-    def test_unkown_sequence(self):
+    def test_unknown_sequence(self):
         """
         Anything in fasta that isn't one of the 20 standard amino acids
         should be NaN.
         """
-        self.assertTrue(np.isnan(self.ms.all_seqs.loc["strain5", 3]))
+        self.assertTrue(np.isnan(self.ms.sequence_df.loc["strain5", 3]))
 
 
 class MapSeqDuplicates(unittest.TestCase):
@@ -94,7 +109,7 @@ class MapSeqDuplicates(unittest.TestCase):
         be kept.
         """
         for test in "strain1", "strain2":
-            self.assertIn(test, set(self.ms.all_seqs.index))
+            self.assertIn(test, set(self.ms.sequence_df.index))
 
     def test_different_sequences_same_index_len(self):
         """
@@ -112,12 +127,12 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIs(np.nan, self.ms.all_seqs.loc["strain3", 3])
+        self.assertIs(np.nan, self.ms.sequence_df.loc["strain3", 3])
 
     def test_same_sequences_same_index(self):
         """Strains with duplicate index and sequence should be removed."""
         for test in "strain1", "strain4":
-            self.assertIn(test, set(self.ms.all_seqs.index))
+            self.assertIn(test, set(self.ms.sequence_df.index))
 
 
 class MapSeqStrainsWithCombinations(unittest.TestCase):
@@ -166,7 +181,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         output = self.ms.strains_with_combinations({1: "Q"})
         self.assertEqual(set(("strain1", "strain2", "strain3")), set(output.index))
 
-    def test_correct_strains_3(self):
+    def test_correct_strains_2(self):
         """
         Test correct strains returned.
         Expect no strains.
@@ -181,7 +196,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
             self.ms.strains_with_combinations({4: "K"})
 
 
-class MapSeqDuplicateSeqeunces(unittest.TestCase):
+class MapSeqDuplicateSequences(unittest.TestCase):
     """Tests for MapSeq.duplicate_sequences"""
 
     def setUp(self):
@@ -289,6 +304,36 @@ class OrderedMapSeqTests(unittest.TestCase):
         their indexes match.
         """
         self.assertEqual(list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
+
+
+class PlottingTests(unittest.TestCase):
+
+    def setUp(self):
+        """Sequences and coordinates to use in tests"""
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q", "Q"),
+                2: ("K", "K", "N", "K", "N"),
+                3: ("L", "L", "A", "L", "-"),
+            },
+            index=("strain1", "strain2", "strain3", "strain5", "strain6"),
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1, 0),
+                "y": (0, 1, 0, 1, 0),
+            },
+            index=("strain1", "strain2", "strain3", "strain4", "strain6"),
+        )
+        self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
+
+    def test_plot_strains_with_combinations_kde(self):
+        self.ms.plot_strains_with_combinations_kde({1: "Q"})
+        plt.close()
+
+    def test_plot_with_without(self):
+        self.ms.plot_with_without()
+        plt.close()
 
 
 if __name__ == "__main__":

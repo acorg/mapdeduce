@@ -1,8 +1,9 @@
-**.pyc
 _trial_temp
-mapdeduce.egg-info
-**.py.bak
-mapdeduce/__pycache__
-build
 .vscode
+**.py.bak
+**.pyc
+build
+docs/build
+mapdeduce.egg-info
+mapdeduce/__pycache__
 pip-freeze.txt

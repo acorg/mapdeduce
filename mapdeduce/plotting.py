@@ -2,16 +2,18 @@
 
 import math
 
+import math
 import numpy as np
+from scipy.spatial.distance import euclidean
+from itertools import combinations
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
 
 
-def set_ax_limits(map):
-    """
-    Sets up layout of some ax settings.
+def setup_ax(map):
+    """Sets up ax for maps with known dimensions.
 
     @param map: String. 2017 or Pre2009
     """
@@ -19,6 +21,13 @@ def set_ax_limits(map):
     if (map == 2018) or (map == "cdc-melb-2017-merge"):
         ax.set_xlim(-7, 7)
         ax.set_ylim(-7, 7)
+        ax.set_xticks(list(range(-7, 8)))
+        ax.set_yticks(list(range(-7, 8)))
+    elif map == "cdc-melb-2017-merge":
+        ax.set_xlim(-7, 7)
+        ax.set_ylim(-7, 7)
+        ax.set_xticks(list(range(-7, 8)))
+        ax.set_yticks(list(range(-6, 7)))
 
 
 # Define ellipses to demark clusters on maps
@@ -211,7 +220,7 @@ def make_ax_a_map(ax=None):
     Returns
         matplotlib ax
     """
-    ax = plt.gca() if ax is None else ax
+    ax = ax or plt.gca()
     ax.get_xaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
     ax.get_yaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
     ax.set_xticklabels([])
@@ -251,3 +260,55 @@ def calc_line_hist(arr, hist_kwds=dict()):
     right = bin_edges[1:]
     mid = np.vstack((left, right)).mean(axis=0)
     return mid, hist
+
+
+def label_scatter_plot(df, group_dist=0.05, ax=None, **kwds):
+    """Add labels to an xy scatter plot.
+
+    Args:
+        df (pd.DataFrame): Shape [n, 2]. 1st column contains x, 2nd contains y.
+            Labels are the index of the df.
+        group_dist (number): Use single label for points that are this close
+            or closer.
+        ax (mpl ax)
+        **kwds passed to plt.annotate
+
+    Notes:
+        Simple algorithm alert: If a point is within group_dist to multiple
+            other points, it's label will be grouped only with the first. A
+            more complex algorithm for grouping labels could use a clustering
+            algorithm to find clusters of points to use the same label for.
+    """
+    if df.shape[1] != 2:
+        raise ValueError("df must have only 2 columns.")
+
+    ax = plt.gca() if ax is None else ax
+
+    xytext = kwds.pop("xytext", (5, 0))
+    textcoords = kwds.pop("textcoords", "offset points")
+    va = kwds.pop("va", "center")
+
+    # Points to make combined labels for
+    combined = set()
+    for a, b in combinations(df.index, 2):
+        if euclidean(df.loc[a, :], df.loc[b, :]) < 0.05:
+            combined.add((a, b))
+
+    # Points to make single labels for
+    singles = set(df.index)
+
+    for group in combined:
+
+        # Members in a group aren't singles
+        for member in group:
+            if member in singles:
+                singles.remove(member)
+
+        # Annotate last member with whole group in label
+        s = ",".join(group)
+        xy = df.loc[member, :]
+        ax.annotate(s=s, xy=xy, xytext=xytext, textcoords=textcoords, va=va, **kwds)
+
+    for s in singles:
+        xy = df.loc[s, :]
+        ax.annotate(s=s, xy=xy, xytext=xytext, textcoords=textcoords, va=va, **kwds)

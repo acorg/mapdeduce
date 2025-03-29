@@ -118,6 +118,20 @@ class SeqDfConsensusTests(unittest.TestCase):
         self.assertEqual("XNRKSE", "".join(cons))
 
 
+class SeqDfGeneralTests(unittest.TestCase):
+
+    def test_groupby_at_site(self):
+        df = pd.DataFrame.from_dict(
+            dict(a=list("AKN"), b=list("RRD"), c=list("KRE")),
+            orient="index",
+            columns=list(range(1, 4)),
+        )
+        sdf = SeqDf(df)
+        result = sdf.groupby_amino_acid_at_site(2)
+        self.assertEqual(("a",), tuple(result["K"]))
+        self.assertEqual(("b", "c"), tuple(sorted(result["R"])))
+
+
 class SeqDfMergeTests(unittest.TestCase):
     """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-"""Tests for data munginig functions"""
+"""Tests for data munging functions"""
 
+import os
 import unittest
 
 import pandas as pd
-import os
 
 import mapdeduce
 from mapdeduce.munging import dict_from_fasta, df_from_fasta

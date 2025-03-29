@@ -12,6 +12,10 @@ A python library for:
 ## Installation
 
 ```bash
+# An R dependency
+Rscript -e 'install.packages("statmod")'
+
+# The python package
 pip install git+https://github.com/acorg/mapdeduce.git
 ```
 

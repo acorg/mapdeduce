@@ -9,35 +9,16 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
 
 
-def setup_ax(map):
+def set_ax_limits(map):
     """
     Sets up layout of some ax settings.
 
     @param map: String. 2017 or Pre2009
     """
     ax = plt.gca()
-    if map == 2017:
-        ax.set_xticks(list(range(-6, 7)))
-        ax.set_yticks(list(range(-6, 6)))
-    elif map == 2009:
-        ax.set_xlim(-10, 10)
-        ax.set_xticks(list(range(-10, 10)))
-        ax.set_yticks(list(range(-13, 9)))
-    elif map == 2018:
+    if (map == 2018) or (map == "cdc-melb-2017-merge"):
         ax.set_xlim(-7, 7)
         ax.set_ylim(-7, 7)
-        ax.set_xticks(list(range(-7, 8)))
-        ax.set_yticks(list(range(-7, 8)))
-    elif map == "cdc-melb-2017-merge":
-        ax.set_xlim(-7, 7)
-        ax.set_ylim(-7, 7)
-        ax.set_xticks(list(range(-7, 8)))
-        ax.set_yticks(list(range(-6, 7)))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_xlabel("")
-    ax.set_ylabel("")
-    ax.set_aspect(1)
 
 
 # Define ellipses to demark clusters on maps

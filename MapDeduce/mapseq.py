@@ -1,28 +1,21 @@
 """Contains the main class to represent maps with sequences."""
 
-from __future__ import print_function, division
 
-from builtins import zip, map, str, range, object
-
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-
+import logging
 import warnings
-
-import numpy as np
-import spm1d
-
-from scipy import spatial
-
-import sklearn
-
 from operator import and_
 import itertools
 
+from scipy import spatial
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import sklearn
+import spm1d
 import tqdm
 
 from .plotting import (
-    setup_ax,
+    set_ax_limits,
     amino_acid_colors,
     add_ellipses,
     combination_label,
@@ -104,7 +97,7 @@ class MapSeq(object):
         self.coords_in_both.plot.scatter(
             color="#b72467", label="With sequence ({})".format(n_with_sequence), **kwds
         )
-        setup_ax(map=self.map)
+        set_ax_limits(map=self.map)
         return ax
 
     def variant_proportions(self, p):
@@ -121,20 +114,26 @@ class MapSeq(object):
         value_counts = series.value_counts()
         return (value_counts / value_counts.sum()).sort_values()
 
-    def scatter_colored_by_amino_acid(self, p, randomz=True, ellipses=True, **kwargs):
-        """Plot map colored by amino acids at position p.
+    def scatter_colored_by_amino_acid(
+        self, p: int, zorder_behaviour: str = "x", ellipses: bool = True, **kwargs
+    ) -> mpl.axes.Axes:
+        """
+        Plot map colored by amino acids at position p.
 
         Args:
             p (int): HA position
-            randomz (bool): Given points random positions in z. This is
-                slower because marks have to plotted individually.
+            zorder_behaviour (str): 'x' / 'random' / 'default'. 'x' sorts the dataframe
+                by the x-value so that points incrementally overlap each other from left
+                to right. 'random' gives points an explicit random zorder. This is slow
+                because each point gets its own call to plt.scatter. 'default' is the
+                default zorder.
             ellipses (bool). Demark clusters with ellipses.
             **kwargs. Passed to ax.scatter for the colored strains.
 
         Returns:
             matplotlib ax
         """
-        ax = plt.gca()
+        ax = kwargs.pop("ax", plt.gca())
 
         # Antigens without a known sequence
         if not self.coords_excl_to_coords.empty:
@@ -146,40 +145,46 @@ class MapSeq(object):
         kwds = dict(
             lw=1,
             edgecolor="white",
-            s=3 * point_size(self.seq_in_both.shape[0]),
+            s=kwargs.pop("s", 3) * point_size(self.seq_in_both.shape[0]),
             **kwargs,
         )
 
         proportions = self.variant_proportions(p=p) * 100
-        seq_grouped = self.seq_in_both.groupby(p)
 
-        for amino_acid, seq_group in seq_grouped:
+        for amino_acid, seq_group in self.seq_in_both.groupby(p):
             coord_group = self.coords_in_both.loc[seq_group.index, :]
 
-            try:
-                kwds["color"] = amino_acid_colors[amino_acid]
+            # Get a colour for this amino acid. Get the default color if it's not
+            # a known amino acid
+            kwds["color"] = amino_acid_colors.get(amino_acid, amino_acid_colors["X"])
 
-            except KeyError:
-                kwds["color"] = amino_acid_colors["X"]
+            label = f"{amino_acid} {proportions[amino_acid]:.1f}%"
 
-            label = "{} {:.1f}%".format(amino_acid, proportions[amino_acid])
+            if zorder_behaviour == "random":
 
-            if randomz:
                 zorders = np.random.rand(seq_group.shape[0]) + 5
 
-                for z, (strain, row) in zip(zorders, coord_group.iterrows()):
+                for z, (_, row) in zip(zorders, coord_group.iterrows()):
                     ax.scatter(x=row["x"], y=row["y"], zorder=z, **kwds)
 
                 # Plot the final point twice, but add a label for the group
                 ax.scatter(x=row["x"], y=row["y"], label=label, **kwds)
 
-            else:
+            elif zorder_behaviour == "default":
                 coord_group.plot.scatter(label=label, x="x", y="y", ax=ax, **kwds)
 
-        if ellipses:
+            elif zorder_behaviour == "x":
+                coord_group.sort_values("x").plot.scatter(
+                    label=label, x="x", y="y", ax=ax, **kwds
+                )
+
+            else:
+                raise ValueError("zorder_behaviour should be 'x'/'random'/'default'")
+
+        if ellipses and self.map is not None:
             add_ellipses(self.map)
 
-        setup_ax(self.map)
+        set_ax_limits(self.map)
 
         ax.legend()
         ax.text(x=0.5, y=1, s=p, fontsize=25, va="top", transform=ax.transAxes)
@@ -187,7 +192,13 @@ class MapSeq(object):
         return ax
 
     def scatter_single_substitution(
-        self, sub, ellipses=True, filename=None, connecting_lines=True, **kwargs
+        self,
+        sub,
+        ellipses=True,
+        filename=None,
+        connecting_lines=True,
+        hotellings=True,
+        **kwargs,
     ):
         """Plot map colored by amino acids at position p.
 
@@ -197,6 +208,7 @@ class MapSeq(object):
             filename (str): Passed to plt.savefig. None does not save figure.
             connecting_lines (bool): Plot lines between each points that
                 differ by the substitution.
+            hotellings (bool): Report Hotellings T-squared statistic on the two samples.
             **kwargs. Passed to self.single_substitutions. Use to restrict
                 to particular positions.
         """
@@ -209,20 +221,31 @@ class MapSeq(object):
             print("No pairs of strains with {}".format(label))
             return
 
+        scatter_kwds = dict(x="x", y="y")
+
         # Collect x, y of points to plot, and lines between
         aas = sub[0], sub[2]
         for i, pairs in enumerate(combinations):
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
+            scatter_kwds["ax"] = ax
 
             # Antigens without a known sequence
-            self.coords_excl_to_coords.plot.scatter(
-                ax=ax, x="x", y="y", s=5, color="lightgrey", label="Unknown sequence"
-            )
+            if not self.coords_excl_to_coords.empty:
+                self.coords_excl_to_coords.plot.scatter(
+                    s=5,
+                    color="lightgrey",
+                    label=f"Unknown seq.\n(n={len(self.coords_excl_to_coords)})",
+                    **scatter_kwds,
+                )
 
             # Antigens with a known sequence
-            self.coords_in_both.plot.scatter(
-                ax=ax, x="x", y="y", s=10, color="darkgrey", label="Known sequence"
-            )
+            if not self.coords_in_both.empty:
+                self.coords_in_both.plot.scatter(
+                    s=10,
+                    color="darkgrey",
+                    label=f"Known seq.\n(n={len(self.coords_in_both)})",
+                    **scatter_kwds,
+                )
 
             # More transparent lines when there are more points
             alpha = 0.95 ** len(pairs)
@@ -230,43 +253,43 @@ class MapSeq(object):
 
             # Plot strains that have aa0 and aa1
             samples = [None, None]
-            for j in 0, 1:
+
+            for j in range(2):
                 strains = set(pair[j] for pair in pairs)
+                samples[j] = self.coords_in_both.loc[list(strains), :]
 
-                samples[j] = self.coords_in_both.loc[strains, :]
+            js = reversed(range(2)) if len(samples[1]) > len(samples[0]) else range(2)
 
-            # Plot the group with more samples first
-            # Prevents over plotting
-            for sample in sorted(samples, key=lambda x: len(x))[::-1]:
-                sample.plot.scatter(
-                    x="x",
-                    y="y",
-                    s=150,
+            # Plot the group with more samples first to prevent overplotting
+            for j in js:
+                samples[j].plot.scatter(
+                    s=100,
                     c=amino_acid_colors[aas[j]],
                     edgecolor="white",
                     linewidth=1,
                     zorder=20,
-                    ax=ax,
                     label="{}{}".format(aas[j], sub[1]),
+                    **scatter_kwds,
                 )
 
-            # Compute Hotelling's T-squared statistic on the two samples
-            if len(samples[0]) > 1 and len(samples[1]) > 1:
-                h = spm1d.stats.hotellings2(*samples)
-                h_report = "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
-                    h.inference().p, h.z, *list(map(int, h.df))
-                )
-            else:
-                h_report = "[Insufficient data]"
+            if hotellings:
+                # Compute Hotelling's T-squared statistic on the two samples
+                if len(samples[0]) > 1 and len(samples[1]) > 1:
+                    h = spm1d.stats.hotellings2(*samples)
+                    h_report = "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
+                        h.inference().p, h.z, *list(map(int, h.df))
+                    )
+                else:
+                    h_report = "[Insufficient data]"
 
-            ax.text(
-                x=0,
-                y=1,
-                ha="left",
-                va="top",
-                transform=ax.transAxes,
-                s=r"2 sample Hotelling's T$^2$" + "\n" + h_report,
-            )
+                ax.text(
+                    x=0,
+                    y=1,
+                    ha="left",
+                    va="top",
+                    transform=ax.transAxes,
+                    s=r"2 sample Hotelling's T$^2$" + "\n" + h_report,
+                )
 
             if connecting_lines:
                 for pair in pairs:
@@ -299,7 +322,7 @@ class MapSeq(object):
                         )
 
                     ax.add_collection(
-                        LineCollection(
+                        mpl.collections.LineCollection(
                             segments=segments,
                             lw=1,
                             color="black",
@@ -312,9 +335,10 @@ class MapSeq(object):
             if ellipses:
                 add_ellipses(self.map)
 
-            setup_ax(self.map)
-            ax.legend()
-            title = "{} ({})".format(label, i + 1)
+            make_ax_a_map(ax)
+            set_ax_limits(self.map)
+            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+            title = f"{label} ({i + 1})"
             ax.set_title(title)
             if filename is not None:
                 plt.tight_layout()
@@ -327,7 +351,6 @@ class MapSeq(object):
             filename (str): A format string with one field to fill in. Each
                 position will be substituted in. E.g.:
                 "img/melb-h3-2009-coloured-by-pos/{}.png"
-
             **kwds: Keyword arguments passed to scatter_colored_by_amino_acid
         """
         # Save text file containing html of the variant positions. 1 sorted by
@@ -345,16 +368,16 @@ class MapSeq(object):
             for p in sorted_most_common:
                 fobj.write(img_tag.format(filename.format(p)))
 
-        print("Wrote .by_primary.txt and .by_most_common.txt.")
+        logging.info("Wrote .by_primary.txt and .by_most_common.txt.")
+        logging.info(
+            "There are {} variant positions.".format(len(self.variant_positions))
+        )
+        logging.info("Doing:", end=" ")
 
-        n = len(self.variant_positions)
-        print("There are {} variant positions.".format(n))
-        print("Doing", end="")
+        for p in self.variant_positions:
+            logging.info("{}".format(p), end=" ")
 
-        for i, p in enumerate(self.variant_positions):
-            print("{}".format(p), end="")
-
-            fig, ax = plt.subplots()
+            plt.subplots()
             self.scatter_colored_by_amino_acid(p, **kwds)
             make_ax_a_map()
             plt.tight_layout()
@@ -478,7 +501,7 @@ class MapSeq(object):
 
             if self.map:
                 add_ellipses(self.map)
-                setup_ax(self.map)
+                set_ax_limits(self.map)
 
     def plot_strains_with_combinations_kde(
         self, combinations, c=0.9, color="black", **kwargs

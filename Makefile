@@ -1,7 +1,7 @@
 .PHONY: test check
 
 test:
-	pytest --ignore test/test_hwas.py
+    pytest
 
 check:
 	pyflakes **/*.py

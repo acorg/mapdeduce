@@ -57,12 +57,12 @@ class MapSeqAttributes(unittest.TestCase):
         self.assertEqual(expect, self.ms.strains_with_both)
 
     def test_seq_in_both_indexes(self):
-        """Indexes of self.seq_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both, set(self.ms.seq_in_both.index))
+        """Indexes of self.seq_in_both should match strains_with_both"""
+        self.assertEqual(self.ms.strains_with_both, set(self.ms.seq_in_both.index))
 
     def test_coords_in_both_indexes(self):
-        """Indexes of self.coords_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both, set(self.ms.coords_in_both.index))
+        """Indexes of self.coords_in_both should match strains_with_both"""
+        self.assertEqual(self.ms.strains_with_both, set(self.ms.coords_in_both.index))
 
     def test_unknown_sequence(self):
         """
@@ -118,7 +118,9 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIsInstance(self.ms.all_seqs.loc["strain3", :], pd.core.frame.Series)
+        self.assertIsInstance(
+            self.ms.sequence_df.loc["strain3", :], pd.core.frame.Series
+        )
 
     def test_different_sequences_same_index_value(self):
         """

@@ -101,11 +101,11 @@ class MapSeq(object):
     @property
     def variant_positions(self):
         """Positions that have different amino acids."""
-        _variant_positions = set()
+        variant_positions = set()
         for p in self.seq_in_both.columns:
             if len(self.seq_in_both.loc[:, p].unique()) != 1:
-                _variant_positions.add(p)
-        return _variant_positions
+                variant_positions.add(p)
+        return variant_positions
 
     def plot_with_without(self, ax=None, **kwds):
         """Plot indicating which antigens do and do not have sequences.
@@ -165,7 +165,7 @@ class MapSeq(object):
         Returns:
             (matplotlib ax)
         """
-        ax = plt.gca() if ax is None else ax
+        ax = ax or plt.gca()
 
         # Antigens without a known sequence
         if not self.coords_of_strains_without_sequence.empty:

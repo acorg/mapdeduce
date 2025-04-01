@@ -1,7 +1,10 @@
+import warnings
+from datetime import datetime
 from pathlib import Path
+
+import mapdeduce as md
 import pandas as pd
 from maps import Chart
-import mapdeduce as md
 
 
 def main():
@@ -14,7 +17,7 @@ def main():
         "--min-aap-count",
         help="Only test AAPs that appear in at least this many strains.",
         required=True,
-        type=int
+        type=int,
     )
     parser.add_argument(
         "--sites",
@@ -34,7 +37,7 @@ def main():
 
     if args.min_aap_count < 0:
         raise ValueError("--min_aap_count must be positive")
-    
+
     if not Path(args.csv).parent.is_dir():
         raise ValueError(f"directory doesn't exist: {Path(args.csv).parent}")
 
@@ -78,4 +81,10 @@ def main():
 
     df_test = at.test_aaps(common_aaps)
 
-    df_test.to_csv("")
+    try:
+        df_test.to_csv(args.csv)
+    except FileNotFoundError:
+        now = datetime.now()
+        filename = f"{now:%Y%m%d_%H%M%S}_assoc_test.csv"
+        df_test.to_csv(filename)
+        warnings.warn(f"Couldn't save to {args.csv}. Saved to {filename} instead.")

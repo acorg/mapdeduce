@@ -307,6 +307,28 @@ class OrderedMapSeqTests(unittest.TestCase):
         """
         self.assertEqual(list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
 
+    def test_duplicate_strain(self):
+        seq_df = pd.DataFrame(
+            {
+                1: list("QQQQQAQ"),
+                2: list("KKNKNAK"),
+                3: list("LLAL-AL"),
+            },
+            index="flu1 flu2 flu3 flu5 flu6 flu7 flu1".split(),
+        )
+
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1, 0, np.nan),
+                "y": (0, 1, 0, 1, 0, np.nan),
+            },
+            index="flu2 flu1 flu3 flu4 flu6 flu7".split(),
+        )
+
+        self.oms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+
+        self.assertTrue(all(self.oms.coord_df.index == self.oms.sequence_df.index))
+
 
 class PlottingTests(unittest.TestCase):
 

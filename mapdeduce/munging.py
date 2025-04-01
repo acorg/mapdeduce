@@ -156,7 +156,7 @@ def handle_duplicate_sequences(df):
         merged = pd.DataFrame.from_dict(merged, orient="index")
         merged.columns = df.columns
 
-        # Uniqe indexes
+        # Unique indexes
         unique = df[~remaining_dupe_idx]
 
         return pd.concat((merged, unique))

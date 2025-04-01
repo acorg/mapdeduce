@@ -1,40 +1,33 @@
 """Contains the main class to represent maps with sequences."""
 
+import itertools
 import logging
 import warnings
-
-import numpy as np
-import spm1d
-
-from scipy import spatial
-
-import sklearn
-from sklearn import neighbors
-
+from functools import reduce
 from operator import and_
-import itertools
+from typing import Literal
 
-from scipy import spatial
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn
 import spm1d
 import tqdm
+from scipy import spatial
+from sklearn import neighbors
 
-from .plotting import (
-    set_ax_limits,
-    amino_acid_colors,
-    add_ellipses,
-    combination_label,
-    point_size,
-    make_ax_a_map,
-)
-from .munging import handle_duplicate_sequences
 from .data import amino_acids
 from .dataframes import CoordDf, SeqDf
 from .helper import is_not_amino_acid
-from functools import reduce
+from .munging import handle_duplicate_sequences
+from .plotting import (
+    add_ellipses,
+    amino_acid_colors,
+    combination_label,
+    make_ax_a_map,
+    point_size,
+    set_ax_limits,
+)
 
 
 class MapSeq(object):
@@ -68,12 +61,20 @@ class MapSeq(object):
                 more than one unique element.
             map (int): Optional. Integer encoding which antigenic map this is.
         """
+        if len(seq_df.index) != len(set(seq_df.index)):
+            vc = seq_df.index.value_counts()
+            raise ValueError(f"seq_df index contains duplicates:\n{vc[vc > 1]}")
+
+        if len(coord_df.index) != len(set(coord_df.index)):
+            vc = coord_df.index.value_counts()
+            raise ValueError(f"coord_df index contains duplicates:\n{vc[vc > 1]}")
+
         self.sequence_df = handle_duplicate_sequences(seq_df)
         self.coord_df = coord_df.copy()
         self.map = map
 
         # Replace any unknown amino acids with NaN
-        cond = self.sequence_df.applymap(lambda x: x not in amino_acids)
+        cond = self.sequence_df.map(lambda x: x not in amino_acids)
         self.sequence_df.mask(cond, inplace=True)
 
         # Remove any rows that contain NaN coords
@@ -91,11 +92,11 @@ class MapSeq(object):
         self.strains_with_only_coords = self.strains_with_coords - self.strains_with_seq
 
         # Coordinates and sequences of strains in both
-        self.seq_in_both = self.sequence_df.loc[self.strains_with_both, :]
-        self.coords_in_both = self.coord_df.loc[self.strains_with_both, :]
+        self.seq_in_both = self.sequence_df.loc[sorted(self.strains_with_both), :]
+        self.coords_in_both = self.coord_df.loc[sorted(self.strains_with_both), :]
 
         self.coords_of_strains_without_sequence = self.coord_df.loc[
-            self.strains_with_only_coords
+            sorted(self.strains_with_only_coords)
         ]
 
     @property
@@ -149,17 +150,23 @@ class MapSeq(object):
         return (value_counts / value_counts.sum()).sort_values()
 
     def plot_amino_acids_at_site(
-        self, p, randomz=True, ellipses=True, title=True, ax=None, **kwds
+        self,
+        p,
+        ellipses=True,
+        title=True,
+        ax=None,
+        zorder_behaviour: Literal["random", "default"] = "default",
+        **kwds,
     ):
         """Plot map colored by amino acids at site p.
 
         Args:
             p (int): HA site.
-            randomz (bool): Given points random sites in z. This is
-                slower because marks have to plotted individually.
             ellipses (bool): Demark clusters with ellipses.
             title (bool): Add a title to the figure.
             ax (matplotlib ax): Plot figure on this ax.
+            zorder_behaviour (str): "random" gives points random sites in z. This is slower because
+                marks have to plotted individually.
             **kwds passed to ax.scatter for the colored strains.
 
         Returns:
@@ -522,7 +529,7 @@ class MapSeq(object):
         """
         positions = kwds.pop("positions", self.seq_in_both.columns.tolist())
         df = self.seq_in_both
-        return df.mask(df.applymap(is_not_amino_acid)).groupby(positions)
+        return df.mask(df.map(is_not_amino_acid)).groupby(positions)
 
     def plot_strains_with_combinations(
         self, combinations, without=False, plot_other=True, ax=None, **kwds

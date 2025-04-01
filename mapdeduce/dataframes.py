@@ -32,7 +32,8 @@ class CoordDf(object):
 
     def __repr__(self):
         return "CoordDf with {} samples and {} dimensions:\n{}".format(
-            *self.df.shape, repr(self.df))
+            *self.df.shape, repr(self.df)
+        )
 
     def rotate(self, a, inplace=True):
         """Rotate points a degrees around the origin anticlockwise.
@@ -129,9 +130,7 @@ class CoordDf(object):
 
         for i in range(n):
             try:
-                distances[i] = euclidean(
-                    u=self.df.iloc[i, :],
-                    v=other.iloc[i, :])
+                distances[i] = euclidean(u=self.df.iloc[i, :], v=other.iloc[i, :])
 
             except ValueError:
                 distances[i] = np.nan
@@ -152,7 +151,8 @@ class SeqDf(object):
 
     def __repr__(self):
         return "SeqDf with {} samples and {} sites\n{}:".format(
-            *self.df.shape, repr(self.df))
+            *self.df.shape, repr(self.df)
+        )
 
     def __str__(self):
         return str(self.df)
@@ -324,8 +324,10 @@ class SeqDf(object):
         """
         if p not in self.df.columns:
             raise ValueError("{} not in self.df.columns".format(p))
-        return {amino_acid: set(group.index)
-                for amino_acid, group in self.df.groupby(self.df.loc[:, p])}
+        return {
+            amino_acid: set(group.index)
+            for amino_acid, group in self.df.groupby(self.df.loc[:, p])
+        }
 
     def substitutions_at_site(self, p, min_strains=0):
         """Find substitutions that occur at site p.
@@ -337,7 +339,7 @@ class SeqDf(object):
                 strains.
 
         Returns:
-            (dict): Maps substituion -> pd.Series containing profile of
+            (dict): Maps substitution -> pd.Series containing profile of
                 substitution. Strains with 0 have the aa0. Strains with 1 have
                 the aa1.
         """

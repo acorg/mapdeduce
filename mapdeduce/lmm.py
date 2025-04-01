@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import numpy.typing as npt
 from glimix_core.lmm import Kron2Sum
+from tqdm import tqdm
 
 
 class AssociationTest:
@@ -33,13 +34,12 @@ class AssociationTest:
         if len(self.dummies.columns) != len(set(self.dummies.columns)):
             raise ValueError("dummies contains duplicated column names")
 
-    def test_aap(self, aap: str, verbose: bool = False) -> dict[str, float]:
+    def test_aap(self, aap: str) -> dict[str, float]:
         """
         Run an association test on an amino acid polymorphism.
 
         Args:
             aap: Amino acid polymorphism to test. Must be a column in self.seqs.dummies.
-            verbose:
         """
         if not isinstance(self.dummies[aap], pd.Series):
             raise ValueError("can only pass a single aap")
@@ -89,11 +89,11 @@ class AssociationTest:
         Args:
             aaps: Iterable containing column labels in self.dummies.
         """
-        df = (
-            pd.DataFrame(map(self.test_aap, aaps))
-            .set_index("aap")
-            .sort_values("p_value")
-        )
+        df = {}
+        for aap in tqdm(set(aaps)):
+            df[aap] = self.test_aap(aap)
+
+        df = pd.DataFrame.from_dict(df, orient="index").sort_values("p_value")
 
         try:
             n_tests = effective_tests(self.dummies[aaps])

@@ -327,7 +327,7 @@ class OrderedMapSeqTests(unittest.TestCase):
 
         self.oms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
 
-        self.assertTrue(all(self.oms.coord_df.index == self.oms.sequence_df.index))
+        self.assertTrue(all(self.oms.coord.df.index == self.oms.seqs.df.index))
 
 
 class PlottingTests(unittest.TestCase):

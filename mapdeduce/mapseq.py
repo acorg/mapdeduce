@@ -63,11 +63,11 @@ class MapSeq(object):
         """
         if len(seq_df.index) != len(set(seq_df.index)):
             vc = seq_df.index.value_counts()
-            raise ValueError(f"seq_df index contains duplicates:\n{vc[vc > 1]}")
+            warnings.warn(f"seq_df index contains duplicates:\n{vc[vc > 1]}")
 
         if len(coord_df.index) != len(set(coord_df.index)):
             vc = coord_df.index.value_counts()
-            raise ValueError(f"coord_df index contains duplicates:\n{vc[vc > 1]}")
+            warnings.warn(f"coord_df index contains duplicates:\n{vc[vc > 1]}")
 
         self.sequence_df = handle_duplicate_sequences(seq_df)
         self.coord_df = coord_df.copy()

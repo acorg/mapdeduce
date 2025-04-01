@@ -36,3 +36,6 @@ Homepage = "https://github.com/acorg/mapdeduce"
 
 [tool.setuptools]
 packages = ["mapdeduce"]
+
+[project.scripts]
+md-association-test = "mapdeduce.scripts.association_test:main"

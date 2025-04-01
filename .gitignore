@@ -7,3 +7,4 @@ docs/build
 mapdeduce.egg-info
 mapdeduce/__pycache__
 pip-freeze.txt
+data/russell-2008/__marimo__

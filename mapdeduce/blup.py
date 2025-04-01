@@ -57,15 +57,12 @@ class LmmBlup(object):
         vc.setTestSampleSize(test.shape[0])
 
         if self.F is not None:
-            vc.addFixedEffect(
-                F=self.F[train],
-                Ftest=self.F[test],
-                A=self.A)
+            vc.addFixedEffect(F=self.F[train], Ftest=self.F[test], A=self.A)
 
         if self.K is not None:
             vc.addRandomEffect(
-                K=self.K[train, :][:, train],
-                Kcross=self.K[train, :][:, test])
+                K=self.K[train, :][:, train], Kcross=self.K[train, :][:, test]
+            )
 
         vc.addRandomEffect(is_noise=True)
 
@@ -85,10 +82,7 @@ class LmmBlup(object):
         predicted response variables. Errors contain the distance between
         the predictions and the test set.
         """
-        kf = KFold(
-            n_splits=n_splits,
-            random_state=random_state,
-            shuffle=True)
+        kf = KFold(n_splits=n_splits, random_state=random_state, shuffle=True)
 
         self.kfold_predictions = {}
         self.kfold_error = {}
@@ -99,18 +93,14 @@ class LmmBlup(object):
             iterable = tqdm(iterable)
 
         for i, (train, test) in iterable:
-
-            p = self.predict(
-                train=train,
-                test=test)
+            p = self.predict(train=train, test=test)
 
             train_set = self.Y[train]
             test_set = self.Y[test]
 
             self.kfold_predictions[i] = dict(
-                train=train_set,
-                test=test_set,
-                prediction=p)
+                train=train_set, test=test_set, prediction=p
+            )
 
             distance = np.empty(test_set.shape[0])
 
@@ -121,7 +111,6 @@ class LmmBlup(object):
 
 
 class FluLmmBlup(object):
-
     def __init__(self, filepath_or_df):
         """Train LMM and predict antigenic coordinates on influenza data.
 
@@ -136,7 +125,8 @@ class FluLmmBlup(object):
                 filepath_or_buffer=filepath_or_df,
                 header=None,
                 index_col=0,
-                names=["strain", "x", "y", "seq"])
+                names=["strain", "x", "y", "seq"],
+            )
         else:
             df = filepath_or_df
 
@@ -170,8 +160,7 @@ class FluLmmBlup(object):
             raise ValueError("unknown_df does not have 328 columns")
 
         if not columns_match:
-            raise ValueError(
-                "unknown_df columns are not equal to range(1, 329)")
+            raise ValueError("unknown_df columns are not equal to range(1, 329)")
 
         if len(unknown_df.index) != len(set(unknown_df.index)):
             raise ValueError("Indexes in unknown_df must all be unique.")
@@ -203,5 +192,5 @@ class FluLmmBlup(object):
         test = np.arange(n_known, n_known + n_unknown)
 
         return pd.DataFrame(
-            data=blup.predict(train=train, test=test),
-            index=unknown_df.index)
+            data=blup.predict(train=train, test=test), index=unknown_df.index
+        )

@@ -2,12 +2,9 @@
 
 """Tests for data"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
-from MapDeduce.data import not_109_to_301, not_110_to_199
+from mapdeduce.data import not_109_to_301, not_110_to_199
 
 
 class MapSeqData(unittest.TestCase):

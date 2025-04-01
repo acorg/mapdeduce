@@ -25,7 +25,7 @@ def in_season(season):
 
     if hemisphere == "N":
         # Northern hemisphere season
-        yr1, yr2 = list(map(int, season.split('-')))
+        yr1, yr2 = list(map(int, season.split("-")))
 
         def fun(date):
             """Check if a date is in a northern hemisphere season.
@@ -81,7 +81,6 @@ def season_from_timestamp(ts, hemisphere):
         return None
 
     if hemisphere.upper() == "N":
-
         if ts.month in octToDec:
             return "{}-{}".format(ts.year, ts.year + 1)
 
@@ -92,7 +91,6 @@ def season_from_timestamp(ts, hemisphere):
             return "Not in main season / unknown"
 
     elif hemisphere.upper() == "S":
-
         if ts.month in aprToNov:
             return str(ts.year)
 
@@ -112,12 +110,12 @@ def date_str_to_timestamp(date):
     Returns:
         pd.timestamp
     """
-    if '(Month and day unknown)' in date:
+    if "(Month and day unknown)" in date:
         # Can't know season
         return None
 
-    elif '(Day unknown)' in date:
-        return pd.to_datetime(date[:7], format='%Y-%m')
+    elif "(Day unknown)" in date:
+        return pd.to_datetime(date[:7], format="%Y-%m")
 
     else:
         return pd.to_datetime(date)

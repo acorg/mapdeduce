@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 
-"""Tests for code in MapDeduce/season.py"""
+"""Tests for code in mapdeduce/season.py"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
-from MapDeduce.season import in_season, season_from_timestamp, \
-    hemisphere_from_season
+from mapdeduce.season import in_season, season_from_timestamp, hemisphere_from_season
 from pandas import to_datetime
 
 
 class InSeasonTests(unittest.TestCase):
-    """Tests for MapDeduce.season.in_season"""
+    """Tests for mapdeduce.season.in_season"""
 
     def test_returns_fun_nh(self):
         fun = in_season("2005-2006")
@@ -26,36 +22,36 @@ class InSeasonTests(unittest.TestCase):
     def test_nov_in_sh(self):
         """November is in SH season."""
         fun = in_season("2005")
-        date = to_datetime('2005-11-04')
+        date = to_datetime("2005-11-04")
         self.assertTrue(fun(date))
 
     def test_dec_notin_sh(self):
         """December is not in SH season."""
         fun = in_season("2005")
-        date = to_datetime('2005-12-04')
+        date = to_datetime("2005-12-04")
         self.assertFalse(fun(date))
 
     def test_nov_in_sh_but_yr_checked(self):
         """November is in SH season, but year has to be correct."""
         fun = in_season("2006")
-        date = to_datetime('2005-11-04')
+        date = to_datetime("2005-11-04")
         self.assertFalse(fun(date))
 
     def test_apr_in_sh(self):
         """April is in SH season."""
         fun = in_season("2005")
-        date = to_datetime('2005-04-04')
+        date = to_datetime("2005-04-04")
         self.assertTrue(fun(date))
 
     def test_mar_not_in_sh(self):
         """March is not in SH season."""
         fun = in_season("2005")
-        date = to_datetime('2005-03-04')
+        date = to_datetime("2005-03-04")
         self.assertFalse(fun(date))
 
 
 class SeasonFromTimestampTests(unittest.TestCase):
-    """Tests for MapDeduce.season.season_from_timestamp"""
+    """Tests for mapdeduce.season.season_from_timestamp"""
 
     def test_throws_without_hemisphere(self):
         """Must give a hemisphere"""
@@ -83,7 +79,7 @@ class SeasonFromTimestampTests(unittest.TestCase):
 
 
 class HemisphereFromSeasonTests(unittest.TestCase):
-    """Tests for MapDeduce.season.hemisphere_from_season"""
+    """Tests for mapdeduce.season.hemisphere_from_season"""
 
     def test_nh_example(self):
         self.assertEqual("N", hemisphere_from_season("2005-2006"))

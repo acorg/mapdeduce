@@ -31,7 +31,7 @@ def string_to_series(arg):
     """Each element in string becomes element in series
 
     Notes:
-        If arg is not cannot be coerced to a series, return an empty series.
+        If arg is cannot be coerced to a series, return an empty series.
 
     Args:
         arg (str)
@@ -42,7 +42,7 @@ def string_to_series(arg):
     try:
         return pd.Series(tuple(arg))
     except TypeError:
-        return pd.Series()
+        return pd.Series(dtype="object")
 
 
 def expand_sequences(series):

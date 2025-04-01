@@ -1,5 +1,10 @@
-**.pyc
 _trial_temp
-MapDeduce.egg-info
+.vscode
 **.py.bak
-MapDeduce/__pycache__
+**.pyc
+build
+docs/build
+mapdeduce.egg-info
+mapdeduce/__pycache__
+pip-freeze.txt
+data/russell-2008/__marimo__

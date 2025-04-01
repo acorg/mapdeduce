@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 
-"""Tests for data munginig functions"""
+"""Tests for data munging functions"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-import pandas as pd
 import os
+import unittest
 
-import MapDeduce
-from MapDeduce.munging import dict_from_fasta, df_from_fasta
+import pandas as pd
+
+import mapdeduce
+from mapdeduce.munging import dict_from_fasta, df_from_fasta
 
 
 class DictFromFastaTests(unittest.TestCase):
@@ -18,9 +16,8 @@ class DictFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        module_directory = os.path.dirname(MapDeduce.__path__[0])
-        fasta_path = os.path.join(module_directory, 'data', 'test',
-                                  'fasta-sample.fa')
+        module_directory = os.path.dirname(mapdeduce.__path__[0])
+        fasta_path = os.path.join(module_directory, "data", "test", "fasta-sample.fa")
         self.dict = dict_from_fasta(path=fasta_path)
 
     def test_lower_absent(self):
@@ -39,9 +36,8 @@ class DfFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        module_directory = os.path.dirname(MapDeduce.__path__[0])
-        fasta_path = os.path.join(module_directory, 'data', 'test',
-                                  'fasta-sample.fa')
+        module_directory = os.path.dirname(mapdeduce.__path__[0])
+        fasta_path = os.path.join(module_directory, "data", "test", "fasta-sample.fa")
         self.df = df_from_fasta(path=fasta_path, positions=(1, 2, 3, 4, 5))
 
     def test_df_is_dataframe(self):

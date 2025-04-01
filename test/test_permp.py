@@ -2,13 +2,20 @@
 
 """Tests for permp function that computes empirical p-values"""
 
-from MapDeduce.permp import permp
+import unittest
+import warnings
+
 import numpy as np
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-from rpy2.rinterface import RRuntimeError
+from rpy2.rinterface_lib.embedded import RRuntimeError
+
+from mapdeduce.permp import permp
+
+# Permp.test_too_many_combinations_for_exact raises this warning
+warnings.filterwarnings(
+    action="ignore",
+    module="rpy2",
+    message="Error in 1:total.nperm : result would be too " "long a vector",
+)
 
 
 class Permp(unittest.TestCase):
@@ -20,13 +27,13 @@ class Permp(unittest.TestCase):
         self.assertTrue(np.abs(p - 0.001997999) < 1e-10)
 
     def test_too_many_combinations_for_exact(self):
-        """When there are too many permutations, expec an RRuntimeError"""
+        """When there are too many permutations, expect an RRuntimeError"""
         with self.assertRaises(RRuntimeError):
             permp(1, 1000, 500, 500, method="exact")
 
     def test_approximate_method(self):
         """
-        When there are too many permutations for exact, approximate shold not
+        When there are too many permutations for exact, approximate should not
         raise an error.
         """
         permp(1, 1000, 500, 500, method="approximate")

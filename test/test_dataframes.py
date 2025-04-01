@@ -2,15 +2,12 @@
 
 """Tests for data"""
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 import pandas as pd
 
-from MapDeduce.dataframes import CoordDf, SeqDf
+from mapdeduce.dataframes import CoordDf, SeqDf
 
 
 class CoordDfPairedDistTests(unittest.TestCase):
@@ -78,13 +75,13 @@ class CoordDfPairedDistTests(unittest.TestCase):
         df = pd.DataFrame({0: [0, 1, 2], 1: [0, 0, 5]})
         other = pd.DataFrame({0: [0, 0, -1.5], 1: [0, 4, -3]})
         cdf = CoordDf(df)
-        expect = 0, 17 ** 0.5, (3.5 ** 2 + 8 ** 2) ** 0.5
+        expect = 0, 17**0.5, (3.5**2 + 8**2) ** 0.5
         result = tuple(cdf.paired_distances(other))
         self.assertEqual(expect, result)
 
 
 class SeqDfConsensusTests(unittest.TestCase):
-    """Tests for MapDeduce.dataframes.SeqDf.consensus."""
+    """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 
     def setUp(self):
         """
@@ -95,13 +92,17 @@ class SeqDfConsensusTests(unittest.TestCase):
         Position 5 tests the most abundant amino acid.
         Position 6 tests that NaN does not contribute to consensus.
         """
-        df = pd.DataFrame.from_dict({
-            #            1    2    3    4    5
-            "strainA": ["A", "N", "-", "K", "S", "E"],
-            "strainB": ["A", "X", "-", "K", "T", "E"],
-            "strainC": ["D", "X", "-", "K", "S", "E"],
-            "strainD": ["D", "X", "R", "K", "S", None]},
-            orient="index", columns=list(range(1, 7)))
+        df = pd.DataFrame.from_dict(
+            {
+                #            1    2    3    4    5
+                "strainA": ["A", "N", "-", "K", "S", "E"],
+                "strainB": ["A", "X", "-", "K", "T", "E"],
+                "strainC": ["D", "X", "-", "K", "S", "E"],
+                "strainD": ["D", "X", "R", "K", "S", None],
+            },
+            orient="index",
+            columns=list(range(1, 7)),
+        )
         self.sdf = SeqDf(df)
 
     def test_returns_series(self):
@@ -117,8 +118,22 @@ class SeqDfConsensusTests(unittest.TestCase):
         self.assertEqual("XNRKSE", "".join(cons))
 
 
+class SeqDfGeneralTests(unittest.TestCase):
+
+    def test_groupby_at_site(self):
+        df = pd.DataFrame.from_dict(
+            dict(a=list("AKN"), b=list("RRD"), c=list("KRE")),
+            orient="index",
+            columns=list(range(1, 4)),
+        )
+        sdf = SeqDf(df)
+        result = sdf.groupby_amino_acid_at_site(2)
+        self.assertEqual(("a",), tuple(result["K"]))
+        self.assertEqual(("b", "c"), tuple(sorted(result["R"])))
+
+
 class SeqDfMergeTests(unittest.TestCase):
-    """Tests for MapDeduce.dataframes.SeqDf.consensus."""
+    """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 
     def setUp(self):
         """StrainC should be replaced by the consensus of the strainC seqs."""
@@ -128,12 +143,13 @@ class SeqDfMergeTests(unittest.TestCase):
             ["-", "-", "-", "R"],
             ["K", "K", "K", "K"],
             ["S", "T", "S", "S"],
-            ["E", "E", "E",  None]
+            ["E", "E", "E", None],
         ]
         df = pd.DataFrame(
             data,
             index=list(range(1, 7)),
-            columns=["strainA", "strainB", "strainC", "strainC"]).T
+            columns=["strainA", "strainB", "strainC", "strainC"],
+        ).T
         self.sdf = SeqDf(df)
 
     def test_df_smaller(self):

@@ -82,9 +82,9 @@ def main():
     df_test = at.test_aaps(common_aaps)
 
     try:
-        df_test.to_csv(args.csv)
+        df_test.to_csv(args.csv, index=False)
     except FileNotFoundError:
         now = datetime.now()
         filename = f"{now:%Y%m%d_%H%M%S}_assoc_test.csv"
-        df_test.to_csv(filename)
+        df_test.to_csv(filename, index=False)
         warnings.warn(f"Couldn't save to {args.csv}. Saved to {filename} instead.")

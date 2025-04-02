@@ -75,7 +75,7 @@ class AssociationTest:
         return dict(
             aap=aap,
             p_value=p_value,
-            p_value_log10=np.log10(p_value),
+            p_value_log10=-np.inf if p_value == 0 else np.log10(p_value),
             prop_with_aap=self.dummies[aap].mean(),
             n_with_aap=int(self.dummies[aap].sum()),
             beta_joint=scipy.linalg.norm(betas),
@@ -89,8 +89,15 @@ class AssociationTest:
         Args:
             aaps: Iterable containing column labels in self.dummies.
         """
+        aaps = set(aaps)
+
+        if non_existent := aaps - set(self.dummies.columns):
+            raise ValueError(f"these aaps don't exist in dummies: {non_existent}")
+
+        aaps = list(aaps)
+
         df = {}
-        for aap in tqdm(set(aaps)):
+        for aap in tqdm(aaps):
             df[aap] = self.test_aap(aap)
 
         df = pd.DataFrame.from_dict(df, orient="index").sort_values("p_value")

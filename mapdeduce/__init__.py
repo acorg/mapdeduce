@@ -12,7 +12,7 @@ from .plotting import make_ax_a_map
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("eremitalpa")
+    __version__ = version("mapdeduce")
 except PackageNotFoundError:
     pass
 

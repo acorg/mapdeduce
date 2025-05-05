@@ -9,7 +9,15 @@ from .lmm import (
 from .mapseq import MapSeq, OrderedMapSeq
 from .plotting import make_ax_a_map
 
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("eremitalpa")
+except PackageNotFoundError:
+    pass
+
 __all__ = [
+    "__version__",
     "AssociationTest",
     "compute_likelihood_ratio_test_statistic",
     "compute_p_value",

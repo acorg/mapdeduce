@@ -1,10 +1,10 @@
 [build-system]
-requires      = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools >= 77.0.3", "setuptools-scm >= 8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mapdeduce"
-version = "2.0.0"
+dynamic = ["version"]
 description = """Handling antigenic maps and sequence data, testing amino \
     acid polymorphisms associated with antigenicity."""
 readme = "README.md"
@@ -39,3 +39,5 @@ packages = ["mapdeduce"]
 
 [project.scripts]
 md-association-test = "mapdeduce.scripts.association_test:main"
+
+[tool.setuptools_scm]

@@ -174,6 +174,12 @@ class MapSeq(object):
         """
         ax = ax or plt.gca()
 
+        if kwds.get("zorder") == "random":
+            warnings.warn("You probably want zorder_behaviour='random', not zorder='random'")
+
+        if kwds.get("zorder") == "default":
+            warnings.warn("You probably want zorder_behaviour='default', not zorder='default'")
+
         # Antigens without a known sequence
         if not self.coords_of_strains_without_sequence.empty:
             self.coords_of_strains_without_sequence.plot.scatter(

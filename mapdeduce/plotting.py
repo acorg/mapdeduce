@@ -224,6 +224,9 @@ def make_ax_a_map(ax=None):
     xlim, ylim = ax.get_xlim(), ax.get_ylim()
     ax.set_xlim(math.floor(xlim[0]), math.ceil(xlim[1]))
     ax.set_ylim(math.floor(ylim[0]), math.ceil(ylim[1]))
+    ax.grid(visible=True, lw=0.5, c="lightgrey")
+    # Can't pass a zorder to the grid, this puts the grid under everything else on the ax
+    ax.set_axisbelow(True)
     ax.set_aspect(1)
     return ax
 

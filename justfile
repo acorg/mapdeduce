@@ -1,6 +1,5 @@
-.PHONY: test check clean
 test:
-    pytest
+    pytest --disable-warnings
 
 check:
 	pyflakes */*.py

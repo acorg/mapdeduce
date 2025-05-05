@@ -217,8 +217,6 @@ def make_ax_a_map(ax=None):
     ax = ax or plt.gca()
     ax.get_xaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
     ax.get_yaxis().set_major_locator(mpl.ticker.MultipleLocator(base=1.0))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
     ax.set_ylabel("")
     ax.set_xlabel("")
     xlim, ylim = ax.get_xlim(), ax.get_ylim()
@@ -228,6 +226,9 @@ def make_ax_a_map(ax=None):
     # Can't pass a zorder to the grid, this puts the grid under everything else on the ax
     ax.set_axisbelow(True)
     ax.set_aspect(1)
+    for spine in "top", "bottom", "left", "right":
+        ax.spines[spine].set_visible(False)
+    ax.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
     return ax
 
 

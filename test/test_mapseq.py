@@ -329,6 +329,28 @@ class OrderedMapSeqTests(unittest.TestCase):
 
         self.assertTrue(all(self.oms.coord.df.index == self.oms.seqs.df.index))
 
+    def test_shared_columns(self):
+        """Test that a ValueError is raised if coordinate and sequence dataframes share columns."""
+        seq_df = pd.DataFrame(
+            {
+                "x": list("QQQQ"),  # Using "x" which is also in coord_df
+                2: list("KNNK"),
+                3: list("LAAL"),
+            },
+            index="flu1 flu2 flu3 flu5".split(),
+        )
+
+        coord_df = pd.DataFrame(
+            {
+                "x": (0, 0, 1, 1),
+                "y": (0, 1, 0, 1),
+            },
+            index="flu1 flu2 flu3 flu4".split(),
+        )
+
+        with self.assertRaisesRegex(ValueError, "seq_df and coord_df share column names"):
+            OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+
 
 class PlottingTests(unittest.TestCase):
 

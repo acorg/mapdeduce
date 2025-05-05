@@ -984,7 +984,10 @@ class OrderedMapSeq(MapSeq):
         super().__init__(seq_df, coord_df)
 
         # Join the two dataframes, so they share indexes
-        combined = self.coords_in_both.join(self.seq_in_both)
+        if shared := set(self.coords_in_both) & set(self.seq_in_both):
+            raise ValueError(f"seq_df and coord_df share column names: {shared}")
+        else:
+            combined = self.coords_in_both.join(self.seq_in_both)
 
         # Remove strains that have any NaN entries
         mask = combined.notnull().any(axis=1)

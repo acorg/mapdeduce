@@ -1,5 +1,6 @@
 """Classes for handling DataFrames containing coordinates and sequences."""
 
+from collections import defaultdict
 from itertools import combinations
 import logging
 
@@ -236,9 +237,10 @@ class SeqDf:
     def merge_duplicate_dummies(self):
         """Merge SNPs that are identical in all strains. Updates the `dummies` attribute."""
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
-        self.dummies = pd.DataFrame(
+        dummies = pd.DataFrame(
             data={"|".join(g.index): n for n, g in grouped}, index=self.dummies.index
         )
+        self.dummies, self.inverse_dummies = remove_inverse_profiles(dummies)
 
     def consensus(self):
         """Compute the consensus sequence.
@@ -327,3 +329,40 @@ class SeqDf:
                 series.name = "{}{}{}".format(aa0, str(p), aa1)
                 rv[str(series.name)] = series
         return rv
+
+
+def remove_inverse_profiles(dummies: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """
+    AAPs might have profiles: 000111 and 111000.
+
+    The same information is encoded in both cases, just with different uses of 0/1. Importantly the
+    effect sizes of two AAPs with these profiles would be the same, but one multiplied by a factor
+    of -1 relative to the other.
+
+    This function searches for situations like this in a DataFrame containing AAP profiles (or
+    'dummies'), and returns a DataFrame with the inverse profiles removed. It also returns a
+    dictionary where keys are dummies in the returned DataFrame and values are lists of dummy names
+    that were inverses of the key.
+    """
+    # Store unique profiles
+    seen = {}
+
+    # This dictionary keeps track of which dummies are the inverse of another dummy
+    inverse_dummies = defaultdict(list)
+
+    # Iterate over each dummy variable, testing if any profiles already seen are exactly equal
+    # to one minus the profile (i.e. the 'inverse')
+    for dummy in dummies:
+
+        profile = dummies[dummy].values
+        inverse = 1 - profile
+
+        # Check if this inverse profile has been seen before
+        for seen_dummy, seen_value in seen.items():
+            if all(inverse == seen_value):
+                inverse_dummies[seen_dummy].append(dummy)
+                break
+        else:
+            seen[dummy] = profile
+
+    return pd.DataFrame(seen), inverse_dummies

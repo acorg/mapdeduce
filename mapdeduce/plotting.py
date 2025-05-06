@@ -2,7 +2,6 @@
 
 import math
 
-import math
 import numpy as np
 from scipy.spatial.distance import euclidean
 from itertools import combinations

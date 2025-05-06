@@ -2,30 +2,22 @@
 
 from __future__ import print_function, division
 from builtins import zip, map, str, object, range
-
-import numpy as np
-import pandas as pd
-
-import scipy
-import sklearn
-
 import warnings
-
-warnings.filterwarnings("ignore", module="h5py")
 
 from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
 from limix.vardec import VarianceDecomposition
-
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy
+import seaborn as sns
+import sklearn
 
+from .dataframes import CoordDf
 from .permp import permp
 from .plotting import plot_arrow, make_ax_a_map
-from .dataframes import CoordDf
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-import warnings
 warnings.filterwarnings("ignore", module="h5py")
 
 

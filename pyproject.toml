@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["black", "pytest"]
+dev = ["black", "pytest", "flake8"]
 
 [project.urls]
 Homepage = "https://github.com/acorg/mapdeduce"

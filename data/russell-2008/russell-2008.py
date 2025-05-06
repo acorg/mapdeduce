@@ -7,6 +7,7 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -17,6 +18,7 @@ def _():
     import pandas as pd
 
     import mapdeduce as md
+
     return md, np, pd, plt
 
 
@@ -96,7 +98,14 @@ def _(mo):
 @app.cell
 def _(oms):
     aap_counts = oms.seqs.dummies.sum().sort_values()
-    aap_counts.plot(ylabel="AAP frequency", xlabel="AAP", figsize=(8, 3), ylim=(0, len(oms.seqs.df)), clip_on=False, zorder=10)
+    aap_counts.plot(
+        ylabel="AAP frequency",
+        xlabel="AAP",
+        figsize=(8, 3),
+        ylim=(0, len(oms.seqs.df)),
+        clip_on=False,
+        zorder=10,
+    )
     return (aap_counts,)
 
 
@@ -104,7 +113,9 @@ def _(oms):
 def _(aap_counts, oms):
     min_aap_count = 5
     n = len(oms.seqs.dummies)
-    common_aaps = aap_counts.index[(5 <= aap_counts) & (aap_counts <= (n - min_aap_count))]
+    common_aaps = aap_counts.index[
+        (5 <= aap_counts) & (aap_counts <= (n - min_aap_count))
+    ]
     print(len(common_aaps))
     print(common_aaps)
     return common_aaps, min_aap_count, n
@@ -131,7 +142,18 @@ def _(mo):
 
 @app.cell
 def _():
-    fu02_ca04_aaps = ["145N", "145K", "159F", "226V", "159Y", "189S", "226I", "227S", "227P", "189N"]
+    fu02_ca04_aaps = [
+        "145N",
+        "145K",
+        "159F",
+        "226V",
+        "159Y",
+        "189S",
+        "226I",
+        "227S",
+        "227P",
+        "189N",
+    ]
     return (fu02_ca04_aaps,)
 
 
@@ -170,7 +192,7 @@ def _(df_prior_fu02_ca04, df_test_fu02_ca04):
 
 @app.cell
 def _(plt):
-    def compare(df, x, y, ax=None, logscale: bool=False):
+    def compare(df, x, y, ax=None, logscale: bool = False):
         ax = ax or plt.gca()
         df.plot.scatter(x, y, ax=ax)
         if logscale:
@@ -178,6 +200,7 @@ def _(plt):
         ax.axline((0.1, 0.1), (1, 1), c="lightgrey", lw=1)
         ax.set(aspect=1)
         return ax
+
     return (compare,)
 
 
@@ -186,7 +209,13 @@ def _(compare, df_comb, plt):
     _, _axes = plt.subplots(ncols=3, figsize=(10, 4))
 
     compare(df_comb, "p_value_prior", "p_value", logscale=True, ax=_axes[0])
-    compare(df_comb, "p_value_corrected_prior", "p_value_corrected", logscale=True, ax=_axes[1])
+    compare(
+        df_comb,
+        "p_value_corrected_prior",
+        "p_value_corrected",
+        logscale=True,
+        ax=_axes[1],
+    )
     compare(df_comb, "beta_joint_prior", "beta_joint", ax=_axes[2])
 
     plt.tight_layout()

@@ -26,7 +26,6 @@ from .plotting import (
     amino_acid_colors,
     combination_label,
     make_ax_a_map,
-    point_size,
     set_ax_limits,
 )
 
@@ -273,8 +272,6 @@ class MapSeq(object):
 
         if not combinations:
             raise ValueError("No pairs of strains with {}".format(label))
-
-        scatter_kwds = dict(x="x", y="y")
 
         # Collect x, y of points to plot, and lines between
         aas = sub[0], sub[2]

@@ -213,7 +213,7 @@ class SeqDf:
         Notes:
             Dummy variable names are either singles (e.g. 135K), or compound
             (e.g. 7D|135K|265E). For compound dummy variable names return the
-            entire compound name if any constituent SNP is in positions.
+            entire compound name if any constituent AAP is in positions.
 
         Args:
             positions (iterable) containing positions.
@@ -235,7 +235,10 @@ class SeqDf:
         return dummies
 
     def merge_duplicate_dummies(self):
-        """Merge SNPs that are identical in all strains. Updates the `dummies` attribute."""
+        """
+        Merge AAPs that are identical in all strains, then remove any AAPs that are exactly
+        inverses of any other AAP. Updates the `dummies` attribute.
+        """
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
         dummies = pd.DataFrame(
             data={"|".join(g.index): n for n, g in grouped}, index=self.dummies.index

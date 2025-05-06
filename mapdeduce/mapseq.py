@@ -5,11 +5,12 @@ import logging
 import warnings
 from functools import reduce
 from operator import and_
-from typing import Literal
+from typing import Literal, Optional
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import sklearn
 import spm1d
 import tqdm
@@ -175,10 +176,14 @@ class MapSeq(object):
         ax = ax or plt.gca()
 
         if kwds.get("zorder") == "random":
-            warnings.warn("You probably want zorder_behaviour='random', not zorder='random'")
+            warnings.warn(
+                "You probably want zorder_behaviour='random', not zorder='random'"
+            )
 
         if kwds.get("zorder") == "default":
-            warnings.warn("You probably want zorder_behaviour='default', not zorder='default'")
+            warnings.warn(
+                "You probably want zorder_behaviour='default', not zorder='default'"
+            )
 
         # Antigens without a known sequence
         if not self.coords_of_strains_without_sequence.empty:
@@ -1006,6 +1011,39 @@ class OrderedMapSeq(MapSeq):
 
         self.coord = CoordDf(combined.loc[:, phenotypes])
         self.seqs = SeqDf(combined.drop(phenotypes, axis=1))
+
+    @classmethod
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        map_coords: list[str],
+        sequence: str,
+        sites: Optional[tuple[int]] = None,
+    ) -> "OrderedMapSeq":
+        """
+        Instantiate directly from a single DataFrame that has columns containing sequences and map
+        coordinates.
+
+        Args:
+            df: DataFrame.
+            map_coords: List containing column names of map sequences.
+            sequence: Name of column containing sequences.
+            sites: 2-tuple containing first and last sequence position to include (1-indexed). By
+                default include all sequence positions.
+        """
+        coord_df = df[map_coords].copy()
+        seq_df = df[sequence].str.split("", expand=True)
+
+        if sites is not None:
+
+            try:
+                start, end = sites
+            except ValueError:
+                raise ValueError("sites should contain 2 ints")
+
+            seq_df = seq_df.loc[:, list(range(start, end + 1))].copy()
+
+        return cls(seq_df=seq_df, coord_df=coord_df)
 
     def filter(
         self,

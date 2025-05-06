@@ -1,26 +1,21 @@
 """Classes for handling DataFrames containing coordinates and sequences."""
 
-from __future__ import print_function
-from builtins import range, object
-
 from itertools import combinations
-
-import numpy as np
-import pandas as pd
-
-import sklearn
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import quantile_transform
+import logging
 
 from scipy.spatial.distance import euclidean
-
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import quantile_transform
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import sklearn
 
 from .helper import expand_sequences, site_consensus
 from .munging import df_from_fasta
 
 
-class CoordDf(object):
+class CoordDf:
 
     def __init__(self, df):
         """Coordinate data.
@@ -138,7 +133,7 @@ class CoordDf(object):
         return distances
 
 
-class SeqDf(object):
+class SeqDf:
 
     def __init__(self, df):
         """DataFrames containing amino acid sequences.
@@ -147,7 +142,7 @@ class SeqDf(object):
             df (pd.DataFrame): Columns are amino acid positions, rows are
                 samples, cells contain amino acids.
         """
-        self.df = df
+        self.df = df.copy()
 
     def __repr__(self):
         return "SeqDf with {} samples and {} sites\n{}:".format(
@@ -182,34 +177,18 @@ class SeqDf(object):
         """
         return cls(expand_sequences(series))
 
-    def remove_invariant(self, inplace=True):
-        """Remove positions (columns) that contain only one amino acid.
-
-        Args:
-            inplace (bool)
-        """
+    def remove_invariant(self) -> "SeqDf":
+        """Remove positions (columns) that contain only one amino acid."""
         mask = self.df.apply(lambda x: pd.unique(x).shape[0] > 1)
-        n = (~mask).sum()
-        print("Removed {} invariant sequence positions".format(n))
-        new = self.df.loc[:, self.df.columns[mask]]
+        logging.info(f"Removed {(~mask).sum()} invariant sequence positions")
+        return SeqDf(self.df.loc[:, self.df.columns[mask]])
 
-        if inplace:
-            self.df = new
-        else:
-            return new
-
-    def get_dummies(self, inplace=True):
+    def get_dummies(self) -> None:
         """Get dummy representation of the sequences.
 
-        Args:
-            inplace (bool)
+        Attaches a `dummies` attribute.
         """
-        d = pd.get_dummies(self.df, prefix_sep="").astype(float)
-
-        if inplace:
-            self.dummies = d
-        else:
-            return d
+        self.dummies = pd.get_dummies(self.df, prefix_sep="").astype(float)
 
     def shuffle_dummies(self, n_shuffles, c):
         """Return a DataFrame containing n shuffles of the data in column c
@@ -254,22 +233,12 @@ class SeqDf(object):
 
         return dummies
 
-    def merge_duplicate_dummies(self, inplace=False):
-        """Merge SNPs that are identical in all strains.
-
-        Args:
-            inplace (bool)
-        """
+    def merge_duplicate_dummies(self):
+        """Merge SNPs that are identical in all strains. Updates the `dummies` attribute."""
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
-
-        df = pd.DataFrame(
+        self.dummies = pd.DataFrame(
             data={"|".join(g.index): n for n, g in grouped}, index=self.dummies.index
         )
-
-        if inplace:
-            self.dummies = df
-        else:
-            return df
 
     def consensus(self):
         """Compute the consensus sequence.

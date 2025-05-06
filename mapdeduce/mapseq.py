@@ -1050,7 +1050,7 @@ class OrderedMapSeq(MapSeq):
         get_dummies=True,
         merge_duplicate_dummies=False,
         rename_idx=False,
-    ):
+    ) -> "OrderedMapSeq":
         """Remove data where the x y coordinates are outside a matplotlib
         patch.
 
@@ -1091,7 +1091,7 @@ class OrderedMapSeq(MapSeq):
             self.seqs.df = self.seqs.df[mask]
 
         if remove_invariant:
-            self.seqs.remove_invariant(inplace=True)
+            self.seqs = self.seqs.remove_invariant()
 
         if rename_idx:
             old_idx = self.coord.df.index
@@ -1101,12 +1101,14 @@ class OrderedMapSeq(MapSeq):
             self.seqs.df.index = new_idx
 
         if get_dummies:
-            self.seqs.get_dummies(inplace=True)
+            self.seqs.get_dummies()
 
         if merge_duplicate_dummies:
-            self.seqs.merge_duplicate_dummies(inplace=True)
+            self.seqs.merge_duplicate_dummies()
 
         if plot and patch is not None:
             self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)
             make_ax_a_map(ax)
             return ax
+
+        return self

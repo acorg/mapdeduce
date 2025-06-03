@@ -35,6 +35,7 @@ class TestMvLMM(unittest.TestCase):
         """
         Passing multiple aaps should raise an error.
         """
+        np.random.seed(42)
         dummies = pd.DataFrame(np.random.randint(0, 2, size=9).reshape(3, 3))
         phenotypes = np.arange(9).reshape(3, 3)
         at = md.MvLMM(dummies, phenotypes)
@@ -48,6 +49,7 @@ class TestMvLMM(unittest.TestCase):
         n = 10  # number of viruses
         p = 2  # number of phenotypes
         d = 20  # number of dummies
+        np.random.seed(45)
         dummies = pd.DataFrame(np.random.randint(0, 2, size=n * d).reshape(n, d))
         phenotypes = np.random.randn(n, p)
         at = md.MvLMM(dummies, phenotypes)
@@ -62,9 +64,24 @@ class TestMvLMM(unittest.TestCase):
         n = 10  # number of viruses
         p = 2  # number of phenotypes
         d = 20  # number of dummies
+        np.random.seed(45)
         dummies = pd.DataFrame(np.random.randint(0, 2, size=n * d).reshape(n, d))
         phenotypes = np.random.randn(n, p)
         at = md.MvLMM(dummies, phenotypes)
         df = at.test_aaps([0, 1, 2, 3])
         self.assertIsInstance(df, pd.DataFrame)
         self.assertIsInstance(df.loc[0, "p_value"], float)
+
+    def test_non_unique_columns(self):
+        """
+        If dummies contains repeated columns then a ValueError should be raised.
+        """
+        # Create dummies with duplicate columns
+        dummies = pd.DataFrame(
+            {"col1": [0, 1, 0], "col2": [1, 0, 1], "col3": [0, 1, 0]}  # Same as col1
+        )
+        phenotypes = np.random.randn(3, 2)
+
+        msg = "dummies contains duplicate columns"
+        with self.assertRaisesRegex(ValueError, msg):
+            md.MvLMM(dummies=dummies, phenotypes=phenotypes)

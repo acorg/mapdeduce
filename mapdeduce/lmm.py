@@ -34,6 +34,15 @@ class MvLMM:
         if len(self.dummies.columns) != len(set(self.dummies.columns)):
             raise ValueError("dummies contains duplicated column names")
 
+        if self.dummies.T.duplicated().any():
+            dupes = (
+                self.dummies.T.duplicated(keep=False)
+                .replace(False, np.nan)
+                .dropna()
+                .index
+            )
+            raise ValueError(f"dummies contains duplicate columns: {dupes}")
+
     def test_aap(self, aap: str) -> dict[str, float]:
         """
         Run an association test on an amino acid polymorphism.

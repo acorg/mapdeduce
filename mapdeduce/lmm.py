@@ -9,7 +9,7 @@ from glimix_core.lmm import Kron2Sum
 from tqdm import tqdm
 
 
-class AssociationTest:
+class MvLMM:
     def __init__(self, dummies: pd.DataFrame, phenotypes: npt.ArrayLike) -> None:
         """
         Conduct association tests between sequences encoded as dummy variables and
@@ -151,7 +151,7 @@ class AssociationTest:
         Run association tests of aaps that are more variable than a threshold.
 
         Args:
-            threshold: See AssociationTest.variable_aaps.
+            threshold: See MvLmm.variable_aaps.
         """
         aaps = self.variable_aaps(threshold=threshold)
         return self.test_aaps(aaps)

@@ -85,7 +85,7 @@ def _(oms):
 
 @app.cell
 def _(md, oms):
-    at = md.AssociationTest(dummies=oms.seqs.dummies, phenotypes=oms.coord.df)
+    at = md.MvLMM(dummies=oms.seqs.dummies, phenotypes=oms.coord.df)
     return (at,)
 
 

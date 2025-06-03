@@ -77,7 +77,7 @@ def main():
         & (aap_counts <= (len(oms.seqs.dummies) - args.min_aap_count))
     ]
 
-    at = md.AssociationTest(dummies=oms.seqs.dummies, phenotypes=oms.coord.df)
+    at = md.MvLMM(dummies=oms.seqs.dummies, phenotypes=oms.coord.df)
 
     df_test = at.test_aaps(common_aaps)
 

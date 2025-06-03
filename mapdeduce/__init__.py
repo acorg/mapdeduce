@@ -1,6 +1,6 @@
 from .dataframes import CoordDf, SeqDf
 from .lmm import (
-    AssociationTest,
+    MvLMM,
     compute_likelihood_ratio_test_statistic,
     compute_p_value,
     cov,
@@ -18,7 +18,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "__version__",
-    "AssociationTest",
+    "MvLMM",
     "compute_likelihood_ratio_test_statistic",
     "compute_p_value",
     "CoordDf",

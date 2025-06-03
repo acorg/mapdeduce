@@ -6,7 +6,7 @@ import pandas as pd
 import mapdeduce as md
 
 
-class TestAssociationTest(unittest.TestCase):
+class TestMvLMM(unittest.TestCase):
     def test_cant_pass_dummies_and_phenotypes_with_different_rows(self):
         """
         Shouldn't be able to pass dummies and phenotypes with a different number of rows.
@@ -19,7 +19,7 @@ class TestAssociationTest(unittest.TestCase):
 
         msg = "dummies and phenotypes have different numbers of rows"
         with self.assertRaisesRegex(ValueError, msg):
-            md.AssociationTest(dummies=dummies, phenotypes=phenotypes)
+            md.MvLMM(dummies=dummies, phenotypes=phenotypes)
 
     def test_dummies_only_contains_zero_one(self):
         """
@@ -29,7 +29,7 @@ class TestAssociationTest(unittest.TestCase):
         phenotypes = np.arange(9).reshape(3, 3)
         msg = "dummies must contain 0s and 1s"
         with self.assertRaisesRegex(ValueError, msg):
-            md.AssociationTest(dummies=dummies, phenotypes=phenotypes)
+            md.MvLMM(dummies=dummies, phenotypes=phenotypes)
 
     def test_cannot_pass_multiple_aaps(self):
         """
@@ -37,7 +37,7 @@ class TestAssociationTest(unittest.TestCase):
         """
         dummies = pd.DataFrame(np.random.randint(0, 2, size=9).reshape(3, 3))
         phenotypes = np.arange(9).reshape(3, 3)
-        at = md.AssociationTest(dummies, phenotypes)
+        at = md.MvLMM(dummies, phenotypes)
         with self.assertRaisesRegex(ValueError, "can only pass a single aap"):
             at.test_aap([1, 2])
 
@@ -50,7 +50,7 @@ class TestAssociationTest(unittest.TestCase):
         d = 20  # number of dummies
         dummies = pd.DataFrame(np.random.randint(0, 2, size=n * d).reshape(n, d))
         phenotypes = np.random.randn(n, p)
-        at = md.AssociationTest(dummies, phenotypes)
+        at = md.MvLMM(dummies, phenotypes)
         results = at.test_aap(0)
         self.assertIsInstance(results, dict)
         self.assertIsInstance(results["p_value"], float)
@@ -64,7 +64,7 @@ class TestAssociationTest(unittest.TestCase):
         d = 20  # number of dummies
         dummies = pd.DataFrame(np.random.randint(0, 2, size=n * d).reshape(n, d))
         phenotypes = np.random.randn(n, p)
-        at = md.AssociationTest(dummies, phenotypes)
+        at = md.MvLMM(dummies, phenotypes)
         df = at.test_aaps([0, 1, 2, 3])
         self.assertIsInstance(df, pd.DataFrame)
         self.assertIsInstance(df.loc[0, "p_value"], float)

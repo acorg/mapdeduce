@@ -22,6 +22,7 @@ class MvLMM:
         """
         self.Y = phenotypes
         self.dummies = dummies
+        self.a = dummies.shape[1]
         self.n, self.p = self.Y.shape  # n viruses, n phenotypes
         self.A = np.eye(self.p)  # trait by trait covariance matrix
 
@@ -164,6 +165,56 @@ class MvLMM:
         """
         aaps = self.variable_aaps(threshold=threshold)
         return self.test_aaps(aaps)
+
+    def blup(self, test_dummies: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
+        """
+        Best linear unbiased predictions (BLUP).
+
+        Args:
+            test_dummies: AAPs of strains to make predictions for. Must have identical columns to
+                self.dummies.
+            verbose: Passed to Kron2Sum.fit.
+        """
+        if len(test_dummies.columns) != len(self.dummies.columns):
+            raise ValueError(
+                "test_dummies has a different number of AAPs to self.dummies"
+            )
+
+        if not (test_dummies.columns == self.dummies.columns).all():
+            raise ValueError(
+                "test_dummies has different AAPs to self.dummies or they are in a different order"
+            )
+
+        # Fit Kron2Sum
+        Y_train = self.Y.values  # Train coordinates (n, p)
+        G = self.dummies.values  # Train AAPs (n, a)
+        X = np.ones(self.n).reshape(self.n, 1)  # Intercept  (n, 1)
+        k2s = Kron2Sum(Y=Y_train, G=G, A=self.A, X=X)
+        k2s.fit(verbose=verbose)
+
+        # BLUP
+        K = cov(G)  # Train set AAP covariance (n, n)
+
+        # Inverse covariance (n, n)
+        try:
+            K_inv = np.linalg.inv(K)
+        except np.linalg.LinAlgError:
+            K_inv = np.linalg.pinv(K)
+
+        G_test = test_dummies.values  # Test AAPs (n_test, a)
+        n_test = G_test.shape[0]
+        G_all = np.vstack([G, G_test])  # Concatenated AAPs  (n_test + n, a)
+        assert G_all.shape == (self.n + n_test, self.a)
+
+        K_all = cov(G_all)  # Covariance of train and test AAPs
+        assert K_all.shape == (self.n + n_test, self.n + n_test)
+
+        K_cross = K_all[self.n :, : self.n]  # Cross-covariance of train and test AAPs
+        assert K_cross.shape == (n_test, self.n)
+
+        Y_test = K_cross @ K_inv @ Y_train @ k2s.C1
+
+        return pd.DataFrame(Y_test, index=test_dummies.index, columns=self.Y.columns)
 
 
 def compute_likelihood_ratio_test_statistic(h0_ll: float, h1_ll: float) -> float:

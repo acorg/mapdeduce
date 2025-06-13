@@ -80,6 +80,60 @@ class CoordDfPairedDistTests(unittest.TestCase):
         self.assertEqual(expect, result)
 
 
+class CoordDfPCARotateTests(unittest.TestCase):
+    """Tests for CoordDf.pca_rotate"""
+
+    def test_pca_rotate_returns_coorddf(self):
+        """Should return a CoordDf when inplace=False"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim))
+        cdf = CoordDf(df)
+        result = cdf.pca_rotate(inplace=False)
+        self.assertIsInstance(result, CoordDf)
+
+    def test_pca_rotate_modifies_inplace(self):
+        """Should modify the dataframe when inplace=True"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim))
+        cdf = CoordDf(df)
+        original_df = cdf.df.copy()
+        cdf.pca_rotate(inplace=True)
+        self.assertFalse(cdf.df.equals(original_df))
+
+    def test_pca_rotate_keeps_dimensions(self):
+        """Should keep the same dimensions"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim))
+        cdf = CoordDf(df)
+        result = cdf.pca_rotate(inplace=False)
+        self.assertEqual(df.shape, result.df.shape)
+
+    def test_pca_rotate_keeps_index(self):
+        """Should keep the same index"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim), index=list("abcdefghij"))
+        cdf = CoordDf(df)
+        result = cdf.pca_rotate(inplace=False)
+        self.assertTrue(df.index.equals(result.df.index))
+
+    def test_pca_rotate_renames_columns(self):
+        """Should rename columns when keep_dim_names=False"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim), columns=["x", "y", "z"])
+        cdf = CoordDf(df)
+        result = cdf.pca_rotate(inplace=False, keep_dim_names=False)
+        expected_columns = ["PC1", "PC2", "PC3"]
+        self.assertEqual(list(result.df.columns), expected_columns)
+
+    def test_pca_rotate_keeps_column_names(self):
+        """Should keep column names when keep_dim_names=True"""
+        size, ndim = 10, 3
+        df = pd.DataFrame(np.random.randn(size, ndim), columns=["x", "y", "z"])
+        cdf = CoordDf(df)
+        result = cdf.pca_rotate(inplace=False, keep_dim_names=True)
+        self.assertTrue(df.columns.equals(result.df.columns))
+
+
 class SeqDfConsensusTests(unittest.TestCase):
     """Tests for mapdeduce.dataframes.SeqDf.consensus."""
 

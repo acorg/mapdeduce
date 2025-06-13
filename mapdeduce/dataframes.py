@@ -59,7 +59,7 @@ class CoordDf:
         Returns:
             Strains in patch.
         """
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         self.df.plot.scatter(x="x", y="y", ax=ax)
         ax.add_artist(patch)
         path = patch.get_transform().transform_path(patch.get_path())
@@ -67,22 +67,31 @@ class CoordDf:
         plt.close()
         return mask
 
-    def pca_rotate(self, inplace=True):
+    def pca_rotate(self, inplace=True, keep_dim_names=False):
         """Rotate coordinates along first and second principal components.
 
         Args:
             inplace (bool): Rotate the data inplace, or return a rotated
                 copy of the data.
+            keep_colnames (bool): Keep the existing names of the columns. Otherwise replaced by
+                "PC1", "PC2" etc...
         """
         n_components = self.df.shape[1]
-        coord_pca = PCA(n_components=n_components).fit(self.df)
-        df = pd.DataFrame(coord_pca.transform(self.df))
-        df.columns = ["PC{}".format(i + 1) for i in range(n_components)]
-        df.index = self.df.index
+
+        df_rotated = pd.DataFrame(
+            PCA(n_components=n_components).fit(self.df).transform(self.df),
+            index=self.df.index,
+            columns=(
+                self.df.columns
+                if keep_dim_names
+                else [f"PC{i}" for i in range(1, n_components + 1)]
+            ),
+        )
+
         if inplace:
-            self.df = df
+            self.df = df_rotated
         else:
-            return CoordDf(df=df)
+            return CoordDf(df=df_rotated)
 
     def quantile_transform(self, inplace=True):
         """Transform features using quantile information.

@@ -348,7 +348,9 @@ class OrderedMapSeqTests(unittest.TestCase):
             index="flu1 flu2 flu3 flu4".split(),
         )
 
-        with self.assertRaisesRegex(ValueError, "seq_df and coord_df share column names"):
+        with self.assertRaisesRegex(
+            ValueError, "seq_df and coord_df share column names"
+        ):
             OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
 
 
@@ -380,6 +382,74 @@ class PlottingTests(unittest.TestCase):
     def test_plot_with_without(self):
         self.ms.plot_with_without()
         plt.close()
+
+
+class OrderedMapSeqCoordDfPCARotateTests(unittest.TestCase):
+    """Tests for PCA rotation in OrderedMapSeq"""
+
+    def setUp(self):
+        """Set up an OrderedMapSeq object with coordinates that can be PCA rotated"""
+        # Create coordinates that have a clear principal component direction
+        coord_df = pd.DataFrame(
+            {"x": [1, 2, 3, 4, 5], "y": [1.1, 2.2, 2.8, 3.9, 5.1]},  # Correlated with x
+            index=["strain1", "strain2", "strain3", "strain4", "strain5"],
+        )
+
+        seq_df = pd.DataFrame(
+            {
+                1: ["A", "A", "A", "A", "A"],
+                2: ["C", "C", "C", "C", "C"],
+            },
+            index=["strain1", "strain2", "strain3", "strain4", "strain5"],
+        )
+
+        self.oms = OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+        # Store original coordinates for comparison
+        self.original_coords = self.oms.coord.df.copy()
+
+    def test_pca_rotate_inplace_true(self):
+        """Test that pca_rotate with inplace=True updates the coordinates"""
+        # Perform PCA rotation inplace
+        self.oms.coord.pca_rotate(inplace=True)
+
+        # Check that coordinates were actually changed
+        self.assertFalse(self.original_coords.equals(self.oms.coord.df))
+
+        # The first principal component should now be aligned with the x-axis
+        # This means the y coordinates should be much smaller than before
+        y_variance_original = self.original_coords["y"].var()
+        y_variance_rotated = self.oms.coord.df["PC2"].var()
+
+        self.assertLess(y_variance_rotated, y_variance_original)
+
+    def test_pca_rotate_inplace_false(self):
+        """Test that pca_rotate with inplace=False returns new coordinates"""
+        # Perform PCA rotation without inplace
+        rotated_df = self.oms.coord.pca_rotate(inplace=False).df
+
+        # Original coordinates should remain unchanged
+        pd.testing.assert_frame_equal(self.original_coords, self.oms.coord.df)
+
+        # Returned dataframe should be different from the original
+        self.assertFalse(rotated_df.equals(self.oms.coord.df))
+
+        # The returned dataframe should have the same shape as original
+        self.assertEqual(rotated_df.shape, self.oms.coord.df.shape)
+
+    def test_pca_rotate_result_properties(self):
+        """Test that the PCA rotated coordinates have expected properties"""
+        # Perform PCA rotation
+        self.oms.coord.pca_rotate(inplace=True)
+
+        # Check that the dataframe index remains the same
+        self.assertEqual(
+            list(self.oms.coord.df.index), list(self.original_coords.index)
+        )
+
+        # Check that maximum variance is now along x-axis
+        pc1_variance = self.oms.coord.df["PC1"].var()
+        pc2_variance = self.oms.coord.df["PC2"].var()
+        self.assertGreater(pc1_variance, pc2_variance)
 
 
 if __name__ == "__main__":

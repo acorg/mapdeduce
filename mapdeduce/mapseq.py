@@ -827,7 +827,7 @@ class MapSeq(object):
         step = 0.5
         bins = np.arange(0, np.ceil(max_error) + step, step)
 
-        fig, ax = plt.subplots(
+        _, ax = plt.subplots(
             nrows=2, ncols=1, figsize=(7, 10), sharex=True, sharey=True
         )
 

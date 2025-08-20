@@ -73,13 +73,12 @@ def read_eu_coordinate_layout(path):
     return df.loc["AG", :]
 
 
-# Compile once
-strain_regex = re.compile(r"^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
-ah3n2_regex = re.compile(r"^([A-Z]+_)?A\(H3N2\)\/")
-human_regex = re.compile(r"\/HUMAN\/")
+STRAIN_REGEX = re.compile(r"^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
+AH3N2_REGEX = re.compile(r"^([A-Z]+_)?A\(H3N2\)\/")
+HUMAN_REGEX = re.compile(r"\/HUMAN\/")
 
 
-def clean_strain_name(strain_name):
+def clean_strain_name(strain_name: str) -> str:
     """
     Replace A(H3N2) with A at the start of a strain name.
 
@@ -97,16 +96,16 @@ def clean_strain_name(strain_name):
 
     @param strain_name. Str.
     """
-    strain_name = re.sub(pattern=human_regex, repl="/", string=strain_name)
-    strain_name = re.sub(pattern=ah3n2_regex, repl="A/", string=strain_name)
-    match = re.match(pattern=strain_regex, string=strain_name)
+    strain_name = re.sub(pattern=HUMAN_REGEX, repl="/", string=strain_name)
+    strain_name = re.sub(pattern=AH3N2_REGEX, repl="A/", string=strain_name)
+    match = re.match(pattern=STRAIN_REGEX, string=strain_name)
     try:
         return match.group().strip("_")
     except AttributeError:
         return strain_name
 
 
-def clean_df_strain_names(df, filename):
+def clean_df_strain_names(df: pd.DataFrame, filename: str) -> str:
     """
     Clean strain names of DataFrame indexes and write a file containing
     rows of the original and altered strain names for inspecting.
@@ -125,8 +124,9 @@ def clean_df_strain_names(df, filename):
     format_string = "{{:{}}} {{}}\n".format(col_width)
     with open(filename, "w") as fobj:
         fobj.write(format_string.format("New", "Original"))
-        for n, o in zip(new_names, orig_names):
-            fobj.write(format_string.format(n, o))
+        for new, orig in zip(new_names, orig_names):
+            if new != orig:
+                fobj.write(format_string.format(new, orig))
 
     df.index = new_names
     return df

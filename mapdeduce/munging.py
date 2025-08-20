@@ -4,6 +4,7 @@ from Bio.SeqIO import parse
 import pandas as pd
 import numpy as np
 import re
+from scipy.spatial.distance import pdist
 
 
 def dict_from_fasta(path, upper=True):
@@ -184,3 +185,33 @@ def merge_amino_acids(amino_acids):
         return unique_no_na[0]
     else:
         return np.nan
+
+
+def handle_duplicate_coords(df: pd.DataFrame, threshold: float) -> pd.DataFrame:
+    """
+    Handle a dataframe with duplicate strains in the index.
+
+    @param df: pd.DataFrame. Index are strain names, columns are 'x' and 'y'.
+    @param threshold: float. Maximum distance allowed between antigens before antigen is removed.
+    @returns pd.DataFrame: Strains that were further apart than the threshold
+        are removed. Strains that were closer than the threshold are averaged.
+    """
+    if threshold < 0:
+        raise ValueError("threshold must be >=0")
+
+    dupe_mask = df.index.duplicated(keep=False)
+
+    df_duplicated = df.loc[dupe_mask]
+    df_unique = df.loc[~dupe_mask]
+
+    # For each duplicated strain, get the average of the coordinates if they aren't too far apart
+    # If they are too far apart, ignore them
+    average_coord = {}
+    for strain, coords in df_duplicated.groupby(level=0):
+        if np.all(pdist(coords) < threshold):
+            average_coord[strain] = coords.mean(axis=0)
+
+    df_average = pd.DataFrame(average_coord).T
+    df_average.columns = ["x", "y"]
+
+    return pd.concat([df_unique, df_average]).sort_index()

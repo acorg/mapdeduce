@@ -312,7 +312,9 @@ class HwasLmm(object):
                     )
 
                 except AssertionError:
-                    warnings.warn("Doing manual variance decomposition.")
+                    warnings.warn(
+                        f"Doing manual variance decomposition for {snp}."
+                    )
 
                     vs = VarianceDecomposition(Y=self.pheno.values)
 
@@ -345,10 +347,11 @@ class HwasLmm(object):
                         )
 
                     else:
-                        raise ValueError(
-                            "Variance decomposition didn't "
-                            "optimize for {}.".format(snp)
+                        warnings.warn(
+                            f"Variance decomposition didn't converge for "
+                            f"{snp}. Skipping..."
                         )
+                        continue
 
                 # lmm.getBetaSNP() returns (P, S) array of effect sizes
                 # Only tested 1 snp

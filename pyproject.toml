@@ -1,7 +1,7 @@
 # pyproject.toml
 
 [build-system]
-requires      = ["setuptools>=61.0.0", "wheel"]
+requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,6 +20,7 @@ classifiers = [
 keywords = ["influenza", "lmm", "antigenic cartography"]
 dependencies = [
     "biopython",
+    "limix_legacy @ git+https://github.com/davipatti/limix-legacy",
     "matplotlib",
     "pandas",
     "rpy2>=3.0.0",
@@ -28,7 +29,7 @@ dependencies = [
     "spm1d",
     "tqdm",
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.9,<3.12"
 
 [project.optional-dependencies]
 dev = ["black", "pytest"]
@@ -38,3 +39,6 @@ Homepage = "https://github.com/acorg/mapdeduce"
 
 [tool.setuptools]
 packages = ["mapdeduce"]
+
+[tool.setuptools.package-data]
+mapdeduce = ["data/test/*.fa"]

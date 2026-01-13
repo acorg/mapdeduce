@@ -3,3 +3,6 @@ _trial_temp
 mapdeduce.egg-info
 **.py.bak
 mapdeduce/__pycache__
+build
+dist
+.vscode

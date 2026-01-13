@@ -2,28 +2,24 @@
 
 from __future__ import print_function, division
 from builtins import zip, map, str, object, range
-
-import numpy as np
-import pandas as pd
-
-import scipy
-import sklearn
-
 import warnings
 
-warnings.filterwarnings("ignore", module="h5py")
-
-from limix.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
-from limix.vardec import VarianceDecomposition
-
+from limix_legacy.modules.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
+from limix_legacy.modules.varianceDecomposition import VarianceDecomposition
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy
+import seaborn as sns
+import sklearn
 
+from .dataframes import CoordDf
 from .permp import permp
 from .plotting import plot_arrow, make_ax_a_map
-from .dataframes import CoordDf
 
-import seaborn as sns
-import matplotlib.pyplot as plt
+
+warnings.filterwarnings("ignore", module="h5py")
 
 
 def shuffle_values(nperm, values):
@@ -440,7 +436,7 @@ class HwasLmm(object):
         if hasattr(self, "folds"):
             raise AttributeError("HwasLmm already has folds attribute.")
 
-        kf = sklearn.model_selection.KFold(n_splits=n_splits, random_state=1234)
+        kf = sklearn.model_selection.KFold(n_splits=n_splits, shuffle=True, random_state=1234)
 
         folds = []
         append = folds.append

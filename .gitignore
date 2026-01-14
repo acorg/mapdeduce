@@ -6,3 +6,4 @@ mapdeduce/__pycache__
 build
 dist
 .vscode
+.claude

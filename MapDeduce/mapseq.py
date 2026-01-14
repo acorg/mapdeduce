@@ -53,7 +53,7 @@ class MapSeq(object):
         self.map = map
 
         # Replace any unknown amino acids with NaN
-        cond = self.all_seqs.applymap(lambda x: x not in amino_acids)
+        cond = self.all_seqs.map(lambda x: x not in amino_acids)
         self.all_seqs.mask(cond, inplace=True)
 
         # Remove any rows that contain NaN coords
@@ -426,7 +426,7 @@ class MapSeq(object):
         """
         positions = kwargs.pop("positions", self.seq_in_both.columns.tolist())
         df = self.seq_in_both
-        return df.mask(df.applymap(is_not_amino_acid)).groupby(positions)
+        return df.mask(df.map(is_not_amino_acid)).groupby(positions)
 
     def plot_strains_with_combinations(
         self, combinations, without=False, plot_other=True, **kwargs

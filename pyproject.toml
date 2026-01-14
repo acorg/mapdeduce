@@ -42,3 +42,6 @@ packages = ["mapdeduce"]
 
 [tool.setuptools.package-data]
 mapdeduce = ["data/test/*.fa"]
+
+[tool.black]
+line-length = 79

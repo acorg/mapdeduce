@@ -18,7 +18,9 @@ class LmmBlupInit(unittest.TestCase):
         Y = np.random.randn(10, 2)
         with self.assertRaises(ValueError) as ctx:
             LmmBlup(Y=Y)
-        self.assertIn("At least one of F and K must be specified", str(ctx.exception))
+        self.assertIn(
+            "At least one of F and K must be specified", str(ctx.exception)
+        )
 
     def test_requires_a_when_f_specified(self):
         """Should raise ValueError if F is specified without A"""

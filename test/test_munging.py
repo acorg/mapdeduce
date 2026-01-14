@@ -16,7 +16,9 @@ class DictFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        fasta_path = os.path.join(mapdeduce.__path__[0], "data", "test", "fasta-sample.fa")
+        fasta_path = os.path.join(
+            mapdeduce.__path__[0], "data", "test", "fasta-sample.fa"
+        )
         self.dict = dict_from_fasta(path=fasta_path)
 
     def test_lower_absent(self):
@@ -35,7 +37,9 @@ class DfFromFastaTests(unittest.TestCase):
 
     def setUp(self):
         """Run df_from_fasta on a sample fasta file."""
-        fasta_path = os.path.join(mapdeduce.__path__[0], "data", "test", "fasta-sample.fa")
+        fasta_path = os.path.join(
+            mapdeduce.__path__[0], "data", "test", "fasta-sample.fa"
+        )
         self.df = df_from_fasta(path=fasta_path, positions=(1, 2, 3, 4, 5))
 
     def test_df_is_dataframe(self):

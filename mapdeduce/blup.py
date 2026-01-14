@@ -160,7 +160,9 @@ class FluLmmBlup(object):
             raise ValueError("unknown_df does not have 328 columns")
 
         if not columns_match:
-            raise ValueError("unknown_df columns are not equal to range(1, 329)")
+            raise ValueError(
+                "unknown_df columns are not equal to range(1, 329)"
+            )
 
         if len(unknown_df.index) != len(set(unknown_df.index)):
             raise ValueError("Indexes in unknown_df must all be unique.")

@@ -43,11 +43,15 @@ class MapSeqAttributes(unittest.TestCase):
 
     def test_seq_in_both_indexes(self):
         """Indexes of self.seq_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both, set(self.ms.seq_in_both.index))
+        self.assertEqual(
+            self.ms.strains_in_both, set(self.ms.seq_in_both.index)
+        )
 
     def test_coords_in_both_indexes(self):
         """Indexes of self.coords_in_both should match strains_in_both"""
-        self.assertEqual(self.ms.strains_in_both, set(self.ms.coords_in_both.index))
+        self.assertEqual(
+            self.ms.strains_in_both, set(self.ms.coords_in_both.index)
+        )
 
     def test_unkown_sequence(self):
         """
@@ -103,7 +107,9 @@ class MapSeqDuplicates(unittest.TestCase):
 
         strain3 is an example. Sequence should be (Q, K, nan)
         """
-        self.assertIsInstance(self.ms.all_seqs.loc["strain3", :], pd.core.frame.Series)
+        self.assertIsInstance(
+            self.ms.all_seqs.loc["strain3", :], pd.core.frame.Series
+        )
 
     def test_different_sequences_same_index_value(self):
         """
@@ -145,7 +151,8 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
     def test_returns_df(self):
         """Should return a df"""
         self.assertIsInstance(
-            self.ms.strains_with_combinations({1: "Q"}, verbose=False), pd.core.frame.DataFrame
+            self.ms.strains_with_combinations({1: "Q"}, verbose=False),
+            pd.core.frame.DataFrame,
         )
 
     def test_returns_df_combinations_absent(self):
@@ -154,7 +161,8 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         combination
         """
         self.assertIsInstance(
-            self.ms.strains_with_combinations({1: "L"}, verbose=False), pd.core.frame.DataFrame
+            self.ms.strains_with_combinations({1: "L"}, verbose=False),
+            pd.core.frame.DataFrame,
         )
 
     def test_correct_strains_1(self):
@@ -164,7 +172,9 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         (I.e. out of "strain1", "strain2", "strain3")
         """
         output = self.ms.strains_with_combinations({1: "Q"}, verbose=False)
-        self.assertEqual(set(("strain1", "strain2", "strain3")), set(output.index))
+        self.assertEqual(
+            set(("strain1", "strain2", "strain3")), set(output.index)
+        )
 
     def test_correct_strains_3(self):
         """
@@ -288,7 +298,9 @@ class OrderedMapSeqTests(unittest.TestCase):
         """Sequence and coordinate dataframes should be reordered such that
         their indexes match.
         """
-        self.assertEqual(list(self.oms.coord.df.index), list(self.oms.seqs.df.index))
+        self.assertEqual(
+            list(self.oms.coord.df.index), list(self.oms.seqs.df.index)
+        )
 
 
 if __name__ == "__main__":

@@ -57,7 +57,9 @@ def permp(x, nperm, n1, n2, total_nperm=None, method="auto", twosided=True):
         http://www.statsci.org/smyth/pubs/PermPValuesPreprint.pdf>
     """
     total_nperm = (
-        robjects.NULL if total_nperm is None else robjects.IntVector([total_nperm])
+        robjects.NULL
+        if total_nperm is None
+        else robjects.IntVector([total_nperm])
     )
 
     return np.array(

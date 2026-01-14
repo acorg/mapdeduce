@@ -4,7 +4,11 @@
 
 import unittest
 
-from mapdeduce.season import in_season, season_from_timestamp, hemisphere_from_season
+from mapdeduce.season import (
+    in_season,
+    season_from_timestamp,
+    hemisphere_from_season,
+)
 from pandas import to_datetime
 
 

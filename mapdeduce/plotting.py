@@ -65,8 +65,12 @@ ellipse_params = {
         "HK14": dict(xy=(1, -0.75), width=2.5, height=5, angle=-70, **kwds),
     },
     "cdc-melb-2017-merge": {
-        "PE09": dict(xy=(-2.5, 1.75), width=2.25, height=3.25, angle=345, **kwds),
-        "SW13": dict(xy=(0.5, -2.25), width=1.75, height=3.5, angle=90, **kwds),
+        "PE09": dict(
+            xy=(-2.5, 1.75), width=2.25, height=3.25, angle=345, **kwds
+        ),
+        "SW13": dict(
+            xy=(0.5, -2.25), width=1.75, height=3.5, angle=90, **kwds
+        ),
         "HK14": dict(xy=(0.75, 0.25), width=3, height=4.5, angle=85, **kwds),
     },
 }
@@ -119,7 +123,11 @@ def add_ellipses(map):
 
 
 rectangle_params = {
-    2009: {"FU02-CA04": dict(xy=(-5, -0.5), width=6.5, height=7.5, angle=-35, **kwds)}
+    2009: {
+        "FU02-CA04": dict(
+            xy=(-5, -0.5), width=6.5, height=7.5, angle=-35, **kwds
+        )
+    }
 }
 
 

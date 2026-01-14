@@ -26,7 +26,9 @@ class CoordDf(object):
         self.df = df
 
     def __repr__(self):
-        return "CoordDf with {} samples and {} dimensions.".format(*self.df.shape)
+        return "CoordDf with {} samples and {} dimensions.".format(
+            *self.df.shape
+        )
 
     def rotate(self, a, inplace=True):
         """
@@ -117,7 +119,9 @@ class CoordDf(object):
 
         for i in range(n):
             try:
-                distances[i] = euclidean(u=self.df.iloc[i, :], v=other_df.iloc[i, :])
+                distances[i] = euclidean(
+                    u=self.df.iloc[i, :], v=other_df.iloc[i, :]
+                )
 
             except ValueError:
                 distances[i] = np.nan
@@ -133,7 +137,9 @@ class SeqDf(object):
         self.df = df
 
     def __repr__(self):
-        return "SeqDf with {} samples and {} sequence positions.".format(*self.df.shape)
+        return "SeqDf with {} samples and {} sequence positions.".format(
+            *self.df.shape
+        )
 
     @classmethod
     def from_fasta(cls, path):
@@ -223,7 +229,8 @@ class SeqDf(object):
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
 
         df = pd.DataFrame(
-            data={"|".join(g.index): n for n, g in grouped}, index=self.dummies.index
+            data={"|".join(g.index): n for n, g in grouped},
+            index=self.dummies.index,
         )
 
         if inplace:

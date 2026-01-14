@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 import mapdeduce
-from mapdeduce.hwas import HwasLmm
+from mapdeduce.hwas import HwasLmm, find_perfectly_correlated_snps
 
 
 class HwasLmmCrossValidation(unittest.TestCase):
@@ -284,6 +284,109 @@ class HwasLmmFit(unittest.TestCase):
 
         # Results are sorted by p-value, causal should be first
         self.assertEqual(hwas.results.index[0], "causal")
+
+
+class FindPerfectlyCorrelatedSnpsTests(unittest.TestCase):
+    """Tests for find_perfectly_correlated_snps function"""
+
+    def test_no_correlation(self):
+        """Independent SNPs should return empty list"""
+
+        # no snps are identical or complements
+        snps = pd.DataFrame(
+            {
+                "snp1": [0, 1, 0, 1, 0, 0],
+                "snp2": [0, 0, 1, 1, 0, 1],
+                "snp3": [1, 1, 0, 1, 0, 0],
+            }
+        )
+        result = find_perfectly_correlated_snps(snps)
+        self.assertEqual(result, [])
+
+    def test_identical_snps(self):
+        """Identical SNPs should be detected"""
+        snps = pd.DataFrame(
+            {
+                "snp1": [0, 1, 0, 1, 0, 1],
+                "snp2": [0, 1, 0, 1, 0, 1],  # identical to snp1
+                "snp3": [1, 1, 0, 0, 1, 0],  # independent
+            }
+        )
+        result = find_perfectly_correlated_snps(snps)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], ("snp1", "snp2", "identical"))
+
+    def test_complement_snps(self):
+        """Complement SNPs (one = 1 - other) should be detected"""
+        snps = pd.DataFrame(
+            {
+                "snp1": [0, 1, 0, 1, 0, 1],
+                "snp2": [1, 0, 1, 0, 1, 0],  # complement of snp1
+                "snp3": [0, 0, 1, 1, 0, 1],  # independent
+            }
+        )
+        result = find_perfectly_correlated_snps(snps)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], ("snp1", "snp2", "complement"))
+
+    def test_multiple_correlations(self):
+        """Multiple correlated pairs should all be detected"""
+        snps = pd.DataFrame(
+            {
+                "snp1": [0, 1, 0, 1, 0, 1],
+                "snp2": [0, 1, 0, 1, 0, 1],  # identical to snp1
+                "snp3": [1, 0, 1, 0, 1, 0],  # complement of snp1 and snp2
+            }
+        )
+        result = find_perfectly_correlated_snps(snps)
+        self.assertEqual(len(result), 3)
+        self.assertIn(("snp1", "snp2", "identical"), result)
+        self.assertIn(("snp1", "snp3", "complement"), result)
+        self.assertIn(("snp2", "snp3", "complement"), result)
+
+
+class HwasLmmFitValidation(unittest.TestCase):
+    """Tests for HwasLmm.fit input validation"""
+
+    def test_raises_on_identical_snps(self):
+        """fit should raise ValueError if SNPs are identical"""
+        np.random.seed(42)
+        N = 20
+        snp_values = np.random.randint(2, size=N)
+        snps = pd.DataFrame(
+            {
+                "snp1": snp_values,
+                "snp2": snp_values,  # identical
+                "snp3": np.random.randint(2, size=N),
+            }
+        )
+        pheno = pd.DataFrame({"y": np.random.randn(N)})
+
+        hwas = HwasLmm(snps=snps, pheno=pheno)
+        with self.assertRaises(ValueError) as err:
+            hwas.fit()
+        self.assertIn("perfectly correlated", str(err.exception))
+        self.assertIn("snp1", str(err.exception))
+        self.assertIn("snp2", str(err.exception))
+
+    def test_raises_on_complement_snps(self):
+        """fit should raise ValueError if SNPs are complements"""
+        np.random.seed(42)
+        N = 20
+        snp_values = np.random.randint(2, size=N)
+        snps = pd.DataFrame(
+            {
+                "snp1": snp_values,
+                "snp2": 1 - snp_values,  # complement
+                "snp3": np.random.randint(2, size=N),
+            }
+        )
+        pheno = pd.DataFrame({"y": np.random.randn(N)})
+
+        hwas = HwasLmm(snps=snps, pheno=pheno)
+        with self.assertRaises(ValueError) as ctx:
+            hwas.fit()
+        self.assertIn("perfectly correlated", str(ctx.exception))
 
 
 class HwasLmmRegressOut(unittest.TestCase):

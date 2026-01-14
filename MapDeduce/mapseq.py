@@ -411,7 +411,12 @@ class MapSeq(object):
         )
         return tuple(p.name for p in proportions_all_variants_sorted)
 
-    def strains_with_combinations(self, combinations, without=False):
+    def strains_with_combinations(
+        self,
+        combinations: dict[int:str],
+        without: bool = False,
+        verbose: bool = True,
+    ):
         """Lookup strains that have combinations of amino acids at particular
         positions.
 
@@ -443,7 +448,8 @@ class MapSeq(object):
                 sorted("{}{}".format(k, v) for k, v in combinations.items())
             )
 
-            warnings.warn("No strains with {}".format(label))
+            if verbose:
+                warnings.warn("No strains with {}".format(label))
 
         return df
 

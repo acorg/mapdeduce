@@ -145,7 +145,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
     def test_returns_df(self):
         """Should return a df"""
         self.assertIsInstance(
-            self.ms.strains_with_combinations({1: "Q"}), pd.core.frame.DataFrame
+            self.ms.strains_with_combinations({1: "Q"}, verbose=False), pd.core.frame.DataFrame
         )
 
     def test_returns_df_combinations_absent(self):
@@ -154,7 +154,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         combination
         """
         self.assertIsInstance(
-            self.ms.strains_with_combinations({1: "L"}), pd.core.frame.DataFrame
+            self.ms.strains_with_combinations({1: "L"}, verbose=False), pd.core.frame.DataFrame
         )
 
     def test_correct_strains_1(self):
@@ -163,7 +163,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         Should only return strains in seq_in_both and coords_in_both.
         (I.e. out of "strain1", "strain2", "strain3")
         """
-        output = self.ms.strains_with_combinations({1: "Q"})
+        output = self.ms.strains_with_combinations({1: "Q"}, verbose=False)
         self.assertEqual(set(("strain1", "strain2", "strain3")), set(output.index))
 
     def test_correct_strains_3(self):
@@ -171,14 +171,14 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         Test correct strains returned.
         Expect no strains.
         """
-        output = self.ms.strains_with_combinations({1: "K"})
+        output = self.ms.strains_with_combinations({1: "K"}, verbose=False)
         expect = set()
         self.assertEqual(expect, set(output.index))
 
     def test_raises_value_error_positions_absent(self):
         """Should raise a value error when a position requested is absent"""
         with self.assertRaises(ValueError):
-            self.ms.strains_with_combinations({4: "K"})
+            self.ms.strains_with_combinations({4: "K"}, verbose=False)
 
 
 class MapSeqDuplicateSeqeunces(unittest.TestCase):

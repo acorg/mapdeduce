@@ -41,7 +41,7 @@ def cov(m):
     """
     Compute the covariance matrix of m
 
-    @param m: ndarry / dataframe
+    @param m: ndarray / dataframe
     """
     return np.dot(m, m.T) / float(m.shape[0])
 
@@ -56,10 +56,10 @@ def effective_tests(snps):
     if snps.shape[1] == 1:
         return 1
 
-    corr, p = scipy.stats.spearmanr(snps)
+    corr, _ = scipy.stats.spearmanr(snps)
 
     try:
-        eigenvalues, eigenvectors = np.linalg.eigh(corr)
+        eigenvalues, _ = np.linalg.eigh(corr)
 
     except np.linalg.LinAlgError:
         # if only two SNPs in snps and are perfectly negatively correlated
@@ -95,21 +95,21 @@ def qq_plot(results, snps=None, **kwargs):
     larger = kwargs.pop("larger", None)
     very_large = kwargs.pop("very_large", None)
 
-    # Get 2D DataFrame contianing pvalues and effect sizes for this
+    # Get 2D DataFrame containing p values and effect sizes for this
     # phenotype
     df = results
     if snps is not None:
         print(
-            "Only plotting substitutions at these positions:\n{}".format(
-                ",".join(map(str, snps))
-            )
+            "Only plotting substitutions at these positions:\n"
+            ",".join(map(str, snps))
         )
         df = pd.concat([df.filter(regex=str(x), axis=0) for x in snps])
     df.sort_values("p", inplace=True)
 
     if larger is not None:
         s = pd.Series(
-            np.array([i in larger for i in df.index]) * 125 + 25, index=df.index
+            np.array([i in larger for i in df.index]) * 125 + 25,
+            index=df.index,
         )
     else:
         s = pd.Series(np.repeat(50, df.shape[0]), index=df.index)
@@ -120,11 +120,17 @@ def qq_plot(results, snps=None, **kwargs):
 
     # qq plot parameters
     n = df.shape[0]
-    x = pd.Series(-1 * np.log10(np.linspace(1 / float(n), 1, n)), index=df.index)
+    x = pd.Series(
+        -1 * np.log10(np.linspace(1 / float(n), 1, n)), index=df.index
+    )
     scatter_kwds = dict(x=x, edgecolor="white", s=s)
 
     ax.scatter(
-        y=df["logp"], zorder=15, label="-log10(p-value)", c="#c7eae5", **scatter_kwds
+        y=df["logp"],
+        zorder=15,
+        label="-log10(p-value)",
+        c="#c7eae5",
+        **scatter_kwds,
     )
 
     try:
@@ -187,10 +193,7 @@ def qq_plot(results, snps=None, **kwargs):
 
     ax.plot((0, 50), (0, 50), c="white", zorder=10)
 
-    ax.legend(
-        bbox_to_anchor=(1, 1),
-        loc="upper left",
-    )
+    ax.legend(bbox_to_anchor=(1, 1), loc="upper left")
 
     return ax
 
@@ -254,7 +257,9 @@ class HwasLmm(object):
             for these snps.
         """
         test_snps = self.snps.columns if test_snps is None else test_snps
-        self.K_leave_out = {s: cov(self.snps.drop(s, axis=1)) for s in test_snps}
+        self.K_leave_out = {
+            s: cov(self.snps.drop(s, axis=1)) for s in test_snps
+        }
 
     def fit(self, test_snps=None, progress_bar=False):
         """
@@ -277,16 +282,13 @@ class HwasLmm(object):
         iterable = tqdm(test_snps) if progress_bar else test_snps
 
         for snp in iterable:
-            snp_profile = self.snps.loc[
-                :,
-                [
-                    snp,
-                ],
-            ].values
+            snp_profile = self.snps.loc[:, [snp]].values
             covs = self.covs.values if self.covs is not None else None
 
             if np.unique(snp_profile).shape[0] != 2:
-                warnings.warn("{} does not have 2 unique values. Skipping.".format(snp))
+                warnings.warn(
+                    f"{snp} does not have 2 unique values. Skipping."
+                )
 
                 continue
 
@@ -302,7 +304,7 @@ class HwasLmm(object):
 
             else:
                 try:
-                    lmm, pv = qtl_test_lmm_kronecker(
+                    lmm, _ = qtl_test_lmm_kronecker(
                         snps=snp_profile,
                         phenos=self.pheno.values,
                         Asnps=self.Asnps,
@@ -319,7 +321,9 @@ class HwasLmm(object):
                     vs = VarianceDecomposition(Y=self.pheno.values)
 
                     if self.covs is not None:
-                        F = np.concatenate((self.covs.values, snp_profile), axis=1)
+                        F = np.concatenate(
+                            (self.covs.values, snp_profile), axis=1
+                        )
 
                     else:
                         F = snp_profile
@@ -331,11 +335,11 @@ class HwasLmm(object):
                     try:
                         conv = vs.optimize()
                     except np.linalg.LinAlgError:
-                        warnings.warn("{} raised LinAlgError".format(snp))
+                        warnings.warn(f"{snp} raised LinAlgError")
                         continue
 
                     if conv:
-                        lmm, pv = qtl_test_lmm_kronecker(
+                        lmm, _ = qtl_test_lmm_kronecker(
                             snps=snp_profile,
                             phenos=self.pheno.values,
                             Asnps=self.Asnps,
@@ -357,10 +361,7 @@ class HwasLmm(object):
                 # Only tested 1 snp
                 beta = lmm.getBetaSNP()[:, 0]
 
-            results[snp] = {
-                "p": lmm.getPv()[0, 0],
-                "beta": beta,
-            }
+            results[snp] = {"p": lmm.getPv()[0, 0], "beta": beta}
 
         df = pd.DataFrame.from_dict(results, orient="index")
         df.sort_values("p", inplace=True)
@@ -399,13 +400,15 @@ class HwasLmm(object):
         residual = self.pheno - profile.dot(beta)
 
         if summary_plot:
-            ax = self.pheno.plot.scatter(x="x", y="y", s=5, c="black", label="Original")
+            ax = self.pheno.plot.scatter(
+                x="x", y="y", s=5, c="black", label="Original"
+            )
 
             residual.plot.scatter(x="x", y="y", ax=ax, s=10, label="Residual")
 
             joined = residual.join(self.pheno, lsuffix="resid", rsuffix="orig")
 
-            for strain, row in joined.iterrows():
+            for _, row in joined.iterrows():
                 xmatch = row["xresid"] != row["xorig"]
                 ymatch = row["yresid"] != row["yorig"]
 
@@ -439,7 +442,9 @@ class HwasLmm(object):
         if hasattr(self, "folds"):
             raise AttributeError("HwasLmm already has folds attribute.")
 
-        kf = sklearn.model_selection.KFold(n_splits=n_splits, shuffle=True, random_state=1234)
+        kf = sklearn.model_selection.KFold(
+            n_splits=n_splits, shuffle=True, random_state=1234
+        )
 
         folds = []
         append = folds.append
@@ -453,15 +458,9 @@ class HwasLmm(object):
             mask = (means > 0) & (means < 1)
             diverse_snps_i = mask.index[mask]
 
-            hwas_i = HwasLmm(
-                snps=train_snps_i,
-                pheno=train_pheno_i,
-            )
+            hwas_i = HwasLmm(snps=train_snps_i, pheno=train_pheno_i)
 
-            hwas_i.fit(
-                test_snps=diverse_snps_i,
-                progress_bar=progress_bar,
-            )
+            hwas_i.fit(test_snps=diverse_snps_i, progress_bar=progress_bar)
 
             test_snps_i = self.snps.iloc[test, :].copy()
             test_pheno_i = self.pheno.iloc[test, :].copy()
@@ -486,10 +485,7 @@ class HwasLmm(object):
             dists[p] = {}
 
             for i, (hwas, test_pheno, test_snps) in enumerate(self.folds):
-                pheno_predict = hwas.predict(
-                    snps=test_snps,
-                    max_p=p,
-                )
+                pheno_predict = hwas.predict(snps=test_snps, max_p=p)
 
                 cdf = CoordDf(pheno_predict)
 
@@ -517,34 +513,33 @@ class HwasLmm(object):
 
         if df.empty:
             raise ValueError(
-                "No SNPs with p-value < {:.2E} and effect size > {:.2E}"
-                "".format(max_p, min_effect)
+                f"No SNPs with p-value < {max_p:.2E} and effect size > "
+                f"{min_effect:.2E}"
             )
 
         effects = df.filter(regex="b[0-9]", axis=1)
 
         if effects.empty:
             raise ValueError(
-                "df returned from self.summarise_joint does not contain " "effects"
+                "df returned from self.summarise_joint does not contain "
+                "effects"
             )
 
         predictors = effects.index & snps.columns
 
         if predictors.empty:
             raise ValueError(
-                "No SNPs predictors to use.\n\n"
-                "effects: {effects}\n\n"
-                "snps: {snps}".format(
-                    effects=effects.index,
-                    snps=snps.columns,
-                )
+                f"No SNPs predictors to use.\n\neffects: {effects.index}\n\n"
+                f"snps: {snps.columns}"
             )
 
         snps = snps.loc[:, predictors]
         effects = effects.loc[predictors, :]
 
         return pd.DataFrame(
-            data=np.dot(snps, effects), index=snps.index, columns=effects.columns
+            data=np.dot(snps, effects),
+            index=snps.index,
+            columns=effects.columns,
         )
 
     def lmm_permute(self, n, K_without_snp=False, **kwargs):
@@ -552,25 +547,25 @@ class HwasLmm(object):
 
         @param n. Int. Number of permutations.
         @param K_without_snp. Bool. For each snp, use a covariance matrix
-            computed with that snp ommitted.
+            computed with that snp omitted.
 
             Optional kwargs:
 
         @param snps. df (N, S). N individuals, S snps.
 
-        @returns df. Columns are snps. 1 row for each perumutation. Values
+        @returns df. Columns are snps. 1 row for each permutation. Values
             are the p-value for that permutation
         """
-        pvalues = np.empty((n, self.S))
+        p_values = np.empty((n, self.S))
         snps = kwargs.pop("snps", self.snps)
 
         for i in range(n):
             results = self.lmm(
                 snps=sklearn.utils.shuffle(snps), K_without_snp=K_without_snp
             )
-            pvalues[i, :] = results.loc["p", :, :]
+            p_values[i, :] = results.loc["p", :, :]
 
-        df = pd.DataFrame(pvalues)
+        df = pd.DataFrame(p_values)
         df.columns = snps.columns
 
         return df
@@ -589,30 +584,32 @@ class HwasLmm(object):
             ser = results.loc["p-empirical", pheno, :]
             print(ser[ser.notnull()])
 
-        pvalues = results.loc["p-corrected", pheno, :]
-        snps_below_cutoff = pvalues.index[pvalues < cutoff]
-        empirical_pvalues = {}
+        p_values = results.loc["p-corrected", pheno, :]
+        snps_below_cutoff = p_values.index[p_values < cutoff]
+        empirical_p_values = {}
         for snp in tqdm(snps_below_cutoff):
-            arr = shuffle_values(nperm=nperm, values=self.snps.loc[:, snp].values)
+            arr = shuffle_values(
+                nperm=nperm, values=self.snps.loc[:, snp].values
+            )
 
             lmm = qtl_test_lmm(
                 snps=arr, pheno=self.pheno.values, K=self.K_leave_out[snp]
             )
 
-            # Adjust pvalues by effective number of tests
-            perm_pvalues = lmm.getPv() * self.n_tests
+            # Adjust p_values by effective number of tests
+            perm_p_values = lmm.getPv() * self.n_tests
 
             # After adjusting for multiple tests ensure the maximum value
             # for any p-value is 1
-            perm_pvalues[perm_pvalues > 1] = 1
+            perm_p_values[perm_p_values > 1] = 1
 
             # Now compute the empirical p value
-            x = (perm_pvalues <= pvalues[snp]).sum()
+            x = (perm_p_values <= p_values[snp]).sum()
             n1, n2 = self.snps.loc[:, snp].value_counts().values
-            empirical_pvalues[snp] = permp(
+            empirical_p_values[snp] = permp(
                 x=x, nperm=nperm, n1=n1, n2=n2, total_nperm=None, method="auto"
             )[0]
-        results.loc["p-empirical", pheno, :] = pd.Series(empirical_pvalues)
+        results.loc["p-empirical", pheno, :] = pd.Series(empirical_p_values)
         return results
 
     def snp_stripplot(self, snp, **kwargs):
@@ -626,7 +623,9 @@ class HwasLmm(object):
         """
         ax = plt.gca()
         x, y = snp, "Phenotype"
-        df = pd.DataFrame({y: self.pheno.values[:, 0], x: self.snps.loc[:, snp].values})
+        df = pd.DataFrame(
+            {y: self.pheno.values[:, 0], x: self.snps.loc[:, snp].values}
+        )
         sns.stripplot(data=df, x=x, y=y, color="black", ax=ax, **kwargs)
         # Plot the means of the groups
         means = np.empty((2, 2))
@@ -695,7 +694,7 @@ class HwasLmm(object):
         @param snp. Must specify a column in self.snps
 
         @param jitter. Number. Add jitter to the antigen positions. Random
-            uniform jitter is generated in the interval -1, 1, multiplyed by
+            uniform jitter is generated in the interval -1, 1, multiplied by
             the value of jitter, and added to the values that are visualised.
 
         @param randomz. None / Number. If not None, then each point gets a
@@ -706,22 +705,17 @@ class HwasLmm(object):
         mask = self.snps.loc[:, snp] == 1
         n = mask.sum()
 
-        offsets = (
-            np.random.uniform(
-                low=-1,
-                high=1,
-                size=n * 2,
-            )
-            * jitter
-        )
+        offsets = np.random.uniform(low=-1, high=1, size=n * 2) * jitter
 
         df = self.pheno[mask] + offsets.reshape(n, 2)
 
         if randomz:
             df["z"] = np.random.uniform(low=-0.5, high=0.5, size=n) + randomz
 
-            for idx, row in df.iterrows():
-                ax.scatter(x=row[self.P0], y=row[self.P1], zorder=row["z"], **kwargs)
+            for _, row in df.iterrows():
+                ax.scatter(
+                    x=row[self.P0], y=row[self.P1], zorder=row["z"], **kwargs
+                )
 
         else:
             df.plot.scatter(x=self.P0, y=self.P1, ax=ax, **kwargs)
@@ -785,10 +779,7 @@ class HwasLmm(object):
 
         @returns ax: Matplotlib ax
         """
-        df = self.summarise_joint(
-            min_effect=0,
-            max_p=1,
-        )
+        df = self.summarise_joint(min_effect=min_effect, max_p=max_p)
 
         if snps is not None:
             df = df.loc[snps, :]
@@ -814,7 +805,7 @@ class HwasLmm(object):
                 if simple_legend:
                     label = snps_sorted
                 else:
-                    label = "{} {} {}".format(pv, j, snps_sorted)
+                    label = f"{pv} {j} {snps_sorted}"
 
                 arrows.append(
                     {
@@ -906,10 +897,7 @@ class HwasLmm(object):
                 )
 
         ax.legend(
-            leg_artists,
-            leg_labels,
-            bbox_to_anchor=(1, 0.5),
-            loc="center left",
+            leg_artists, leg_labels, bbox_to_anchor=(1, 0.5), loc="center left"
         )
 
         make_ax_a_map(ax)
@@ -924,7 +912,7 @@ class HwasLmm(object):
 
         @param b: Column in self.snps
 
-        @returns Dictionary containing pvalue and effect size of interaction,
+        @returns Dictionary containing p value and effect size of interaction,
             and the counts of the different classes of strains with
             combinations of a and b.
         """
@@ -944,7 +932,7 @@ class HwasLmm(object):
 
         # Test a and b occur together
         if Xab.sum() == 0:
-            raise ValueError("{a} and {b} don't cooccur".format(a=a, b=b))
+            raise ValueError("{a} and {b} don't co-occur".format(a=a, b=b))
 
         K1r = cov(self.snps.drop([a, b], axis=1))
 

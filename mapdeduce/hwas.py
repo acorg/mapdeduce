@@ -328,6 +328,8 @@ class HwasLmm(object):
 
         @param progress_bar: Bool. Visualise tqdm progress bar.
         """
+        explicit_test_snps = test_snps is not None
+
         if test_snps is None:
             test_snps = self.snps.columns
 
@@ -354,12 +356,18 @@ class HwasLmm(object):
             snp_profile = self.snps.loc[:, [snp]].values
             covs = self.covs.values if self.covs is not None else None
 
-            if np.unique(snp_profile).shape[0] != 2:
-                warnings.warn(
-                    f"{snp} does not have 2 unique values. Skipping."
-                )
+            if len(np.unique(snp_profile)) != 2:
 
-                continue
+                if explicit_test_snps:
+                    raise ValueError(
+                        f"{snp} does not have 2 unique values. "
+                        "Invariant SNPs cannot be tested."
+                    )
+                else:
+                    warnings.warn(
+                        f"{snp} does not have 2 unique values. Skipping."
+                    )
+                    continue
 
             if self.P == 1:
                 lmm = qtl_test_lmm(

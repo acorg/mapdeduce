@@ -230,14 +230,11 @@ class HwasLmmFit(unittest.TestCase):
 
         self.assertLess(abs(hwas.results.loc["null_snp", "beta"]), 0.2)
 
-    @unittest.skip(
-        "effective_tests() doesn't handle invariant columns - causes LinAlgError"
-    )
-    def test_invariant_snp_skipped(self):
-        """SNP with only one unique value should be skipped with warning"""
+    def test_invariant_snp_skipped_when_not_explicit(self):
+        """Invariant SNP should be skipped with warning when test_snps is None"""
         np.random.seed(42)
         N = 20
-        # Create mix of variable and invariant SNPs
+
         snps = pd.DataFrame(
             {
                 "variable_snp1": np.random.randint(2, size=N),
@@ -249,19 +246,37 @@ class HwasLmmFit(unittest.TestCase):
         pheno = pd.DataFrame({"y": np.random.randn(N)})
 
         hwas = HwasLmm(snps=snps, pheno=pheno)
-        # Only test the variable SNPs plus the invariant one (avoids effective_tests bug)
-        test_snps = [
-            "variable_snp1",
-            "variable_snp2",
-            "variable_snp3",
-            "invariant_snp",
-        ]
+
+        # Don't pass test_snps - defaults to all columns in snps
         with self.assertWarns(UserWarning):
-            hwas.fit(test_snps=test_snps)
+            hwas.fit()
 
         # Invariant SNP should not be in results
         self.assertNotIn("invariant_snp", hwas.results.index)
         self.assertIn("variable_snp1", hwas.results.index)
+
+    def test_invariant_snp_raises_when_explicit(self):
+        """Invariant SNP should raise ValueError when explicitly passed"""
+        np.random.seed(42)
+        N = 20
+        snps = pd.DataFrame(
+            {
+                "variable_snp1": np.random.randint(2, size=N),
+                "variable_snp2": np.random.randint(2, size=N),
+                "variable_snp3": np.random.randint(2, size=N),
+                "invariant_snp": np.ones(N, dtype=int),  # All 1s
+            }
+        )
+        pheno = pd.DataFrame({"y": np.random.randn(N)})
+
+        hwas = HwasLmm(snps=snps, pheno=pheno)
+
+        with self.assertRaises(ValueError) as err:
+            # Explicitly pass test_snps including the invariant one
+            hwas.fit(test_snps=list(snps.columns))
+
+        self.assertIn("invariant_snp", str(err.exception))
+        self.assertIn("does not have 2 unique values", str(err.exception))
 
     def test_causal_snp_ranked_first(self):
         """Causal SNP should have lowest p-value among tested SNPs"""

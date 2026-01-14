@@ -2,6 +2,8 @@
 
 from __future__ import print_function, division
 from builtins import zip, map, str, object, range
+from itertools import combinations
+from typing import Optional
 import warnings
 
 from limix_legacy.modules.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
@@ -46,30 +48,72 @@ def cov(m):
     return np.dot(m, m.T) / float(m.shape[0])
 
 
+def find_perfectly_correlated_snps(
+    snps: pd.DataFrame,
+) -> list[tuple[str, str, str]]:
+    """
+    Find pairs of SNPs that are perfectly correlated (identical or
+    complements).
+
+    Two SNPs are perfectly correlated if:
+    - They are identical (same values for all individuals)
+    - One is the complement of the other (snp_a == 1 - snp_b for all
+        individuals)
+
+    @param snps: pd.DataFrame. (N, S) DataFrame of SNP values.
+
+    @returns: List of tuples. Each tuple contains (snp_a, snp_b, relationship)
+        where relationship is 'identical' or 'complement'.
+    """
+    correlated_pairs = []
+
+    for col_a, col_b in combinations(snps.columns, 2):
+
+        vals_a = snps[col_a].values
+        vals_b = snps[col_b].values
+
+        # Check if identical
+        if np.array_equal(vals_a, vals_b):
+            correlated_pairs.append((col_a, col_b, "identical"))
+
+        # Check if complement (a == 1 - b)
+        elif np.array_equal(vals_a, 1 - vals_b):
+            correlated_pairs.append((col_a, col_b, "complement"))
+
+    return correlated_pairs
+
+
 def effective_tests(snps):
     """
     Compute the effective number of tests, given correlation between snps.
     For 1 SNP return 1.
 
     @param snps: pd.DataFrame
+
+    @raises ValueError: If SNPs contain NaN or invariant columns that cause
+        the correlation matrix to be invalid.
     """
     if snps.shape[1] == 1:
         return 1
 
     corr, _ = scipy.stats.spearmanr(snps)
 
+    # Handle case where spearmanr returns a scalar (2 SNPs)
+    if np.isscalar(corr):
+        if corr == -1 or corr == 1:
+            return 1
+
+        corr = np.array([[1, corr], [corr, 1]])
+
     try:
         eigenvalues, _ = np.linalg.eigh(corr)
 
     except np.linalg.LinAlgError:
-        # if only two SNPs in snps and are perfectly negatively correlated
-        if corr == -1:
-            return 1
-        else:
-            raise np.linalg.LinAlgError()
+        raise ValueError("Could not compute effective number of tests.")
 
     # Prevent values that should be zero instead being tiny and negative
     eigenvalues += 1e-12
+
     return (np.sum(np.sqrt(eigenvalues)) ** 2) / np.sum(eigenvalues)
 
 
@@ -79,7 +123,8 @@ def qq_plot(results, snps=None, **kwargs):
 
     @param results pd.DataFrame: Like pd.Panel returned by pd_qtl_test_lmm.
         columns must contain "p" and can also contain the following:
-                    p-corrected
+                    p_corrected_n_tests
+                    p_corrected_n_effective_tests
                     beta
                     std-error
                     p-empirical
@@ -133,16 +178,26 @@ def qq_plot(results, snps=None, **kwargs):
         **scatter_kwds,
     )
 
+    # Try effective tests correction first, fall back to raw n_tests
     try:
         ax.scatter(
-            y=df["logp-corrected"],
+            y=df["logp_corrected_n_effective_tests"],
             zorder=15,
-            label="-log10(Corrected p-value)",
+            label="-log10(Corrected p-value, effective tests)",
             c="#35978f",
             **scatter_kwds,
         )
     except KeyError:
-        pass
+        try:
+            ax.scatter(
+                y=df["logp_corrected_n_tests"],
+                zorder=15,
+                label="-log10(Corrected p-value, n tests)",
+                c="#35978f",
+                **scatter_kwds,
+            )
+        except KeyError:
+            pass
 
     try:
         ax.scatter(
@@ -261,7 +316,9 @@ class HwasLmm(object):
             s: cov(self.snps.drop(s, axis=1)) for s in test_snps
         }
 
-    def fit(self, test_snps=None, progress_bar=False):
+    def fit(
+        self, test_snps: Optional[list[str]] = None, progress_bar: bool = False
+    ) -> None:
         """
         Run LMM.
 
@@ -273,6 +330,18 @@ class HwasLmm(object):
         """
         if test_snps is None:
             test_snps = self.snps.columns
+
+        snps_to_test = self.snps.loc[:, test_snps]
+
+        # Check for perfectly correlated SNPs
+        if correlated_pairs := find_perfectly_correlated_snps(snps_to_test):
+            pair_strs = [
+                f"  {a} and {b} ({rel})" for a, b, rel in correlated_pairs
+            ]
+            raise ValueError(
+                "Found perfectly correlated SNPs. These must be removed or "
+                "merged before fitting:\n" + "\n".join(pair_strs)
+            )
 
         if not hasattr(self, "K_leave_out"):
             self.compute_k_leave_each_snp_out(test_snps=test_snps)
@@ -363,19 +432,41 @@ class HwasLmm(object):
 
             results[snp] = {"p": lmm.getPv()[0, 0], "beta": beta}
 
-        df = pd.DataFrame.from_dict(results, orient="index")
-        df.sort_values("p", inplace=True)
-        df["logp"] = np.log10(df["p"]) * -1
+        df = pd.DataFrame.from_dict(results, orient="index").sort_values("p")
+        df["logp"] = -np.log10(df["p"])
 
-        n_tests = effective_tests(self.snps.loc[:, test_snps])
-        corrected = df["p"] * n_tests
-        df["p-corrected"] = corrected
-        df["logp-corrected"] = np.log10(corrected) * -1
+        # Correction using raw number of SNPs
+        n_tests = len(test_snps)
+        corrected_n = df["p"] * n_tests
 
-        # p-values can't exceed 1
-        mask = df["p-corrected"] > 1
-        df.loc[mask, "p-corrected"] = 1
-        df.loc[mask, "logp-corrected"] = 0
+        df["p_corrected_n_tests"] = corrected_n.clip(upper=1)
+        df["logp_corrected_n_tests"] = -np.log10(df["p_corrected_n_tests"])
+        df.loc[df["p_corrected_n_tests"] == 1, "logp_corrected_n_tests"] = 0
+
+        # Correction using effective number of tests
+        # (effective_tests sometimes raises errors)
+        try:
+            n_effective_tests = effective_tests(snps_to_test)
+            corrected_eff = df["p"] * n_effective_tests
+
+            df["p_corrected_n_effective_tests"] = corrected_eff.clip(upper=1)
+            df["logp_corrected_n_effective_tests"] = -np.log10(
+                df["p_corrected_n_effective_tests"]
+            )
+            df.loc[
+                df["p_corrected_n_effective_tests"] == 1,
+                "logp_corrected_n_effective_tests",
+            ] = 0
+
+        except ValueError as e:
+            warnings.warn(f"Could not compute effective number of tests: {e}")
+            n_effective_tests = np.nan
+            df["p_corrected_n_effective_tests"] = np.nan
+            df["logp_corrected_n_effective_tests"] = np.nan
+
+        # Store the number of tests used for correction
+        df["n_tests"] = n_tests
+        df["n_effective_tests"] = n_effective_tests
 
         if self.P > 1:
             df["joint-effect"] = df["beta"].apply(np.linalg.norm)
@@ -575,18 +666,41 @@ class HwasLmm(object):
 
         @param results. pd.Panel like that returned by pd_qtl_test_lmm which
             contains standard p-values
+
+        Note: This method expects a Panel structure and may need updating to
+        work with the new DataFrame-based results from fit().
         """
         if self.pheno.shape[1] > 1:
             warnings.warn("Only implemented for univariate phenotypes")
         pheno = self.pheno.columns[0]
         if "p-empirical" in results.items:
-            print("empirical pvalues already in results will be overwritten:")
+            print("empirical p values already in results will be overwritten:")
             ser = results.loc["p-empirical", pheno, :]
             print(ser[ser.notnull()])
 
-        p_values = results.loc["p-corrected", pheno, :]
+        # Try new column names, fall back to old for backwards compatibility
+        try:
+            p_values = results.loc["p_corrected_n_effective_tests", pheno, :]
+        except KeyError:
+            try:
+                p_values = results.loc["p_corrected_n_tests", pheno, :]
+            except KeyError:
+                p_values = results.loc["p-corrected", pheno, :]
+
         snps_below_cutoff = p_values.index[p_values < cutoff]
         empirical_p_values = {}
+
+        # Get n_tests from self.results if available
+        if (
+            hasattr(self, "results")
+            and "n_effective_tests" in self.results.columns
+        ):
+            n_tests_for_perm = self.results["n_effective_tests"].iloc[0]
+            if np.isnan(n_tests_for_perm):
+                n_tests_for_perm = self.results["n_tests"].iloc[0]
+        else:
+            n_tests_for_perm = self.S  # fallback to number of SNPs
+
         for snp in tqdm(snps_below_cutoff):
             arr = shuffle_values(
                 nperm=nperm, values=self.snps.loc[:, snp].values
@@ -597,7 +711,7 @@ class HwasLmm(object):
             )
 
             # Adjust p_values by effective number of tests
-            perm_p_values = lmm.getPv() * self.n_tests
+            perm_p_values = lmm.getPv() * n_tests_for_perm
 
             # After adjusting for multiple tests ensure the maximum value
             # for any p-value is 1

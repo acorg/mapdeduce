@@ -118,8 +118,297 @@ class SeqDfConsensusTests(unittest.TestCase):
         self.assertEqual("XNRKSE", "".join(cons))
 
 
+class SeqDfMergeDuplicateDummiesTests(unittest.TestCase):
+    """Tests for SeqDf.merge_duplicate_dummies"""
+
+    def test_merges_identical_snps(self):
+        """Identical SNPs should be merged with pipe-separated names"""
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],  # identical to 1A
+                "3C": [1.0, 1.0, 0.0, 0.0],  # different
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(2, result.shape[1])
+        self.assertIn("1A|2B", result.columns)
+        self.assertIn("3C", result.columns)
+
+    def test_merges_complement_snps(self):
+        """Complement SNPs should be merged with minus prefix"""
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [1.0, 0.0, 1.0, 0.0],  # complement of 1A
+                "3C": [1.0, 1.0, 0.0, 0.0],  # different
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(2, result.shape[1])
+        # 1A comes first alphabetically, 2B is complement
+        self.assertIn("1A|-2B", result.columns)
+        self.assertIn("3C", result.columns)
+
+    def test_first_aap_defines_pattern(self):
+        """First AAP in merged name should match the stored values"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [1.0, 0.0, 1.0, 0.0],  # complement of 1A
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        # Find the merged column
+        merged_col = next(c for c in result.columns if "1A" in c)
+
+        # Stored values should match the first AAP's original values
+        expected_values = [0, 1, 0, 1]
+        actual_values = list(result[merged_col].values)
+
+        self.assertEqual(expected_values, actual_values)
+
+    def test_merge_complements_false(self):
+        """With merge_complements=False, complements should not be merged"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [1.0, 0.0, 1.0, 0.0],  # complement of 1A
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies(merge_complements=False)
+
+        # Both should remain separate
+        self.assertEqual(2, result.shape[1])
+        self.assertIn("1A", result.columns)
+        self.assertIn("2B", result.columns)
+
+    def test_merges_duplicates_and_complements_together(self):
+        """Duplicates and complements of those duplicates should all merge"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],  # duplicate of 1A
+                "3C": [1.0, 0.0, 1.0, 0.0],  # complement of 1A and 2B
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        # All three should merge into one column
+        self.assertEqual(1, result.shape[1])
+
+        self.assertEqual("1A|2B|-3C", result.columns[0])
+
+    def test_all_complements_first_becomes_normal(self):
+        """Duplicates should merge correctly regardless of their values.
+
+        Internally, merge_duplicate_dummies uses lexicographic comparison to
+        pick a "canonical" form for grouping SNPs. For values like [1,0,1,1],
+        the complement [0,1,0,0] is lexicographically smaller, so [0,1,0,0]
+        becomes the canonical key and the SNP is internally marked as a
+        "complement" of that canonical form.
+
+        This test checks that when all SNPs in a group are internally marked
+        as "complements" (because their values > their complement values):
+        1. The merged column name doesn't start with "-"
+        2. The stored values match the original SNP values (not the canonical)
+        """
+        # Values where complement is smaller lexicographically
+        dummies = pd.DataFrame(
+            {
+                "1A": [1.0, 0.0, 1.0, 1.0],
+                "2B": [1.0, 0.0, 1.0, 1.0],  # duplicate of 1A
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        # Should merge, first AAP should not have minus
+        merged_col = result.columns[0]
+        self.assertFalse(merged_col.startswith("-"))
+
+        # Values should match original 1A
+        np.testing.assert_array_equal(
+            result[merged_col].values, dummies["1A"].values
+        )
+
+    def test_inplace_true(self):
+        """inplace=True should modify self.dummies"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies(inplace=True)
+
+        self.assertIsNone(result)
+        self.assertEqual(1, sdf.dummies.shape[1])
+
+    def test_inplace_false(self):
+        """inplace=False should return new DataFrame, not modify original"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies.copy()
+
+        result = sdf.merge_duplicate_dummies(inplace=False)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(2, sdf.dummies.shape[1])  # original unchanged
+        self.assertEqual(1, result.shape[1])
+
+    def test_empty_dataframe(self):
+        """Empty dummies DataFrame should return empty DataFrame"""
+        dummies = pd.DataFrame(index=["s1", "s2", "s3"])
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual((3, 0), result.shape)
+
+    def test_single_column(self):
+        """Single column should be returned unchanged"""
+        dummies = pd.DataFrame(
+            {"1A": [0.0, 1.0, 0.0, 1.0]},
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(1, result.shape[1])
+        self.assertIn("1A", result.columns)
+        np.testing.assert_array_equal(result["1A"].values, [0, 1, 0, 1])
+
+    def test_all_independent_snps(self):
+        """All independent SNPs should remain separate"""
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 0.0, 1.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],
+                "3C": [0.0, 1.0, 1.0, 0.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(list(dummies.columns), list(result.columns))
+
+    def test_multiple_independent_groups(self):
+        """Multiple independent groups should each merge separately"""
+        dummies = pd.DataFrame(
+            {
+                # Group 1: 1A and 2B are duplicates
+                "1A": [0.0, 0.0, 1.0, 1.0],
+                "2B": [0.0, 0.0, 1.0, 1.0],
+                # Group 2: 3C and 4D are complements
+                "3C": [0.0, 1.0, 0.0, 1.0],
+                "4D": [1.0, 0.0, 1.0, 0.0],
+                # Group 3: 5E is independent (not dup/complement of others)
+                "5E": [0.0, 0.0, 0.0, 1.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(["1A|2B", "3C|-4D", "5E"], list(result.columns))
+
+    def test_row_index_preserved(self):
+        """Row index (strain names) should be preserved"""
+        index = ["strain_A", "strain_B", "strain_C", "strain_D"]
+        dummies = pd.DataFrame(
+            {
+                "1A": [0.0, 1.0, 0.0, 1.0],
+                "2B": [0.0, 1.0, 0.0, 1.0],
+            },
+            index=index,
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        result = sdf.merge_duplicate_dummies()
+
+        self.assertEqual(list(result.index), index)
+
+    def test_raises_on_pipe_in_name(self):
+        """Should raise ValueError if SNP name contains '|'"""
+        dummies = pd.DataFrame(
+            {
+                "1A|2B": [0.0, 1.0, 0.0, 1.0],
+                "3C": [1.0, 0.0, 1.0, 0.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        with self.assertRaises(ValueError) as err:
+            sdf.merge_duplicate_dummies()
+
+        self.assertIn("1A|2B", str(err.exception))
+
+    def test_raises_on_dash_in_name(self):
+        """Should raise ValueError if SNP name contains '-'"""
+        dummies = pd.DataFrame(
+            {
+                "1A-B": [0.0, 1.0, 0.0, 1.0],
+                "3C": [1.0, 0.0, 1.0, 0.0],
+            },
+            index=["s1", "s2", "s3", "s4"],
+        )
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = dummies
+
+        with self.assertRaises(ValueError) as err:
+            sdf.merge_duplicate_dummies()
+
+        self.assertIn("1A-B", str(err.exception))
+
+
 class SeqDfMergeTests(unittest.TestCase):
-    """Tests for mapdeduce.dataframes.SeqDf.consensus."""
+    """Tests for mapdeduce.dataframes.SeqDf.merge_duplicate_strains."""
 
     def setUp(self):
         """StrainC should be replaced by the consensus of the strainC seqs."""

@@ -221,17 +221,107 @@ class SeqDf(object):
 
         return dummies
 
-    def merge_duplicate_dummies(self, inplace=False):
+    def _merge_identical_dummies(self):
         """Merge SNPs that are identical in all strains.
 
-        @param inplace: Bool.
+        @returns pd.DataFrame with merged columns.
         """
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
-
-        df = pd.DataFrame(
-            data={"|".join(g.index): n for n, g in grouped},
+        return pd.DataFrame(
+            data={"|".join(sorted(g.index)): n for n, g in grouped},
             index=self.dummies.index,
         )
+
+    def _merge_dummies_with_complements(self):
+        """Merge SNPs that are identical or complements in all strains.
+
+        Complement SNPs have a "-" prepended to their name. The first AAP
+        in the merged name always represents the pattern of 0/1s.
+
+        @returns pd.DataFrame with merged columns.
+        """
+        # Group by canonical form (handles both duplicates and complements)
+        # canonical_tuple -> {'normal': [...], 'complement': [...]}
+        canonical_groups = {}
+
+        for col in self.dummies.columns:
+            vals = tuple(self.dummies[col].values)
+            complement = tuple(1.0 - v for v in vals)
+
+            # Use the smaller tuple as canonical form
+            if vals <= complement:
+                canonical = vals
+                is_complement = False
+            else:
+                canonical = complement
+                is_complement = True
+
+            if canonical not in canonical_groups:
+                canonical_groups[canonical] = {
+                    "normal": [],
+                    "complement": [],
+                }
+
+            if is_complement:
+                canonical_groups[canonical]["complement"].append(col)
+            else:
+                canonical_groups[canonical]["normal"].append(col)
+
+        # Build the merged DataFrame
+        data = {}
+        for canonical, members in canonical_groups.items():
+            normal = sorted(members["normal"])
+            complements = sorted(members["complement"])
+
+            # Ensure at least one normal member so first AAP defines pattern
+            if not normal and complements:
+                # Move first complement to normal, flip stored values
+                normal = [complements[0]]
+                complements = complements[1:]
+                stored_values = tuple(1.0 - v for v in canonical)
+            else:
+                stored_values = canonical
+
+            # Build merged name: normal names first, then -complement names
+            names = normal + [f"-{name}" for name in complements]
+            merged_name = "|".join(names)
+
+            data[merged_name] = list(stored_values)
+
+        return pd.DataFrame(data, index=self.dummies.index)
+
+    def merge_duplicate_dummies(self, inplace=False, merge_complements=True):
+        """Merge SNPs that are identical (or complements) in all strains.
+
+        @param inplace: Bool.
+
+        @param merge_complements: Bool. If True (default), also merge SNPs
+            that are complements of each other (i.e., one profile is 1 minus
+            the other). Complement SNPs have a "-" prepended to their name
+            in the merged column name. The first AAP in the merged name
+            always represents the pattern of 0/1s in the profile.
+
+        @raises ValueError: If any SNP names contain "|" or "-" characters.
+        """
+        # Validate SNP names don't contain reserved characters that are used
+        # to concatenate SNP names
+        reserved_chars = {"|", "-"}
+        invalid_names = [
+            col
+            for col in self.dummies.columns
+            if any(c in str(col) for c in reserved_chars)
+        ]
+
+        if invalid_names:
+            raise ValueError(
+                f"SNP names cannot contain '|' or '-' characters: "
+                f"{invalid_names}"
+            )
+
+        if merge_complements:
+            df = self._merge_dummies_with_complements()
+        else:
+            df = self._merge_identical_dummies()
 
         if inplace:
             self.dummies = df

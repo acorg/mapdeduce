@@ -463,7 +463,8 @@ class MapSeq(object):
 
         Args:
 
-            positions (iterable of ints). Optional. Lookup groups of sequences identical at these positions. Default is all positions.
+            positions (iterable of ints). Optional. Lookup groups of sequences
+                identical at these positions. Default is all positions.
 
         Returns:
             pd.GroupBy
@@ -531,15 +532,15 @@ class MapSeq(object):
     def plot_strains_with_combinations_kde(
         self, combinations, c=0.9, color="black", **kwargs
     ):
-        """Plot the countour corresponding to the region that contains c percent
-        of the density of a KDE over strains with combinations of amino acid
-        polymorphisms specified in combinations.
+        """Plot the contour corresponding to the region that contains c
+        percent of the density of a KDE over strains with combinations of
+        amino acid polymorphisms specified in combinations.
 
         Args:
             combinations (dict): Dictionary specifying combinations. E.g.:
                 {145: "N", 133: "D"}
             c (float / int)
-            color (matlplotlib colour): Colour to plot the contour line
+            color (matplotlib colour): Colour to plot the contour line
             **kwargs. Passed to plt.contour
         """
         df = self.strains_with_combinations(combinations)

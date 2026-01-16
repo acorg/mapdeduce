@@ -116,7 +116,7 @@ class FluLmmBlup(object):
     def __init__(self, filepath_or_df):
         """Train LMM and predict antigenic coordinates on influenza data.
 
-        @param filepathor_df. Str. Filepath to csv file containing data to
+        @param filepath or df. Str. Filepath to csv file containing data to
             train the LMM. File should have four columns that correspond to:
                 strain name, x coordinate, y coordinate, sequence
             Or: pd.DataFrame with the same columns. All strain names must be
@@ -169,10 +169,13 @@ class FluLmmBlup(object):
         if len(unknown_df.index) != len(set(unknown_df.index)):
             raise ValueError("Indexes in unknown_df must all be unique.")
 
-        seq_comb = pd.concat([self.seq, unknown_df])
+        if overlapping_strains := set(unknown_df.index) & set(self.seq.index):
+            raise ValueError(
+                "Indexes in unknown_df must not overlap self.seq: "
+                f"{overlapping_strains}"
+            )
 
-        if len(unknown_df.index) + len(self.seq.index) > len(seq_comb.index):
-            raise ValueError("Indexes in unkown_df must not overlap self.seq")
+        seq_comb = pd.concat([self.seq, unknown_df])
 
         # Process sequences for running LMM
         seq_comb = SeqDf(seq_comb)

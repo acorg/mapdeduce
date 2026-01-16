@@ -2,13 +2,19 @@
 
 """Tests for data"""
 
+from itertools import combinations
 import unittest
 
+from scipy.stats import pearsonr
 import numpy as np
 import pandas as pd
 
 import mapdeduce
-from mapdeduce.hwas import HwasLmm, find_perfectly_correlated_snps
+from mapdeduce.hwas import (
+    HwasLmm,
+    find_perfectly_correlated_snps,
+    prune_collinear_snps,
+)
 
 
 class HwasLmmCrossValidation(unittest.TestCase):
@@ -454,6 +460,166 @@ class HwasLmmRegressOut(unittest.TestCase):
         output = self.hwas.regress_out("SNP-2")
         expect = np.array(((0, 0), (-1, -2), (0, -2)))
         self.assertEqual(0, (output - expect).sum().sum())
+
+
+class PruneCollinearSnpsTests(unittest.TestCase):
+    """Tests for prune_collinear_snps function"""
+
+    def _r2(self, x, y):
+        """Compute r2 between two arrays using scipy.stats.pearsonr."""
+        r, _ = pearsonr(x, y)
+        return r**2
+
+    def test_independent_snps_all_kept(self):
+        """Independent SNPs (r2 ~= 0) should all be retained"""
+        # Manually chosen to have low correlation
+        snps = np.array(
+            [
+                [0, 1, 0],
+                [1, 0, 0],
+                [0, 0, 1],
+                [1, 1, 0],
+                [0, 1, 1],
+                [1, 0, 1],
+            ]
+        )
+
+        # Verify r2 between all pairs is low
+        for i, j in combinations(range(3), 2):
+            r2 = self._r2(snps[:, i], snps[:, j])
+            self.assertLess(r2, 0.5, f"SNPs {i} and {j} have r2={r2:.3f}")
+
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+
+        self.assertEqual([0, 1, 2], keep_idx.tolist())
+        self.assertEqual(3, len(keep_idx))
+        self.assertEqual((6, 3), pruned.shape)
+
+    def test_identical_snps_one_kept(self):
+        """Identical SNPs (r2 = 1) should result in only one being kept"""
+        # SNP duplicated 3 times
+        snp = np.array([0, 1, 0, 1, 1, 0])
+        snps = np.column_stack([snp, snp, snp])
+        self.assertEqual((6, 3), snps.shape)
+
+        # Verify r2 = 1 between all pairs
+        for i, j in combinations(range(3), 2):
+            r2 = self._r2(snps[:, i], snps[:, j])
+            self.assertEqual(r2, 1.0)
+
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
+
+        self.assertEqual(1, len(keep_idx))
+        self.assertEqual(0, keep_idx[0])  # First SNP should be kept
+        self.assertEqual((6, 1), pruned.shape)
+
+    def test_anticorrelated_snps_one_kept(self):
+        """Perfectly anti-correlated SNPs (r2 = 1) should be pruned"""
+        # SNP and its complement (r = -1, r2 = 1)
+        snp = np.array([0, 1, 0, 1, 1, 0])
+
+        # Verify r2 = 1
+        r2 = self._r2(snp, 1 - snp)
+        self.assertAlmostEqual(r2, 1.0)
+
+        snps = np.column_stack([snp, 1 - snp])
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
+
+        self.assertEqual(1, len(keep_idx))
+        self.assertEqual((6, 1), pruned.shape)
+
+    def test_high_correlation_above_threshold_pruned(self):
+        """SNPs with r2 above threshold should be pruned"""
+        # Create SNPs with r2 ~= 0.9 using linear combination
+        np.random.seed(42)
+        n = 100
+        snp1 = np.random.randint(0, 2, n)
+
+        # Make a 2nd snp where 95% of the values are copied from the first
+        # the remaining values are chosen at random
+        noise = np.random.randint(0, 2, n)
+        snp2 = np.where(np.random.random(n) < 0.95, snp1, noise)
+
+        # Verify r2 is high (> 0.9)
+        self.assertGreater(self._r2(snp1, snp2), 0.9)
+
+        snps = np.column_stack([snp1, snp2])
+        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=0.8)
+
+        self.assertEqual(1, len(keep_idx))
+
+    def test_moderate_correlation_below_threshold_kept(self):
+        """SNPs with r2 below threshold should both be kept"""
+        # Create SNPs with moderate correlation (r2 ~= 0.5)
+        np.random.seed(43)
+        n = 100
+        snp1 = np.random.randint(0, 2, n)
+
+        # Mix snp1 with noise to get moderate correlation
+        noise = np.random.randint(0, 2, n)
+        snp2 = np.where(np.random.random(n) < 0.7, snp1, noise)
+
+        # Check r2 is between 0.4 and 0.6
+        r2 = self._r2(snp1, snp2)
+        self.assertGreater(r2, 0.4)
+        self.assertLess(r2, 0.6)
+
+        snps = np.column_stack([snp1, snp2])
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+
+        self.assertEqual(2, len(keep_idx))
+        self.assertEqual((n, 2), pruned.shape)
+
+    def test_single_snp(self):
+        """Single SNP should be returned unchanged"""
+        snps = np.array(
+            [
+                [0],
+                [1],
+                [0],
+                [1],
+                [1],
+                [0],
+            ]
+        )
+
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+
+        self.assertEqual(1, len(keep_idx))
+        self.assertEqual(0, keep_idx[0])
+        np.testing.assert_array_equal(snps, pruned)
+
+    def test_returns_correct_indices(self):
+        """Returned indices should correctly reference original SNPs"""
+        # SNP0 and SNP2 are independent, SNP1 is duplicate of SNP0
+        snp0 = np.array([0, 1, 0, 1, 1, 0])
+        snp1 = snp0.copy()  # Duplicate
+        snp2 = np.array([1, 1, 0, 0, 1, 0])  # Independent
+
+        snps = np.column_stack([snp0, snp1, snp2])
+
+        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
+
+        np.testing.assert_array_equal(np.array([0, 2]), keep_idx)
+        np.testing.assert_array_equal(pruned, snps[:, keep_idx])
+
+    def test_threshold_boundary(self):
+        """SNPs exactly at threshold boundary"""
+        # Create SNPs with known exact r2 using deterministic construction
+        # For r=0.9, r2=0.81
+        snp1 = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
+        snp2 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        r2 = self._r2(snp1, snp2)
+
+        snps = np.column_stack([snp1, snp2])
+
+        # Threshold just above r2, both should be kept
+        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=r2 + 0.01)
+        self.assertEqual(2, len(keep_idx))
+
+        # Threshold at or below r2, one should be pruned
+        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=r2 - 0.01)
+        self.assertEqual(1, len(keep_idx))
 
 
 if __name__ == "__main__":

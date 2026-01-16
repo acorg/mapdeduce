@@ -88,6 +88,46 @@ def find_perfectly_correlated_snps(
     return correlated_pairs
 
 
+def prune_collinear_snps(snps, r2_threshold=0.95, verbose=False):
+    """
+    Prune highly collinear SNPs based on pairwise correlation.
+
+    Iterates through SNPs and removes those with r2 > threshold relative to any
+    already-retained SNP.
+
+    @param snps: (N, S) array of S SNPs for N individuals
+    @param r2_threshold: maximum allowed r2 between retained SNPs
+        (default 0.95)
+
+    @returns: tuple containing:
+        keep_indices: indices of retained SNPs
+        pruned_snps: (N, S') array of pruned SNPs
+    """
+    _, S = snps.shape
+
+    # Standardize SNPs (mean=0, std=1) for correlation calculation
+    snps_std = snps - snps.mean(axis=0)
+    norms = np.sqrt((snps_std**2).sum(axis=0))
+    norms[norms == 0] = 1  # Avoid division by zero for uniform SNPs
+    snps_std = snps_std / norms
+
+    keep_indices = [0]  # Always keep the first
+
+    for i in range(1, S):
+
+        # Compute r2 with all retained SNPs
+        # r = dot product of standardized vectors (already normalized by norms)
+        r2 = (snps_std[:, i] @ snps_std[:, keep_indices]) ** 2
+
+        # Keep this SNP if not highly correlated with any retained SNP
+        if r2.max() < r2_threshold:
+            keep_indices.append(i)
+
+    keep_indices = np.array(keep_indices)
+
+    return keep_indices, snps[:, keep_indices]
+
+
 def effective_tests(snps):
     """
     Compute the effective number of tests, given correlation between snps.

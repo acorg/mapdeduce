@@ -2,7 +2,7 @@
 
 set -eo pipefail
 
-uv run black --quiet mapdeduce
+uv run black --check --quiet mapdeduce
 
 uv run flake8 mapdeduce
 

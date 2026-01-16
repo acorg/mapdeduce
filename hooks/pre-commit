@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eo pipefail
+
+uv run black --quiet mapdeduce
+
+uv run flake8 mapdeduce
+
+uv run pytest --no-header --no-summary --quiet

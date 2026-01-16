@@ -5,7 +5,7 @@ from builtins import range
 import numpy as np
 import pandas as pd
 
-from limix_legacy.modules.varianceDecomposition import VarianceDecomposition
+from limix_legacy.deprecated.modules.varianceDecomposition import VarianceDecomposition
 
 from sklearn.model_selection import KFold
 

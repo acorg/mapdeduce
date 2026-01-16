@@ -6,8 +6,8 @@ from itertools import combinations
 from typing import Optional
 import warnings
 
-from limix_legacy.modules.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
-from limix_legacy.modules.varianceDecomposition import VarianceDecomposition
+from limix_legacy.deprecated.modules.qtl import qtl_test_lmm, qtl_test_lmm_kronecker
+from limix_legacy.deprecated.modules.varianceDecomposition import VarianceDecomposition
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np

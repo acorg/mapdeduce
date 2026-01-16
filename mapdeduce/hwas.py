@@ -333,7 +333,9 @@ class HwasLmm(object):
     combinations on antigenic phenotypes.
     """
 
-    def __init__(self, snps, pheno, covs=None):
+    def __init__(
+        self, snps, pheno, covs=None, regularise_kinship: bool = True
+    ):
         """
         @param snps: pd.DataFrame. (N, S). S snps for N individuals.
 
@@ -359,12 +361,13 @@ class HwasLmm(object):
         self.snps = snps
         self.pheno = pheno
         self.covs = covs
+        self.regularise_kinship = regularise_kinship
 
         self.N = snps.shape[0]  # Number of individuals
         self.S = snps.shape[1]  # Number of snps
         self.P = pheno.shape[1]  # Number of phenotypes
         self.P0 = pheno.columns[0]
-        self.K = cov(snps)
+        self.K = cov(snps, regularise=regularise_kinship)
 
         if self.covs is not None:
             self.Q = covs.shape[1]  # Number of covariates
@@ -387,7 +390,10 @@ class HwasLmm(object):
         """
         test_snps = self.snps.columns if test_snps is None else test_snps
         self.K_leave_out = {
-            s: cov(self.snps.drop(s, axis=1)) for s in test_snps
+            s: cov(
+                self.snps.drop(s, axis=1), regularise=self.regularise_kinship
+            )
+            for s in test_snps
         }
 
     def fit(
@@ -1134,7 +1140,9 @@ class HwasLmm(object):
         if Xab.sum() == 0:
             raise ValueError("{a} and {b} don't co-occur".format(a=a, b=b))
 
-        K1r = cov(self.snps.drop([a, b], axis=1))
+        K1r = cov(
+            self.snps.drop([a, b], axis=1), regularise=self.regularise_kinship
+        )
 
         try:
             lmm, pv = qtl_test_lmm_kronecker(

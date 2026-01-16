@@ -365,7 +365,7 @@ class HwasLmm(object):
                     )
                 else:
                     warnings.warn(
-                        f"{snp} does not have 2 unique values. Skipping."
+                        f"{snp} does not have 2 unique values. Skipping..."
                     )
                     continue
 
@@ -390,9 +390,10 @@ class HwasLmm(object):
                         Acovs=self.Acovs,
                     )
 
-                except AssertionError:
+                except AssertionError as err:
                     warnings.warn(
-                        f"Doing manual variance decomposition for {snp}."
+                        f"Assertion error in qtl_test_lmm_kronecker: {err}\n"
+                        f"Doing manual variance decomposition for {snp}..."
                     )
 
                     vs = VarianceDecomposition(Y=self.pheno.values)
@@ -412,7 +413,10 @@ class HwasLmm(object):
                     try:
                         conv = vs.optimize()
                     except np.linalg.LinAlgError:
-                        warnings.warn(f"{snp} raised LinAlgError")
+                        warnings.warn(
+                            "LinAlgError during manual variance "
+                            f"decomposition for {snp}. Skipping..."
+                        )
                         continue
 
                     if conv:
@@ -429,8 +433,8 @@ class HwasLmm(object):
 
                     else:
                         warnings.warn(
-                            f"Variance decomposition didn't converge for "
-                            f"{snp}. Skipping..."
+                            f"Manual variance decomposition for {snp} didn't "
+                            "converge. Skipping..."
                         )
                         continue
 

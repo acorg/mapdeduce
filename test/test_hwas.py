@@ -470,156 +470,211 @@ class PruneCollinearSnpsTests(unittest.TestCase):
         r, _ = pearsonr(x, y)
         return r**2
 
+    def test_requires_dataframe(self):
+        """Should raise TypeError if not passed a DataFrame"""
+        snps = np.array([[0, 1], [1, 0], [0, 0]])
+        with self.assertRaises(TypeError):
+            prune_collinear_snps(snps)
+
+    def test_requires_unique_columns(self):
+        """Should raise ValueError if column names are not unique"""
+        snps = pd.DataFrame([[0, 1], [1, 0]], columns=["A", "A"])
+        with self.assertRaises(ValueError):
+            prune_collinear_snps(snps)
+
+    def test_threshold_below_zero_raises(self):
+        """Should raise ValueError if threshold is negative"""
+        snps = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
+        with self.assertRaises(ValueError):
+            prune_collinear_snps(snps, threshold=-0.1)
+
+    def test_threshold_above_one_raises(self):
+        """Should raise ValueError if threshold is above 1"""
+        snps = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
+        with self.assertRaises(ValueError):
+            prune_collinear_snps(snps, threshold=1.1)
+
+    def test_threshold_zero_valid(self):
+        """threshold of exactly 0 should be accepted"""
+        snps = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
+        prune_collinear_snps(snps, threshold=0)
+
+    def test_threshold_one_valid(self):
+        """threshold of exactly 1 should be accepted"""
+        snps = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
+        prune_collinear_snps(snps, threshold=1)
+
     def test_independent_snps_all_kept(self):
         """Independent SNPs (r2 ~= 0) should all be retained"""
         # Manually chosen to have low correlation
-        snps = np.array(
-            [
-                [0, 1, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-                [1, 1, 0],
-                [0, 1, 1],
-                [1, 0, 1],
-            ]
+        snps = pd.DataFrame(
+            {
+                "A": [0, 1, 0, 1, 0, 1],
+                "B": [1, 0, 0, 1, 1, 0],
+                "C": [0, 0, 1, 0, 1, 1],
+            }
         )
 
         # Verify r2 between all pairs is low
-        for i, j in combinations(range(3), 2):
-            r2 = self._r2(snps[:, i], snps[:, j])
-            self.assertLess(r2, 0.5, f"SNPs {i} and {j} have r2={r2:.3f}")
+        for c1, c2 in combinations(snps.columns, 2):
+            self.assertLess(self._r2(snps[c1], snps[c2]), 0.5)
 
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.8)
 
-        self.assertEqual([0, 1, 2], keep_idx.tolist())
-        self.assertEqual(3, len(keep_idx))
-        self.assertEqual((6, 3), pruned.shape)
+        self.assertEqual(["A", "B", "C"], list(pruned_df.columns))
+        self.assertEqual({}, removed)
 
     def test_identical_snps_one_kept(self):
         """Identical SNPs (r2 = 1) should result in only one being kept"""
-        # SNP duplicated 3 times
-        snp = np.array([0, 1, 0, 1, 1, 0])
-        snps = np.column_stack([snp, snp, snp])
-        self.assertEqual((6, 3), snps.shape)
+        snp = [0, 1, 0, 1, 1, 0]
+        snps = pd.DataFrame({"A": snp, "B": snp, "C": snp})
 
-        # Verify r2 = 1 between all pairs
-        for i, j in combinations(range(3), 2):
-            r2 = self._r2(snps[:, i], snps[:, j])
-            self.assertEqual(r2, 1.0)
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.95)
 
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
-
-        self.assertEqual(1, len(keep_idx))
-        self.assertEqual(0, keep_idx[0])  # First SNP should be kept
-        self.assertEqual((6, 1), pruned.shape)
+        self.assertEqual(["A"], list(pruned_df.columns))
+        self.assertEqual({"B": "A", "C": "A"}, removed)
 
     def test_anticorrelated_snps_one_kept(self):
         """Perfectly anti-correlated SNPs (r2 = 1) should be pruned"""
-        # SNP and its complement (r = -1, r2 = 1)
         snp = np.array([0, 1, 0, 1, 1, 0])
+        snps = pd.DataFrame({"A": snp, "B": 1 - snp})
 
-        # Verify r2 = 1
-        r2 = self._r2(snp, 1 - snp)
-        self.assertAlmostEqual(r2, 1.0)
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.95)
 
-        snps = np.column_stack([snp, 1 - snp])
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
-
-        self.assertEqual(1, len(keep_idx))
-        self.assertEqual((6, 1), pruned.shape)
+        self.assertEqual(["A"], list(pruned_df.columns))
+        self.assertEqual({"B": "A"}, removed)
 
     def test_high_correlation_above_threshold_pruned(self):
         """SNPs with r2 above threshold should be pruned"""
-        # Create SNPs with r2 ~= 0.9 using linear combination
         np.random.seed(42)
         n = 100
         snp1 = np.random.randint(0, 2, n)
-
-        # Make a 2nd snp where 95% of the values are copied from the first
-        # the remaining values are chosen at random
         noise = np.random.randint(0, 2, n)
         snp2 = np.where(np.random.random(n) < 0.95, snp1, noise)
 
-        # Verify r2 is high (> 0.9)
         self.assertGreater(self._r2(snp1, snp2), 0.9)
 
-        snps = np.column_stack([snp1, snp2])
-        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=0.8)
+        snps = pd.DataFrame({"A": snp1, "B": snp2})
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.8)
 
-        self.assertEqual(1, len(keep_idx))
+        self.assertEqual(["A"], list(pruned_df.columns))
+        self.assertEqual({"B": "A"}, removed)
 
     def test_moderate_correlation_below_threshold_kept(self):
         """SNPs with r2 below threshold should both be kept"""
-        # Create SNPs with moderate correlation (r2 ~= 0.5)
         np.random.seed(43)
         n = 100
         snp1 = np.random.randint(0, 2, n)
-
-        # Mix snp1 with noise to get moderate correlation
         noise = np.random.randint(0, 2, n)
         snp2 = np.where(np.random.random(n) < 0.7, snp1, noise)
 
-        # Check r2 is between 0.4 and 0.6
         r2 = self._r2(snp1, snp2)
         self.assertGreater(r2, 0.4)
         self.assertLess(r2, 0.6)
 
-        snps = np.column_stack([snp1, snp2])
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+        snps = pd.DataFrame({"A": snp1, "B": snp2})
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.8)
 
-        self.assertEqual(2, len(keep_idx))
-        self.assertEqual((n, 2), pruned.shape)
+        self.assertEqual(["A", "B"], list(pruned_df.columns))
+        self.assertEqual({}, removed)
 
     def test_single_snp(self):
         """Single SNP should be returned unchanged"""
-        snps = np.array(
-            [
-                [0],
-                [1],
-                [0],
-                [1],
-                [1],
-                [0],
-            ]
+        snps = pd.DataFrame({"A": [0, 1, 0, 1, 1, 0]})
+
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.8)
+
+        self.assertEqual(["A"], list(pruned_df.columns))
+        self.assertEqual({}, removed)
+        pd.testing.assert_frame_equal(snps, pruned_df)
+
+    def test_removed_maps_to_most_correlated(self):
+        """Removed SNPs should map to the retained SNP with highest r2"""
+        # A and B are independent, C is identical to B
+        snps = pd.DataFrame(
+            {
+                "A": [0, 1, 0, 1, 1, 0],
+                "B": [1, 1, 0, 0, 1, 0],
+                "C": [1, 1, 0, 0, 1, 0],  # Identical to B
+            }
         )
 
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.8)
+        pruned_df, removed = prune_collinear_snps(snps, threshold=0.95)
 
-        self.assertEqual(1, len(keep_idx))
-        self.assertEqual(0, keep_idx[0])
-        np.testing.assert_array_equal(snps, pruned)
+        self.assertEqual(["A", "B"], list(pruned_df.columns))
+        self.assertEqual({"C": "B"}, removed)
 
-    def test_returns_correct_indices(self):
-        """Returned indices should correctly reference original SNPs"""
-        # SNP0 and SNP2 are independent, SNP1 is duplicate of SNP0
-        snp0 = np.array([0, 1, 0, 1, 1, 0])
-        snp1 = snp0.copy()  # Duplicate
-        snp2 = np.array([1, 1, 0, 0, 1, 0])  # Independent
+    def test_removed_maps_to_later_kept_snp(self):
+        """Removed SNP should map to most correlated kept SNP, even if kept
+        later.
 
-        snps = np.column_stack([snp0, snp1, snp2])
+        This tests the edge case where:
+        - B is pruned due to high correlation with A
+        - C is kept (low correlation with A)
+        - But B is more correlated with C than A
 
-        keep_idx, pruned = prune_collinear_snps(snps, r2_threshold=0.95)
+        The mapping should be B->C, not B->A.
+        """
+        # Construct SNPs using a "shifting window" pattern where B is
+        # between A and C, correlating with both but more strongly with C
+        A = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+        B = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+        C = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
 
-        np.testing.assert_array_equal(np.array([0, 2]), keep_idx)
-        np.testing.assert_array_equal(pruned, snps[:, keep_idx])
+        # Verify the correlation structure:
+        # r2_AB ~= 0.44, r2_AC ~= 0.29, r2_BC ~= 0.64
+        r2_AB = self._r2(A, B)
+        r2_AC = self._r2(A, C)
+        r2_BC = self._r2(B, C)
+
+        # Use threshold = 0.35, between r2_AC and r2_AB
+        threshold = 0.35
+
+        # B should be pruned (r2 with A above threshold)
+        self.assertGreater(r2_AB, threshold)
+
+        # C should be kept (r2 with A below threshold)
+        self.assertLess(r2_AC, threshold)
+
+        # B should map to C (higher r2 than with A)
+        self.assertGreater(r2_BC, r2_AB)
+
+        snps = pd.DataFrame({"A": A, "B": B, "C": C})
+        pruned_df, removed = prune_collinear_snps(snps, threshold=threshold)
+
+        self.assertEqual(["A", "C"], list(pruned_df.columns))
+
+        # B should map to C (most correlated), not A
+        self.assertEqual({"B": "C"}, removed)
 
     def test_threshold_boundary(self):
         """SNPs exactly at threshold boundary"""
-        # Create SNPs with known exact r2 using deterministic construction
-        # For r=0.9, r2=0.81
-        snp1 = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
-        snp2 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        snp1 = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+        snp2 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
         r2 = self._r2(snp1, snp2)
 
-        snps = np.column_stack([snp1, snp2])
+        snps = pd.DataFrame({"A": snp1, "B": snp2})
 
         # Threshold just above r2, both should be kept
-        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=r2 + 0.01)
-        self.assertEqual(2, len(keep_idx))
+        pruned_df, _ = prune_collinear_snps(snps, threshold=r2 + 0.01)
+        self.assertEqual(2, len(pruned_df.columns))
 
         # Threshold at or below r2, one should be pruned
-        keep_idx, _ = prune_collinear_snps(snps, r2_threshold=r2 - 0.01)
-        self.assertEqual(1, len(keep_idx))
+        pruned_df, _ = prune_collinear_snps(snps, threshold=r2 - 0.01)
+        self.assertEqual(1, len(pruned_df.columns))
+
+    def test_preserves_index(self):
+        """Returned DataFrame should preserve the original index"""
+        snps = pd.DataFrame(
+            {"A": [0, 1, 0], "B": [0, 1, 0]},
+            index=["sample1", "sample2", "sample3"],
+        )
+
+        pruned_df, _ = prune_collinear_snps(snps, threshold=0.95)
+
+        self.assertEqual(
+            ["sample1", "sample2", "sample3"], list(pruned_df.index)
+        )
 
 
 if __name__ == "__main__":

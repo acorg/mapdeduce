@@ -88,44 +88,68 @@ def find_perfectly_correlated_snps(
     return correlated_pairs
 
 
-def prune_collinear_snps(snps, r2_threshold=0.95, verbose=False):
+def prune_collinear_snps(
+    snps: pd.DataFrame, threshold: float = 0.95
+) -> pd.DataFrame:
     """
     Prune highly collinear SNPs based on pairwise correlation.
 
     Iterates through SNPs and removes those with r2 > threshold relative to any
     already-retained SNP.
 
-    @param snps: (N, S) array of S SNPs for N individuals
+    @param snps: pd.DataFrame of SNPs (columns) for individuals (rows).
+        Column names must be unique.
     @param r2_threshold: maximum allowed r2 between retained SNPs
         (default 0.95)
 
     @returns: tuple containing:
-        keep_indices: indices of retained SNPs
-        pruned_snps: (N, S') array of pruned SNPs
+        pruned_df: DataFrame containing only the retained SNPs
+        removed_to_kept: dict mapping each removed SNP name to the name of
+            the retained SNP it correlates most highly with
     """
-    _, S = snps.shape
+    if not isinstance(snps, pd.DataFrame):
+        raise TypeError("snps must be a pandas DataFrame")
+
+    if snps.columns.duplicated().any():
+        raise ValueError("SNP column names must be unique")
+
+    if not 0 <= threshold <= 1:
+        raise ValueError("r2 threshold must be between 0 and 1 inclusive")
+
+    snp_names = list(snps.columns)
+    S = len(snp_names)
 
     # Standardize SNPs (mean=0, std=1) for correlation calculation
-    snps_std = snps - snps.mean(axis=0)
+    snps_std = snps.values - snps.values.mean(axis=0)
     norms = np.sqrt((snps_std**2).sum(axis=0))
     norms[norms == 0] = 1  # Avoid division by zero for uniform SNPs
     snps_std = snps_std / norms
 
-    keep_indices = [0]  # Always keep the first
+    # First pass: determine which SNPs to keep
+    keep_indices = [0]  # always keep the first
 
     for i in range(1, S):
-
         # Compute r2 with all retained SNPs
         # r = dot product of standardized vectors (already normalized by norms)
         r2 = (snps_std[:, i] @ snps_std[:, keep_indices]) ** 2
 
         # Keep this SNP if not highly correlated with any retained SNP
-        if r2.max() < r2_threshold:
+        if r2.max() < threshold:
             keep_indices.append(i)
 
-    keep_indices = np.array(keep_indices)
+    # Second pass: map removed SNPs to their most correlated kept SNP
+    # Done after pruning so we compare against the final set of kept SNPs
+    removed_indices = [i for i in range(1, S) if i not in keep_indices]
+    removed_to_kept = {}
 
-    return keep_indices, snps[:, keep_indices]
+    for i in removed_indices:
+        r2 = (snps_std[:, i] @ snps_std[:, keep_indices]) ** 2
+        best_match_idx = keep_indices[np.argmax(r2)]
+        removed_to_kept[snp_names[i]] = snp_names[best_match_idx]
+
+    kept_cols = [snp_names[i] for i in keep_indices]
+
+    return snps[kept_cols], removed_to_kept
 
 
 def effective_tests(snps):

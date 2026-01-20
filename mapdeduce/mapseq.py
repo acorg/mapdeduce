@@ -79,6 +79,51 @@ class MapSeq(object):
             if len(self.seq_in_both.loc[:, p].unique()) != 1:
                 self.variant_positions.add(p)
 
+    def to_disk(self, path: str) -> None:
+        """Save MapSeq to a JSON file.
+
+        Args:
+            path: Path to save the JSON file.
+        """
+        import json
+
+        data = {
+            "version": 1,
+            "map": self.map,
+            "seq_df": json.loads(self.all_seqs.to_json(orient="split")),
+            "coord_df": json.loads(self.all_coords.to_json(orient="split")),
+        }
+
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+
+    @classmethod
+    def from_disk(cls, path: str) -> "MapSeq":
+        """Load MapSeq from a JSON file.
+
+        Args:
+            path: Path to the JSON file.
+
+        Returns:
+            MapSeq instance.
+        """
+        import json
+        from io import StringIO
+
+        import pandas as pd
+
+        with open(path) as f:
+            data = json.load(f)
+
+        seq_df = pd.read_json(
+            StringIO(json.dumps(data["seq_df"])), orient="split"
+        )
+        coord_df = pd.read_json(
+            StringIO(json.dumps(data["coord_df"])), orient="split"
+        )
+
+        return cls(seq_df=seq_df, coord_df=coord_df, map=data.get("map"))
+
     def scatter_with_without(self, **kwds):
         """Plot indicating which antigens do and do not have sequences.
 

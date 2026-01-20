@@ -2,6 +2,10 @@
 
 """Tests for MapSeq class"""
 
+import json
+import os
+import shutil
+import tempfile
 import unittest
 
 import numpy as np
@@ -257,6 +261,185 @@ class MapSeqDuplicateSeqeunces(unittest.TestCase):
         strains = grouped.groups[("Q", "N", "A")]
         test = set(strains)
         self.assertEqual({"strain3"}, test)
+
+
+class MapSeqDiskIO(unittest.TestCase):
+    """Tests for MapSeq.to_disk and MapSeq.from_disk"""
+
+    def setUp(self):
+        """Sequences and coordinates to use in tests"""
+        self.seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q"),
+                2: ("K", "K", "N"),
+                3: ("L", "P", "A"),
+            },
+            index=("strain1", "strain2", "strain3"),
+        )
+        self.coord_df = pd.DataFrame(
+            {
+                "x": (0.0, 0.5, 1.0),
+                "y": (0.0, 1.0, 0.5),
+            },
+            index=("strain1", "strain2", "strain3"),
+        )
+        self.tmpdir = None
+
+    def tearDown(self):
+        """Clean up temp files"""
+        if self.tmpdir and self.tmpdir.startswith(tempfile.gettempdir()):
+            shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _get_tmpfile(self):
+        """Create a temp file path"""
+        self.tmpdir = tempfile.mkdtemp()
+        return f"{self.tmpdir}/mapseq.json"
+
+    def test_to_disk_creates_file(self):
+        """to_disk should create a file at the specified path"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        self.assertTrue(os.path.exists(path))
+
+    def test_to_disk_creates_valid_json(self):
+        """to_disk should create valid JSON"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIsInstance(data, dict)
+
+    def test_to_disk_contains_version(self):
+        """to_disk output should contain a version field"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIn("version", data)
+        self.assertEqual(data["version"], 1)
+
+    def test_to_disk_contains_seq_df(self):
+        """to_disk output should contain seq_df with split orient structure"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIn("seq_df", data)
+        self.assertIn("columns", data["seq_df"])
+        self.assertIn("index", data["seq_df"])
+        self.assertIn("data", data["seq_df"])
+
+    def test_to_disk_contains_coord_df(self):
+        """to_disk output should contain coord_df with split orient structure"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIn("coord_df", data)
+        self.assertIn("columns", data["coord_df"])
+        self.assertIn("index", data["coord_df"])
+        self.assertIn("data", data["coord_df"])
+
+    def test_to_disk_contains_map_when_set(self):
+        """to_disk output should contain map field when set"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df, map=2017)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIn("map", data)
+        self.assertEqual(data["map"], 2017)
+
+    def test_to_disk_map_null_when_not_set(self):
+        """to_disk output should have map as null when not set"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with open(path) as f:
+            data = json.load(f)
+
+        self.assertIn("map", data)
+        self.assertIsNone(data["map"])
+
+    def test_from_disk_returns_mapseq(self):
+        """from_disk should return a MapSeq instance"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+        ms.to_disk(path)
+
+        loaded = MapSeq.from_disk(path)
+
+        self.assertIsInstance(loaded, MapSeq)
+
+    def test_roundtrip_preserves_seq_data(self):
+        """Round-trip should preserve sequence data"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+        ms.to_disk(path)
+
+        loaded = MapSeq.from_disk(path)
+
+        pd.testing.assert_frame_equal(
+            ms.all_seqs.sort_index(),
+            loaded.all_seqs.sort_index(),
+        )
+
+    def test_roundtrip_preserves_coord_data(self):
+        """Round-trip should preserve coordinate data"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+        ms.to_disk(path)
+
+        loaded = MapSeq.from_disk(path)
+
+        pd.testing.assert_frame_equal(
+            ms.all_coords.sort_index(),
+            loaded.all_coords.sort_index(),
+        )
+
+    def test_roundtrip_preserves_map_metadata(self):
+        """Round-trip should preserve map metadata"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df, map=2009)
+        path = self._get_tmpfile()
+        ms.to_disk(path)
+
+        loaded = MapSeq.from_disk(path)
+
+        self.assertEqual(ms.map, loaded.map)
+
+    def test_roundtrip_preserves_none_map(self):
+        """Round-trip should preserve None map metadata"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df, map=None)
+        path = self._get_tmpfile()
+        ms.to_disk(path)
+
+        loaded = MapSeq.from_disk(path)
+
+        self.assertIsNone(loaded.map)
 
 
 class OrderedMapSeqTests(unittest.TestCase):

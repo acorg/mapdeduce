@@ -1,7 +1,5 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
-from __future__ import print_function, division
-from builtins import zip, map, str, object, range
 from itertools import combinations
 from typing import Optional
 import warnings
@@ -396,6 +394,59 @@ class HwasLmm(object):
             for s in test_snps
         }
 
+    def _manual_variance_decomposition(
+        self, snp: str, snp_profile: np.ndarray, covs: Optional[np.ndarray]
+    ) -> Optional[object]:
+        """
+        Perform manual variance decomposition when qtl_test_lmm_kronecker
+        fails.
+
+        @param snp: Name of the SNP being tested.
+        @param snp_profile: (N, 1) array of SNP values.
+        @param covs: (N, Q) array of covariates, or None.
+
+        @returns: The lmm object if successful, None if decomposition fails.
+        """
+        vs = VarianceDecomposition(Y=self.pheno.values)
+
+        if covs is not None:
+            F = np.concatenate((covs, snp_profile), axis=1)
+        else:
+            F = snp_profile
+
+        vs.addFixedEffect(F=F, A=self.Acovs)
+        vs.addRandomEffect(K=self.K_leave_out[snp])
+        vs.addRandomEffect(is_noise=True)
+
+        try:
+            conv = vs.optimize()
+        except np.linalg.LinAlgError:
+            warnings.warn(
+                "LinAlgError during manual variance "
+                f"decomposition for {snp}. Skipping..."
+            )
+            return None
+
+        if not conv:
+            warnings.warn(
+                f"Manual variance decomposition for {snp} didn't "
+                "converge. Skipping..."
+            )
+            return None
+
+        lmm, _ = qtl_test_lmm_kronecker(
+            snps=snp_profile,
+            phenos=self.pheno.values,
+            Asnps=self.Asnps,
+            covs=covs,
+            Acovs=self.Acovs,
+            K1r=self.K_leave_out[snp],
+            K1c=vs.getTraitCovar(0),
+            K2c=vs.getTraitCovar(1),
+        )
+
+        return lmm
+
     def fit(
         self, test_snps: Optional[list[str]] = None, progress_bar: bool = False
     ) -> None:
@@ -415,11 +466,12 @@ class HwasLmm(object):
 
         snps_to_test = self.snps.loc[:, test_snps]
 
-        # Check for perfectly correlated SNPs
-        if correlated_pairs := find_perfectly_correlated_snps(snps_to_test):
+        if matching_snps := find_perfectly_correlated_snps(snps_to_test):
+
             pair_strs = [
-                f"  {a} and {b} ({rel})" for a, b, rel in correlated_pairs
+                f"  {a} and {b} ({rel})" for a, b, rel in matching_snps
             ]
+
             raise ValueError(
                 "Found perfectly correlated SNPs. These must be removed or "
                 "merged before fitting:\n" + "\n".join(pair_strs)
@@ -449,25 +501,26 @@ class HwasLmm(object):
                     )
                     continue
 
+            qtl_kwds = dict(snps=snp_profile, covs=covs)
+
             if self.P == 1:
                 lmm = qtl_test_lmm(
-                    snps=snp_profile,
                     pheno=self.pheno.values,
                     K=self.K_leave_out[snp],
-                    covs=covs,
+                    **qtl_kwds,
                 )
 
                 beta = lmm.getBetaSNP()[0, 0]
 
             else:
+
                 try:
                     lmm, _ = qtl_test_lmm_kronecker(
-                        snps=snp_profile,
                         phenos=self.pheno.values,
                         Asnps=self.Asnps,
                         K1r=self.K_leave_out[snp],
-                        covs=covs,
                         Acovs=self.Acovs,
+                        **qtl_kwds,
                     )
 
                 except AssertionError as err:
@@ -476,45 +529,13 @@ class HwasLmm(object):
                         f"Doing manual variance decomposition for {snp}..."
                     )
 
-                    vs = VarianceDecomposition(Y=self.pheno.values)
-
-                    if self.covs is not None:
-                        F = np.concatenate(
-                            (self.covs.values, snp_profile), axis=1
-                        )
-
-                    else:
-                        F = snp_profile
-
-                    vs.addFixedEffect(F=F, A=self.Acovs)
-                    vs.addRandomEffect(K=self.K_leave_out[snp])
-                    vs.addRandomEffect(is_noise=True)
-
-                    try:
-                        conv = vs.optimize()
-                    except np.linalg.LinAlgError:
+                    lmm = self._manual_variance_decomposition(
+                        snp, snp_profile, covs
+                    )
+                    if lmm is None:
                         warnings.warn(
-                            "LinAlgError during manual variance "
-                            f"decomposition for {snp}. Skipping..."
-                        )
-                        continue
-
-                    if conv:
-                        lmm, _ = qtl_test_lmm_kronecker(
-                            snps=snp_profile,
-                            phenos=self.pheno.values,
-                            Asnps=self.Asnps,
-                            covs=covs,
-                            Acovs=self.Acovs,
-                            K1r=self.K_leave_out[snp],
-                            K1c=vs.getTraitCovar(0),
-                            K2c=vs.getTraitCovar(1),
-                        )
-
-                    else:
-                        warnings.warn(
-                            f"Manual variance decomposition for {snp} didn't "
-                            "converge. Skipping..."
+                            "Couldn't fit manual variance decomposition for "
+                            f"{snp}. Skipping..."
                         )
                         continue
 

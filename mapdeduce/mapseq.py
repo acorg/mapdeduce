@@ -1,12 +1,15 @@
 """Contains the main class to represent maps with sequences."""
 
 import itertools
+import json
 import warnings
 from functools import reduce
+from io import StringIO
 from operator import and_
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import sklearn
 import spm1d
 import tqdm
@@ -85,8 +88,6 @@ class MapSeq(object):
         Args:
             path: Path to save the JSON file.
         """
-        import json
-
         data = {
             "version": 1,
             "map": self.map,
@@ -107,11 +108,6 @@ class MapSeq(object):
         Returns:
             MapSeq instance.
         """
-        import json
-        from io import StringIO
-
-        import pandas as pd
-
         with open(path) as f:
             data = json.load(f)
 

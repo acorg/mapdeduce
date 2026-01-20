@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from mapdeduce.blup import LmmBlup, FluLmmBlup
+from mapdeduce.blup import FluLmmBlup, LmmBlup
 
 
 class LmmBlupInit(unittest.TestCase):

@@ -2,13 +2,13 @@
 
 """Tests for data munginig functions"""
 
+import os
 import unittest
 
 import pandas as pd
-import os
 
 import mapdeduce
-from mapdeduce.munging import dict_from_fasta, df_from_fasta
+from mapdeduce.munging import df_from_fasta, dict_from_fasta
 
 
 class DictFromFastaTests(unittest.TestCase):

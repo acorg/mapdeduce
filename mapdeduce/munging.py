@@ -1,9 +1,10 @@
 """Utilities for munging data."""
 
-from Bio.SeqIO import parse
-import pandas as pd
-import numpy as np
 import re
+
+import numpy as np
+import pandas as pd
+from Bio.SeqIO import parse
 
 
 def dict_from_fasta(path, upper=True):

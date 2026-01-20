@@ -1,24 +1,18 @@
 """BLUP: Best linear unbiased predictions of a linear mixed model."""
 
-from builtins import range
-
 import numpy as np
 import pandas as pd
-
 from limix_legacy.deprecated.modules.varianceDecomposition import (
     VarianceDecomposition,
 )
-
-from sklearn.model_selection import KFold
-
 from scipy.spatial.distance import euclidean
-
+from sklearn.model_selection import KFold
 from tqdm import tqdm
 
 from .dataframes import SeqDf
+from .helper import expand_sequences
 from .hwas import cov
 from .mapseq import OrderedMapSeq
-from .helper import expand_sequences
 
 
 class LmmBlup(object):

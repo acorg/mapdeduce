@@ -1,39 +1,30 @@
 """Contains the main class to represent maps with sequences."""
 
-from __future__ import print_function, division
-
-from builtins import zip, map, str, range, object
+import itertools
+import warnings
+from functools import reduce
+from operator import and_
 
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-
-import warnings
-
 import numpy as np
+import sklearn
 import spm1d
-
+import tqdm
+from matplotlib.collections import LineCollection
 from scipy import spatial
 
-import sklearn
-
-from operator import and_
-import itertools
-
-import tqdm
-
-from .plotting import (
-    setup_ax,
-    amino_acid_colors,
-    add_ellipses,
-    combination_label,
-    point_size,
-    make_ax_a_map,
-)
-from .munging import handle_duplicate_sequences
 from .data import amino_acids
 from .dataframes import CoordDf, SeqDf
 from .helper import is_not_amino_acid
-from functools import reduce
+from .munging import handle_duplicate_sequences
+from .plotting import (
+    add_ellipses,
+    amino_acid_colors,
+    combination_label,
+    make_ax_a_map,
+    point_size,
+    setup_ax,
+)
 
 
 class MapSeq(object):

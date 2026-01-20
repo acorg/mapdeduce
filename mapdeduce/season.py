@@ -1,7 +1,5 @@
 """Code for classifying dates into influenza seasons and related processes."""
 
-from builtins import str, map
-
 import pandas as pd
 
 octToDec = 10, 11, 12

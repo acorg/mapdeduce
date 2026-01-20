@@ -2,12 +2,12 @@
 
 """Tests for data"""
 
-from itertools import combinations
 import unittest
+from itertools import combinations
 
-from scipy.stats import pearsonr
 import numpy as np
 import pandas as pd
+from scipy.stats import pearsonr
 
 import mapdeduce
 from mapdeduce.hwas import (

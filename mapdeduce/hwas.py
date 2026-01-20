@@ -1,9 +1,15 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
+import warnings
 from itertools import combinations
 from typing import Optional
-import warnings
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy
+import seaborn as sns
+import sklearn
 from limix_legacy.deprecated.modules.qtl import (
     qtl_test_lmm,
     qtl_test_lmm_kronecker,
@@ -12,17 +18,10 @@ from limix_legacy.deprecated.modules.varianceDecomposition import (
     VarianceDecomposition,
 )
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import scipy
-import seaborn as sns
-import sklearn
 
 from .dataframes import CoordDf
 from .permp import permp
-from .plotting import plot_arrow, make_ax_a_map
-
+from .plotting import make_ax_a_map, plot_arrow
 
 warnings.filterwarnings("ignore", module="h5py")
 

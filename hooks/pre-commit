@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+uv run isort --check --quiet --profile black mapdeduce
+
 uv run black --check --quiet mapdeduce
 
 uv run flake8 mapdeduce

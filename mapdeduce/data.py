@@ -2,7 +2,6 @@
 
 # Source:
 #   https://www.fludb.org/brc/vaccineRecommend.spg?decorator=influenza
-from builtins import range
 
 seasonToVaccine = {
     "2000-2001": "A(H3N2)/MOSCOW/10/1999",

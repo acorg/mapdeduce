@@ -1,18 +1,12 @@
 """Classes for handling DataFrames containing coordinates and sequences"""
 
-from __future__ import print_function
-from builtins import range, object
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
 import sklearn
+from scipy.spatial.distance import euclidean
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import quantile_transform
-
-from scipy.spatial.distance import euclidean
-
-import matplotlib.pyplot as plt
 
 from .helper import expand_sequences, site_consensus
 from .munging import df_from_fasta

@@ -21,6 +21,7 @@ keywords = ["influenza", "lmm", "antigenic cartography"]
 dependencies = [
     "biopython",
     "flake8>=7.3.0",
+    "isort>=6.1.0",
     "limix_legacy @ git+https://github.com/davipatti/limix-legacy@master",
     "matplotlib",
     "pandas",

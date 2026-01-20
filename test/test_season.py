@@ -4,12 +4,13 @@
 
 import unittest
 
+from pandas import to_datetime
+
 from mapdeduce.season import (
+    hemisphere_from_season,
     in_season,
     season_from_timestamp,
-    hemisphere_from_season,
 )
-from pandas import to_datetime
 
 
 class InSeasonTests(unittest.TestCase):

@@ -676,6 +676,56 @@ class PruneCollinearSnpsTests(unittest.TestCase):
             ["sample1", "sample2", "sample3"], list(pruned_df.index)
         )
 
+    def test_uniform_snp_handled_correctly(self):
+        """Uniform SNPs (zero variance) should not cause numerical issues."""
+        n = 10
+        snps = pd.DataFrame(
+            {
+                "A": np.zeros(n),  # uniform
+                "B": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                "C": np.ones(n),  # uniform
+            }
+        )
+
+        # Should complete without error
+        pruned_df, _ = prune_collinear_snps(snps, threshold=0.95)
+
+        # Uniform SNPs should be kept (since they're first or have r2=nan
+        # which is not > threshold)
+        self.assertIn("A", pruned_df.columns)
+
+    def test_near_uniform_snp_handled_correctly(self):
+        """Near-uniform SNPs should not cause numerical issues.
+
+        When a SNP has very small variance, the standardization norm is tiny.
+        This should be handled without producing inf, nan, or overflow.
+        """
+        n = 10
+
+        # Create SNPs with varying degrees of near-uniformity
+        # These have tiny but non-zero variance
+        nearly_uniform_1 = np.zeros(n)
+        nearly_uniform_1[0] = 1e-10  # Tiny non-zero value
+
+        nearly_uniform_2 = np.full(n, 0.5)
+        nearly_uniform_2[0] = 0.5 + 1e-15  # Tiny variation
+
+        snps = pd.DataFrame(
+            {
+                "A": [0, 1, 0, 1, 0, 1, 0, 1, 0, 1],  # Normal SNP
+                "B": nearly_uniform_1,
+                "C": nearly_uniform_2,
+                "D": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0],  # Normal SNP
+            }
+        )
+
+        # Should complete without error or warning
+        pruned_df, _ = prune_collinear_snps(snps, threshold=0.95)
+
+        # Should return valid output
+        self.assertIsInstance(pruned_df, pd.DataFrame)
+        self.assertFalse(pruned_df.empty)
+
 
 if __name__ == "__main__":
     unittest.main()

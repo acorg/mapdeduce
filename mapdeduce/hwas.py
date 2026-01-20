@@ -125,7 +125,8 @@ def prune_collinear_snps(
     # Standardize SNPs (mean=0, std=1) for correlation calculation
     snps_std = snps.values - snps.values.mean(axis=0)
     norms = np.sqrt((snps_std**2).sum(axis=0))
-    norms[norms == 0] = 1  # Avoid division by zero for uniform SNPs
+    # Avoid division issues for uniform/near-uniform SNPs
+    norms[norms < 1e-12] = 1
     snps_std = snps_std / norms
 
     # First pass: determine which SNPs to keep
@@ -134,7 +135,8 @@ def prune_collinear_snps(
     for i in range(1, S):
         # Compute r2 with all retained SNPs
         # r = dot product of standardized vectors (already normalized by norms)
-        r2 = (snps_std[:, i] @ snps_std[:, keep_indices]) ** 2
+        # Use np.dot instead of @ to avoid spurious warnings in NumPy < 2.4
+        r2 = np.dot(snps_std[:, i], snps_std[:, keep_indices]) ** 2
 
         # Keep this SNP if not highly correlated with any retained SNP
         if r2.max() < threshold:
@@ -145,8 +147,9 @@ def prune_collinear_snps(
     removed_indices = [i for i in range(1, S) if i not in keep_indices]
     removed_to_kept = {}
 
+    kept_snps = snps_std[:, keep_indices]
     for i in removed_indices:
-        r2 = (snps_std[:, i] @ snps_std[:, keep_indices]) ** 2
+        r2 = np.dot(snps_std[:, i], kept_snps) ** 2
         best_match_idx = keep_indices[np.argmax(r2)]
         removed_to_kept[snp_names[i]] = snp_names[best_match_idx]
 

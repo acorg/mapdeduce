@@ -1,5 +1,7 @@
 """Code for classifying dates into influenza seasons and related processes."""
 
+from typing import Callable, Literal, Optional, Union
+
 import pandas as pd
 
 octToDec = 10, 11, 12
@@ -7,7 +9,7 @@ janToMay = 1, 2, 3, 4, 5
 aprToNov = 4, 5, 6, 7, 8, 9, 10, 11
 
 
-def in_season(season):
+def in_season(season: Union[str, int]) -> Callable[[pd.Timestamp], bool]:
     """Make function to test if a date is in season.
 
     Args:
@@ -64,12 +66,14 @@ def in_season(season):
     return fun
 
 
-def season_from_timestamp(ts, hemisphere):
+def season_from_timestamp(
+    ts: pd.Timestamp, hemisphere: Literal["N", "S"]
+) -> Optional[str]:
     """Convert timestamp to a season
 
     Args:
         ts (pd.Timestamp)
-        hemisphere (str): "N" or "S" (northern or southern).
+        hemisphere (Literal["N", "S"]): "N" or "S" (northern or southern).
 
     Returns:
         str. Like "2006-2007" for northern hemisphere seasons or "2006" for
@@ -99,7 +103,7 @@ def season_from_timestamp(ts, hemisphere):
         raise ValueError("hemisphere must be either 'N' or 'S'.")
 
 
-def date_str_to_timestamp(date):
+def date_str_to_timestamp(date: str) -> Optional[pd.Timestamp]:
     """Make date field in fasta header into a pd.timestamp.
 
     Args:
@@ -119,7 +123,7 @@ def date_str_to_timestamp(date):
         return pd.to_datetime(date)
 
 
-def hemisphere_from_season(season):
+def hemisphere_from_season(season: Union[str, int]) -> Literal["N", "S"]:
     """Classify a season as either N or S
 
     Args:

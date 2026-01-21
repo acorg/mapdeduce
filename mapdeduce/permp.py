@@ -1,5 +1,7 @@
 """Python wrapper for R permp function, in the statmod library."""
 
+from typing import Optional
+
 import numpy as np
 import rpy2.robjects as robjects
 import rpy2.robjects.packages as rpackages
@@ -7,7 +9,15 @@ import rpy2.robjects.packages as rpackages
 rpackages.importr("statmod")
 
 
-def permp(x, nperm, n1, n2, total_nperm=None, method="auto", twosided=True):
+def permp(
+    x: int,
+    nperm: int,
+    n1: int,
+    n2: int,
+    total_nperm: Optional[int] = None,
+    method: str = "auto",
+    two_sided: bool = True,
+) -> np.ndarray:
     """
     Calculates exact p-values for permutation tests when permutations
     are randomly drawn with replacement.
@@ -23,7 +33,7 @@ def permp(x, nperm, n1, n2, total_nperm=None, method="auto", twosided=True):
         design  of the experiment.
     @param method: Str. Indicates computation method. Possible values are
         "exact", "approximate" or "auto".
-    @param twosided: Bool. Is the test two-sided and symmetric between the
+    @param two_sided: Bool. Is the test two-sided and symmetric between the
         two groups?
 
     This function can be used for calculating exact p-values for
@@ -70,6 +80,6 @@ def permp(x, nperm, n1, n2, total_nperm=None, method="auto", twosided=True):
             n2=robjects.IntVector([n2]),
             total_nperm=total_nperm,
             method=method,
-            twosided=twosided,
+            twosided=two_sided,
         )
     )

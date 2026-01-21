@@ -145,7 +145,7 @@ class FluLmmBlupInit(unittest.TestCase):
             # seq and coord should have data
             self.assertEqual(len(flu.seq), 4)
             self.assertEqual(len(flu.coord), 4)
-        
+
         finally:
             os.unlink(temp_path)
 

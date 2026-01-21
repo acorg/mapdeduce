@@ -1,14 +1,20 @@
 """Utilities for munging data."""
 
 import re
+from typing import Union
 
 import numpy as np
 import pandas as pd
 from Bio.SeqIO import parse
 
+STRAIN_REGEX = re.compile(r"^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
+AH3N2_REGEX = re.compile(r"^([A-Z]+_)?A\(H3N2\)\/")
+HUMAN_REGEX = re.compile(r"\/HUMAN\/")
 
-def dict_from_fasta(path, upper=True):
-    """Read a fasta file.
+
+def dict_from_fasta(path: str, upper: bool = True) -> dict:
+    """
+    Read a fasta file.
 
     @param path (str): Path to fasta file.
     @param upper (bool): Convert fasta header to upper case.
@@ -23,8 +29,11 @@ def dict_from_fasta(path, upper=True):
             return {r.description: str(r.seq) for r in records}
 
 
-def df_from_fasta(path, positions=tuple(range(1, 329))):
-    """Read fasta file specified in path.
+def df_from_fasta(
+    path: str, positions: Union[tuple, str] = tuple(range(1, 329))
+) -> pd.DataFrame:
+    """
+    Read fasta file specified in path.
 
     @param path: String.
     @param positions: List-like or "infer". If list-like, must contain integers
@@ -55,7 +64,7 @@ def df_from_fasta(path, positions=tuple(range(1, 329))):
     return df
 
 
-def read_eu_coordinate_layout(path):
+def read_eu_coordinate_layout(path: str) -> pd.DataFrame:
     """
     Read layout files from Eugene.
 
@@ -74,14 +83,9 @@ def read_eu_coordinate_layout(path):
     return df.loc["AG", :]
 
 
-# Compile once
-strain_regex = re.compile(r"^A\/[-_A-Z]*\/[-A-Z0-9]*\/[0-9]{4}_")
-ah3n2_regex = re.compile(r"^([A-Z]+_)?A\(H3N2\)\/")
-human_regex = re.compile(r"\/HUMAN\/")
-
-
-def clean_strain_name(strain_name):
+def clean_strain_name(strain_name: str) -> str:
     """
+
     Replace A(H3N2) with A at the start of a strain name.
 
     Then, match the first four components of a strain name, delimited by /,
@@ -98,16 +102,16 @@ def clean_strain_name(strain_name):
 
     @param strain_name. Str.
     """
-    strain_name = re.sub(pattern=human_regex, repl="/", string=strain_name)
-    strain_name = re.sub(pattern=ah3n2_regex, repl="A/", string=strain_name)
-    match = re.match(pattern=strain_regex, string=strain_name)
+    strain_name = re.sub(pattern=HUMAN_REGEX, repl="/", string=strain_name)
+    strain_name = re.sub(pattern=AH3N2_REGEX, repl="A/", string=strain_name)
+    match = re.match(pattern=STRAIN_REGEX, string=strain_name)
     try:
         return match.group().strip("_")
     except AttributeError:
         return strain_name
 
 
-def clean_df_strain_names(df, filename):
+def clean_df_strain_names(df: pd.DataFrame, filename: str) -> pd.DataFrame:
     """
     Clean strain names of DataFrame indexes and write a file containing
     rows of the original and altered strain names for inspecting.
@@ -133,7 +137,7 @@ def clean_df_strain_names(df, filename):
     return df
 
 
-def handle_duplicate_sequences(df):
+def handle_duplicate_sequences(df: pd.DataFrame) -> pd.DataFrame:
     """
     (A) Remove rows with identical indexes and sequences.
     (B) Keep rows with duplicate sequences, but different indexes.
@@ -166,7 +170,7 @@ def handle_duplicate_sequences(df):
         return df
 
 
-def merge_amino_acids(amino_acids):
+def merge_amino_acids(amino_acids: pd.Series) -> str:
     """
     Merge amino acids. If there is only one unique amino acid
     return that. If there is only one unique amino acid, and the

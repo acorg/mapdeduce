@@ -1,12 +1,15 @@
 """Helper functions."""
 
+from typing import Optional
+
 import pandas as pd
 
 from .data import amino_acids
 
 
-def is_not_amino_acid(a):
-    """Test if a is not an amino acid.
+def is_not_amino_acid(a: str) -> bool:
+    """
+    Test if a is not an amino acid.
 
     Args:
         a (str): String to test.
@@ -25,8 +28,9 @@ def is_not_amino_acid(a):
         return False
 
 
-def string_to_series(arg):
-    """Each element in string becomes element in series
+def string_to_series(arg: str) -> pd.Series:
+    """
+    Each element in string becomes element in series
 
     Notes:
         If arg is cannot be coerced to a series, return an empty series.
@@ -43,8 +47,9 @@ def string_to_series(arg):
         return pd.Series(dtype="object")
 
 
-def expand_sequences(series):
-    """Expand Series containing sequences into DataFrame.
+def expand_sequences(series: pd.Series) -> pd.DataFrame:
+    """
+    Expand Series containing sequences into DataFrame.
 
     Notes:
         Any elements in series that cannot be expanded will be dropped.
@@ -62,8 +67,9 @@ def expand_sequences(series):
     return df[df.notnull().all(axis=1)]
 
 
-def check_all_not_null(df):
-    """Check that each row in df does not contain only null entries.
+def check_all_not_null(df: pd.DataFrame) -> Optional[pd.Index]:
+    """
+    Check that each row in df does not contain only null entries.
 
     Args:
         df (pd.DataFrame)
@@ -76,8 +82,9 @@ def check_all_not_null(df):
         return mask[mask].index
 
 
-def site_consensus(series):
-    """Return the consensus amino acid of a series.
+def site_consensus(series: pd.Series) -> str:
+    """
+    Return the consensus amino acid of a series.
 
     Notes:
         - Should return the amino acid with the highest value count in series.

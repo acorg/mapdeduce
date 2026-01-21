@@ -194,6 +194,13 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.ms.strains_with_combinations({4: "K"}, verbose=False)
 
+    def test_error_message_includes_position(self):
+        """Error message should include the unknown position number"""
+        with self.assertRaises(ValueError) as ctx:
+            self.ms.strains_with_combinations({999: "K"}, verbose=False)
+        # Check that the position number appears in the error message
+        self.assertIn("999", str(ctx.exception))
+
 
 class MapSeqDuplicateSeqeunces(unittest.TestCase):
     """Tests for MapSeq.duplicate_sequences"""
@@ -345,7 +352,9 @@ class MapSeqDiskIO(unittest.TestCase):
         self.assertIn("data", data["seq_df"])
 
     def test_to_disk_contains_coord_df(self):
-        """to_disk output should contain coord_df with split orient structure"""
+        """
+        to_disk output should contain coord_df with split orient structure
+        """
         ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
         path = self._get_tmpfile()
 

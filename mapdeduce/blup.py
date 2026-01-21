@@ -17,7 +17,7 @@ from .hwas import cov
 from .mapseq import OrderedMapSeq
 
 
-class LmmBlup(object):
+class LmmBlup:
     """Best linear unbiased predictions of a linear mixed model."""
 
     def __init__(
@@ -119,7 +119,7 @@ class LmmBlup(object):
             self.kfold_error[i] = pd.Series(distance)
 
 
-class FluLmmBlup(object):
+class FluLmmBlup:
     def __init__(self, filepath_or_df: Union[str, pd.DataFrame]) -> None:
         """
         Train LMM and predict antigenic coordinates on influenza data.

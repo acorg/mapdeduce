@@ -14,7 +14,7 @@ from .helper import expand_sequences, site_consensus
 from .munging import df_from_fasta
 
 
-class CoordDf(object):
+class CoordDf:
     """Class for x, y coordinate data."""
 
     def __init__(self, df: pd.DataFrame) -> None:
@@ -127,7 +127,7 @@ class CoordDf(object):
         return distances
 
 
-class SeqDf(object):
+class SeqDf:
     """Class for DataFrames containing amino acid sequences."""
 
     def __init__(self, df: pd.DataFrame) -> None:

@@ -32,7 +32,7 @@ from .plotting import (
 )
 
 
-class MapSeq(object):
+class MapSeq:
     def __init__(
         self,
         seq_df: pd.DataFrame,

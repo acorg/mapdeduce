@@ -10,6 +10,7 @@ import pandas as pd
 import scipy
 import seaborn as sns
 import sklearn
+from limix_legacy.deprecated import CKroneckerLMM
 from limix_legacy.deprecated.modules.qtl import (
     qtl_test_lmm,
     qtl_test_lmm_kronecker,
@@ -410,7 +411,7 @@ class HwasLmm:
 
     def _manual_variance_decomposition(
         self, snp: str, snp_profile: np.ndarray, covs: Optional[np.ndarray]
-    ) -> Optional[object]:
+    ) -> Optional[CKroneckerLMM]:
         """
         Perform manual variance decomposition when qtl_test_lmm_kronecker
         fails.
@@ -419,7 +420,7 @@ class HwasLmm:
         @param snp_profile: (N, 1) array of SNP values.
         @param covs: (N, Q) array of covariates, or None.
 
-        @returns: The lmm object if successful, None if decomposition fails.
+        @returns: CKroneckerLMM if successful, None if decomposition fails.
         """
         vs = VarianceDecomposition(Y=self.pheno.values)
 

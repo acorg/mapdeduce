@@ -1,5 +1,7 @@
 """Classes for handling DataFrames containing coordinates and sequences"""
 
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,16 +17,16 @@ from .munging import df_from_fasta
 class CoordDf(object):
     """Class for x, y coordinate data."""
 
-    def __init__(self, df):
+    def __init__(self, df: pd.DataFrame) -> None:
         """@param df: pd.DataFrame. Must contain x and y columns."""
         self.df = df
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "CoordDf with {} samples and {} dimensions.".format(
             *self.df.shape
         )
 
-    def rotate(self, a, inplace=True):
+    def rotate(self, a: float, inplace: bool = True) -> Optional["CoordDf"]:
         """
         Rotate points specified by the xy coordinates in the DataFrame
         a degrees around the origin anticlockwise.
@@ -58,7 +60,7 @@ class CoordDf(object):
         plt.close()
         return mask
 
-    def pca_rotate(self, inplace=True):
+    def pca_rotate(self, inplace: bool = True) -> Optional["CoordDf"]:
         """
         Rotate the coordinates along first and second principal components.
 
@@ -75,7 +77,7 @@ class CoordDf(object):
         else:
             return CoordDf(df=df)
 
-    def quantile_transform(self, inplace=True):
+    def quantile_transform(self, inplace: bool = True) -> Optional["CoordDf"]:
         """
         Transform features using quantile information. See
         http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.
@@ -91,7 +93,7 @@ class CoordDf(object):
         else:
             return CoordDf(df=df)
 
-    def paired_distances(self, other_df):
+    def paired_distances(self, other_df: pd.DataFrame) -> np.ndarray:
         """
         Compute euclidean distances between points in self.df and paired
         points in another dataframe. The other dataframe must have the same
@@ -118,6 +120,8 @@ class CoordDf(object):
                 )
 
             except ValueError:
+                # euclidean raises ValueError for NaN coordinates
+                # Set distance to NaN for these cases
                 distances[i] = np.nan
 
         return distances
@@ -126,34 +130,39 @@ class CoordDf(object):
 class SeqDf(object):
     """Class for DataFrames containing amino acid sequences."""
 
-    def __init__(self, df):
-        """@param df: pd.DataFrame. Columns are amino acid positions."""
+    def __init__(self, df: pd.DataFrame) -> None:
+        """
+        @param df: pd.DataFrame. Columns are amino acid positions.
+        """
         self.df = df
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "SeqDf with {} samples and {} sequence positions.".format(
             *self.df.shape
         )
 
     @classmethod
-    def from_fasta(cls, path):
-        """Make a SeqDf from a fasta file.
+    def from_fasta(cls, path: str) -> "SeqDf":
+        """
+        Make a SeqDf from a fasta file.
 
         @param path: Str. Path to fasta file.
         """
         return cls(df_from_fasta(path=path, positions="infer"))
 
     @classmethod
-    def from_series(cls, series):
-        """Make new SeqDf from a series.
+    def from_series(cls, series: pd.Series) -> "SeqDf":
+        """
+        Make new SeqDf from a series.
 
         @param series: pd.Series. Each element in series is a string. See
             mapdeduce.helper.expand_sequences for more details.
         """
         return cls(expand_sequences(series))
 
-    def remove_invariant(self, inplace=True):
-        """Remove positions (columns) that contain only one amino acid.
+    def remove_invariant(self, inplace: bool = True) -> Optional["SeqDf"]:
+        """
+        Remove positions (columns) that contain only one amino acid.
 
         @param inplace: Bool.
         """
@@ -167,8 +176,9 @@ class SeqDf(object):
         else:
             return new
 
-    def get_dummies(self, inplace=True):
-        """Get dummy variable representation of the sequences.
+    def get_dummies(self, inplace: bool = True) -> Optional["SeqDf"]:
+        """
+        Get dummy variable representation of the sequences.
 
         @param inplace: Bool.
         """
@@ -179,8 +189,9 @@ class SeqDf(object):
         else:
             return d
 
-    def shuffle_dummies(self, n_shuffles, c):
-        """Return a DataFrame containing n shuffles of the data in column c
+    def shuffle_dummies(self, n_shuffles: int, c: str) -> np.ndarray:
+        """
+        Return a DataFrame containing n shuffles of the data in column c
 
         @param n_shuffles: Int. Number of shuffles
         @param c: Must lookup column in self.dummies
@@ -193,8 +204,9 @@ class SeqDf(object):
             arr[:, i] = sklearn.utils.shuffle(values)
         return arr
 
-    def get_dummies_at_positions(self, positions):
-        """Return set of dummy variable names at HA positions.
+    def get_dummies_at_positions(self, positions: list[int]) -> set[str]:
+        """
+        Return dummies at given HA positions.
 
         Dummy variable names are either singles (e.g. 135K), or compound
         (e.g. 7D|135K|265E). For compound dummy variable names return the
@@ -203,31 +215,36 @@ class SeqDf(object):
         @param positions: List of positions.
         """
         dummies = set()
-        add = dummies.add
 
         for dummy in self.dummies.columns:
-            for c in dummy.split("|"):
-                pos = int(c[:-1])
+            for aap in dummy.split("|"):
+
+                # Handle complement SNPs: "-156N" -> position 156
+                # Strip leading "-" if present, then extract position
+                pos = int(aap.lstrip("-")[:-1])
 
                 if pos in positions:
-                    add(dummy)
+                    dummies.add(dummy)
                     break
 
         return dummies
 
-    def _merge_identical_dummies(self):
-        """Merge SNPs that are identical in all strains.
+    def _merge_identical_dummies(self) -> pd.DataFrame:
+        """
+        Merge SNPs that are identical in all strains.
 
         @returns pd.DataFrame with merged columns.
         """
         grouped = self.dummies.T.groupby(by=self.dummies.index.tolist())
+
         return pd.DataFrame(
             data={"|".join(sorted(g.index)): n for n, g in grouped},
             index=self.dummies.index,
         )
 
-    def _merge_dummies_with_complements(self):
-        """Merge SNPs that are identical or complements in all strains.
+    def _merge_dummies_with_complements(self) -> pd.DataFrame:
+        """
+        Merge SNPs that are identical or complements in all strains.
 
         Complement SNPs have a "-" prepended to their name. The first AAP
         in the merged name always represents the pattern of 0/1s.
@@ -284,8 +301,11 @@ class SeqDf(object):
 
         return pd.DataFrame(data, index=self.dummies.index)
 
-    def merge_duplicate_dummies(self, inplace=False, merge_complements=True):
-        """Merge SNPs that are identical (or complements) in all strains.
+    def merge_duplicate_dummies(
+        self, inplace: bool = False, merge_complements: bool = True
+    ) -> Optional[pd.DataFrame]:
+        """
+        Merge SNPs that are identical (or complements) in all strains.
 
         @param inplace: Bool.
 
@@ -322,15 +342,19 @@ class SeqDf(object):
         else:
             return df
 
-    def consensus(self):
-        """Compute the consensus sequence
+    def consensus(self) -> pd.DataFrame:
+        """
+        Compute the consensus sequence.
 
         @returns pd.Series.
         """
         return self.df.apply(site_consensus, axis=0)
 
-    def merge_duplicate_strains(self, inplace=False):
-        """Replace all strains that have the same index with a single
+    def merge_duplicate_strains(
+        self, inplace: bool = False
+    ) -> Optional[pd.DataFrame]:
+        """
+        Replace all strains that have the same index with a single
         consensus strain.
 
         @param inplace: Bool.
@@ -348,8 +372,9 @@ class SeqDf(object):
         else:
             return SeqDf(df)
 
-    def to_fasta(self, path):
-        """Write the sequences in fasta format.
+    def to_fasta(self, path: str) -> None:
+        """
+        Write the sequences in fasta format.
 
         @param path: Path to write file.
         """

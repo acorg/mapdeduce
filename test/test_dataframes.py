@@ -118,6 +118,71 @@ class SeqDfConsensusTests(unittest.TestCase):
         self.assertEqual("XNRKSE", "".join(cons))
 
 
+class SeqDfGetDummiesTests(unittest.TestCase):
+    """Tests for mapdeduce.dataframes.SeqDf.get_dummies."""
+
+    def setUp(self):
+        df = pd.DataFrame(
+            [
+                ["A", "K", "D"],
+                ["A", "K", "D"],
+                ["A", "N", "D"],
+                ["A", "N", "E"],
+            ],
+            index=["strain1", "strain2", "strain3", "strain4"],
+            columns=[145, 156, 189],
+        )
+        self.sdf = SeqDf(df)
+
+    def test_dummies_dataframe(self):
+        """get_dummies should create a dummies DataFrame"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertIsInstance(self.sdf.dummies, pd.DataFrame)
+
+    def test_dummies_dataframe_not_inplace_returns_df(self):
+        """get_dummies with inplace=False should return a DataFrame"""
+        dummies = self.sdf.get_dummies(inplace=False)
+        self.assertIsInstance(dummies, pd.DataFrame)
+        self.assertFalse(hasattr(self.sdf, "dummies"))
+
+    def test_dummies_shape(self):
+        """Dummies DataFrame should have correct shape"""
+        self.sdf.get_dummies(inplace=True)
+        # There are 4 strains and 5 unique SNPs: 145A, 156K, 156N, 189D, 189E
+        self.assertEqual((4, 5), self.sdf.dummies.shape)
+
+    def test_dummies_values(self):
+        """Dummies DataFrame should only contain ones and zeros"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertTrue(self.sdf.dummies.isin([0, 1]).all().all())
+
+    def test_dummies_column_names(self):
+        """Dummies DataFrame should have correct column names"""
+        self.sdf.get_dummies(inplace=True)
+        expected_columns = {"145A", "156K", "156N", "189D", "189E"}
+        self.assertEqual(expected_columns, set(self.sdf.dummies.columns))
+
+    def test_dummies_row_index(self):
+        """Dummies DataFrame should have same row index as original df"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertTrue((self.sdf.df.index == self.sdf.dummies.index).all())
+
+    def test_145A_values(self):
+        """Dummies DataFrame should have correct values for 145A"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertEqual([1, 1, 1, 1], list(self.sdf.dummies["145A"].values))
+
+    def test_156N_values(self):
+        """Dummies DataFrame should have correct values for 156N"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertEqual([0, 0, 1, 1], list(self.sdf.dummies["156N"].values))
+
+    def test_189E_values(self):
+        """Dummies DataFrame should have correct values for 189E"""
+        self.sdf.get_dummies(inplace=True)
+        self.assertEqual([0, 0, 0, 1], list(self.sdf.dummies["189E"].values))
+
+
 class SeqDfMergeDuplicateDummiesTests(unittest.TestCase):
     """Tests for SeqDf.merge_duplicate_dummies"""
 
@@ -452,6 +517,57 @@ class SeqDfMergeTests(unittest.TestCase):
     def test_returns_seqdf(self):
         sdf = self.sdf.merge_duplicate_strains(inplace=False)
         self.assertIsInstance(sdf, SeqDf)
+
+
+class SeqDfGetDummiesAtPositionsTests(unittest.TestCase):
+    """Tests for SeqDf.get_dummies_at_positions with complement SNPs"""
+
+    def setUp(self):
+        """Create a SeqDf with dummy variables including complements"""
+        df = pd.DataFrame(
+            [
+                ["A", "K", "D"],
+                ["A", "K", "D"],
+                ["A", "N", "D"],
+                ["A", "N", "E"],
+            ],
+            index=["strain1", "strain2", "strain3", "strain4"],
+            columns=[145, 156, 189],
+        )
+        self.sdf = SeqDf(df)
+        self.sdf.get_dummies(inplace=True)
+
+    def test_finds_snp_not_compound_name(self):
+        """Should find SNP in simple dummy name"""
+        dummies_145 = self.sdf.get_dummies_at_positions([145])
+        self.assertEqual({"145A"}, dummies_145)
+
+    def test_finds_snp_in_compound_name(self):
+        """Should find SNP in compound dummy name"""
+        # Before merging duplicate dummies 156K and 156N should both exist
+        dummies_156 = self.sdf.get_dummies_at_positions([156])
+        self.assertEqual({"156K", "156N"}, dummies_156)
+
+        # merge duplicates to create compound names
+        self.sdf.merge_duplicate_dummies(inplace=True, merge_complements=True)
+
+        # After merge, only one dummy should exist for position 156
+        dummies_156 = self.sdf.get_dummies_at_positions([156])
+        self.assertEqual({"156N|-156K"}, dummies_156)
+
+    def test_finds_dummy_using_site_in_complement(self):
+        """Should find dummy when site is in a complement SNP name"""
+        # mock a dummy DataFrame with a complement dummy at site 145
+        self.sdf.dummies = pd.DataFrame(
+            {
+                "135N|-145A": [1, 1, 0, 1],
+                "156K": [1, 1, 0, 0],
+                "189D": [1, 1, 1, 0],
+            },
+            index=["strain1", "strain2", "strain3", "strain4"],
+        )
+        dummies_145 = self.sdf.get_dummies_at_positions([145])
+        self.assertEqual({"135N|-145A"}, dummies_145)
 
 
 if __name__ == "__main__":

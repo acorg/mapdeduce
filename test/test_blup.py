@@ -2,6 +2,8 @@
 
 """Tests for blup.py - Best linear unbiased predictions"""
 
+import os
+import tempfile
 import unittest
 
 import numpy as np
@@ -96,6 +98,57 @@ class LmmBlupAttributes(unittest.TestCase):
 class FluLmmBlupInit(unittest.TestCase):
     """Tests for FluLmmBlup.__init__"""
 
+    def test_accepts_dataframe_directly(self):
+        """Should accept DataFrame input and properly initialize"""
+        df = pd.DataFrame(
+            {
+                "x": [1.0, 2.0, 3.0, 4.0],
+                "y": [1.0, 2.0, 3.0, 4.0],
+                "seq": ["A" * 328, "C" * 328, "D" * 328, "E" * 328],
+            },
+            index=["strain1", "strain2", "strain3", "strain4"],
+        )
+        flu = FluLmmBlup(df)
+
+        # Should have seq and coord attributes initialized
+        self.assertIsNotNone(flu.seq)
+        self.assertIsNotNone(flu.coord)
+
+        # seq and coord should have data
+        self.assertEqual(len(flu.seq), 4)
+        self.assertEqual(len(flu.coord), 4)
+
+    def test_accepts_filepath_string(self):
+        """Should accept filepath string input and properly initialize"""
+        # Create temporary CSV file
+        df = pd.DataFrame(
+            {
+                "x": [1.0, 2.0, 3.0, 4.0],
+                "y": [1.0, 2.0, 3.0, 4.0],
+                "seq": ["A" * 328, "C" * 328, "D" * 328, "E" * 328],
+            },
+            index=["strain1", "strain2", "strain3", "strain4"],
+        )
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False
+        ) as f:
+            df.to_csv(f)
+            temp_path = f.name
+
+        try:
+            flu = FluLmmBlup(temp_path)
+            # Should have seq and coord attributes initialized
+            self.assertIsNotNone(flu.seq)
+            self.assertIsNotNone(flu.coord)
+
+            # seq and coord should have data
+            self.assertEqual(len(flu.seq), 4)
+            self.assertEqual(len(flu.coord), 4)
+        
+        finally:
+            os.unlink(temp_path)
+
     def test_requires_unique_indexes(self):
         """Should raise ValueError if DataFrame has duplicate indexes"""
         df = pd.DataFrame(
@@ -131,7 +184,9 @@ class FluLmmBlupPredict(unittest.TestCase):
         # For now, we test the validation conditions directly.
 
     def test_unknown_df_wrong_column_count(self):
-        """predict should raise ValueError if unknown_df has wrong column count"""
+        """
+        predict should raise ValueError if unknown_df has wrong column count
+        """
         # Create a mock FluLmmBlup-like object to test validation
         # Since FluLmmBlup.predict checks columns, we can test that logic
         flu = FluLmmBlup(self.df)
@@ -159,7 +214,9 @@ class FluLmmBlupPredict(unittest.TestCase):
         self.assertIn("columns", str(ctx.exception).lower())
 
     def test_unknown_df_duplicate_indexes(self):
-        """predict should raise ValueError if unknown_df has duplicate indexes"""
+        """
+        predict should raise ValueError if unknown_df has duplicate indexes
+        """
         flu = FluLmmBlup(self.df)
 
         # Create unknown_df with duplicate indexes
@@ -173,7 +230,9 @@ class FluLmmBlupPredict(unittest.TestCase):
         self.assertIn("unique", str(ctx.exception).lower())
 
     def test_unknown_df_overlapping_indexes(self):
-        """predict should raise error if unknown_df indexes overlap with training"""
+        """
+        predict should raise error if unknown_df indexes overlap with training
+        """
         flu = FluLmmBlup(self.df)
 
         # Create unknown_df with index that overlaps with training data

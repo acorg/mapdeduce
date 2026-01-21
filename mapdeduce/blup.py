@@ -1,5 +1,7 @@
 """BLUP: Best linear unbiased predictions of a linear mixed model."""
 
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
 from limix_legacy.deprecated.modules.varianceDecomposition import (
@@ -18,7 +20,11 @@ from .mapseq import OrderedMapSeq
 class LmmBlup(object):
     """Best linear unbiased predictions of a linear mixed model."""
 
-    def __init__(self, Y, **kwargs):
+    def __init__(
+        self,
+        Y: np.ndarray,
+        **kwargs,
+    ) -> None:
         """
         At least one of F and K must be specified.
 
@@ -30,10 +36,10 @@ class LmmBlup(object):
         @param K: Random effects predictors. n x r ndarray
         @param A: Trait design matrix. p x p ndarray
         """
-        self.Y = Y
-        self.F = kwargs.pop("F", None)
-        self.K = kwargs.pop("K", None)
-        self.A = kwargs.pop("A", None)
+        self.Y: np.ndarray = Y
+        self.F: Optional[np.ndarray] = kwargs.pop("F", None)
+        self.K: Optional[np.ndarray] = kwargs.pop("K", None)
+        self.A: Optional[np.ndarray] = kwargs.pop("A", None)
 
         if self.F is None and self.K is None:
             raise ValueError("At least one of F and K must be specified.")
@@ -41,8 +47,9 @@ class LmmBlup(object):
         if self.A is None and self.F is not None:
             raise ValueError("Must specify design matrix")
 
-    def predict(self, train, test):
-        """Train LMM using values in the training set, and return predictions
+    def predict(self, train: np.ndarray, test: np.ndarray) -> np.ndarray:
+        """
+        Train LMM using values in the training set, and return predictions
         for responses in the test set.
 
         @param train. n x 1 ndarray. Indexes of rows to use as the train set
@@ -66,8 +73,14 @@ class LmmBlup(object):
 
         return vc.predictPhenos()
 
-    def predict_kfolds(self, n_splits, random_state=1234, progress_bar=True):
-        """Predict k test folds of the data having trained on training folds.
+    def predict_kfolds(
+        self,
+        n_splits: int,
+        random_state: int = 1234,
+        progress_bar: bool = True,
+    ) -> None:
+        """
+        Predict k test folds of the data having trained on training folds.
 
         @param n_splits: Int. Number of folds.
         @param random_state: Int. Used to initialize random state.
@@ -107,8 +120,9 @@ class LmmBlup(object):
 
 
 class FluLmmBlup(object):
-    def __init__(self, filepath_or_df):
-        """Train LMM and predict antigenic coordinates on influenza data.
+    def __init__(self, filepath_or_df: Union[str, pd.DataFrame]) -> None:
+        """
+        Train LMM and predict antigenic coordinates on influenza data.
 
         @param filepath or df. Str. Filepath to csv file containing data to
             train the LMM. File should have four columns that correspond to:
@@ -116,8 +130,8 @@ class FluLmmBlup(object):
             Or: pd.DataFrame with the same columns. All strain names must be
             unique.
         """
-        if type(filepath_or_df) is str:
-            self.df = pd.read_csv(
+        if isinstance(filepath_or_df, str):
+            df = pd.read_csv(
                 filepath_or_buffer=filepath_or_df,
                 header=None,
                 index_col=0,
@@ -137,8 +151,9 @@ class FluLmmBlup(object):
         self.seq = ms.seq_in_both
         self.coord = ms.coords_in_both
 
-    def predict(self, unknown_df):
-        """Train a LMM using self.seq and self.coord as training data. Then
+    def predict(self, unknown_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Train a LMM using self.seq and self.coord as training data. Then
         predict coordinates of sequences in unknown_df.
 
         @param unknown_df. pd.DataFrame. Dataframe containing sequences with

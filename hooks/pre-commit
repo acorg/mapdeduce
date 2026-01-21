@@ -2,10 +2,10 @@
 
 set -eo pipefail
 
-uv run isort --check --quiet --profile black mapdeduce
+uv run isort --check --quiet --profile black mapdeduce test
 
-uv run black --check --quiet mapdeduce
+uv run black --check --quiet mapdeduce test
 
-uv run flake8 mapdeduce
+uv run flake8 mapdeduce test
 
 uv run pytest --no-header --no-summary --quiet

@@ -162,7 +162,9 @@ class HwasLmmFit(unittest.TestCase):
         self.assertLess(hwas.results.loc["causal_snp", "p"], 1e-10)
 
     def test_strong_association_large_effect(self):
-        """SNP strongly associated with phenotype should have large effect size"""
+        """
+        SNP strongly associated with phenotype should have large effect size
+        """
         np.random.seed(42)
         N = 50
         effect_size = 10.0
@@ -237,7 +239,9 @@ class HwasLmmFit(unittest.TestCase):
         self.assertLess(abs(hwas.results.loc["null_snp", "beta"]), 0.2)
 
     def test_invariant_snp_skipped_when_not_explicit(self):
-        """Invariant SNP should be skipped with warning when test_snps is None"""
+        """
+        Invariant SNP should be skipped with warning when test_snps is None
+        """
         np.random.seed(42)
         N = 20
 

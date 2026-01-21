@@ -26,8 +26,9 @@ from .plotting import make_ax_a_map, plot_arrow
 warnings.filterwarnings("ignore", module="h5py")
 
 
-def shuffle_values(nperm, values):
-    """Return an ndarray containing n shuffles of values
+def shuffle_values(nperm: int, values: np.ndarray) -> np.ndarray:
+    """
+    Return an ndarray containing n shuffles of values
 
     @param nperm: Int. Number of shuffles
     @param arr: ndarray
@@ -157,7 +158,7 @@ def prune_collinear_snps(
     return snps[kept_cols], removed_to_kept
 
 
-def effective_tests(snps):
+def effective_tests(snps: pd.DataFrame) -> float:
     """
     Compute the effective number of tests, given correlation between snps.
     For 1 SNP return 1.
@@ -191,11 +192,13 @@ def effective_tests(snps):
     return (np.sum(np.sqrt(eigenvalues)) ** 2) / np.sum(eigenvalues)
 
 
-def qq_plot(results, snps=None, **kwargs):
+def qq_plot(
+    df: pd.DataFrame, snps: Optional[list[str]] = None, **kwargs
+) -> plt.Axes:
     """
     Plot a quantile-quantile comparison plot of p-values
 
-    @param results pd.DataFrame: Like pd.Panel returned by pd_qtl_test_lmm.
+    @param df pd.DataFrame:
         columns must contain "p" and can also contain the following:
                     p_corrected_n_tests
                     p_corrected_n_effective_tests
@@ -203,7 +206,7 @@ def qq_plot(results, snps=None, **kwargs):
                     std-error
                     p-empirical
         DataFrame indexes are SNPs.
-    @param snps: List. Plot only these snps
+    @param snps: Optional[List[str]]. Plot only these snps
 
         Optional kwargs
 
@@ -216,7 +219,6 @@ def qq_plot(results, snps=None, **kwargs):
 
     # Get 2D DataFrame containing p values and effect sizes for this
     # phenotype
-    df = results
     if snps is not None:
         print(
             "Only plotting substitutions at these positions:\n"
@@ -327,14 +329,18 @@ def qq_plot(results, snps=None, **kwargs):
     return ax
 
 
-class HwasLmm(object):
+class HwasLmm:
     """
     Linear mixed models to look for associations between amino acid - position
     combinations on antigenic phenotypes.
     """
 
     def __init__(
-        self, snps, pheno, covs=None, regularise_kinship: bool = True
+        self,
+        snps: pd.DataFrame,
+        pheno: pd.DataFrame,
+        covs: Optional[pd.DataFrame] = None,
+        regularise_kinship: bool = True,
     ):
         """
         @param snps: pd.DataFrame. (N, S). S snps for N individuals.
@@ -342,6 +348,8 @@ class HwasLmm(object):
         @param pheno: pd.DataFrame. (N, P). P phenotypes for N individuals.
 
         @param covs: pd.DataFrame. (N, Q). Q covariates for N individuals.
+
+        @param regularise_kinship: Bool. Regularise the kinship matrix.
         """
         if (snps.index != pheno.index).sum() != 0:
             raise ValueError("snps and pheno have different indexes.")
@@ -380,13 +388,17 @@ class HwasLmm(object):
             self.Asnps = np.eye(self.P)
             self.P1 = pheno.columns[1]
 
-    def compute_k_leave_each_snp_out(self, test_snps=None):
-        """Leave each snp out of self.snps and compute a covariance matrix.
+    def compute_k_leave_each_snp_out(
+        self, test_snps: Optional[list[str]] = None
+    ) -> None:
+        """
+        Leave each snp out of self.snps and compute a covariance matrix.
+
         This attaches a K_leave_out attribute which is a dict. Keys are the
         snp left out. Values are the corresponding covariance matrix.
 
-        @param test_snps: List. Only compute covariance matrix without snps
-            for these snps.
+        @param test_snps: Optional[List[str]]. Only compute covariance matrix
+            without snps for these snps.
         """
         test_snps = self.snps.columns if test_snps is None else test_snps
         self.K_leave_out = {
@@ -590,7 +602,7 @@ class HwasLmm(object):
 
         self.results = df
 
-    def regress_out(self, snp, summary_plot=False):
+    def regress_out(self, snp: str, summary_plot: bool = False):
         """
         Regress out the effects of snp from the phenotype. Returns the residual
         phenotype.
@@ -633,7 +645,9 @@ class HwasLmm(object):
         else:
             return residual
 
-    def cross_validate(self, n_splits=5, progress_bar=False):
+    def cross_validate(
+        self, n_splits: int = 5, progress_bar: bool = False
+    ) -> None:
         """
         Conduct K-fold cross validation. Split data into n_splits training and
         testing splits. Train on each training split.
@@ -675,15 +689,15 @@ class HwasLmm(object):
 
         self.folds = folds
 
-    def cross_validation_predictions(self, p_grid):
+    def cross_validation_predictions(self, p_grid: np.ndarray) -> dict:
         """
         Predict phenotypes for cross validation folds. Include only SNPs that
         have a p value lower than that of each element in p_grid.
 
         @param p_grid: np.ndarray. p value thresholds.
 
-        @returns pd.Panel: Items are p-values, major axis are strains, minor
-            axis are folds. Run pn.apply(np.mean, axis=1) to get fold means
+        @returns dict: Keys are p-values, values are dicts with fold indices as
+            keys and paired distances as values.
         """
         dists = {}
 
@@ -697,9 +711,15 @@ class HwasLmm(object):
 
                 dists[p][i] = pd.Series(cdf.paired_distances(test_pheno))
 
-        return pd.Panel(data=dists)
+        return dists
 
-    def predict(self, snps, max_p=1, min_effect=0, df=None):
+    def predict(
+        self,
+        snps: pd.DataFrame,
+        max_p: float = 1.0,
+        min_effect: float = 0.0,
+        df: Optional[pd.DataFrame] = None,
+    ) -> pd.DataFrame:
         """
         Predict phenotype values for each individual in SNPs
 
@@ -748,8 +768,11 @@ class HwasLmm(object):
             columns=effects.columns,
         )
 
-    def lmm_permute(self, n, K_without_snp=False, **kwargs):
-        """Run lmm on n shuffled permutations of snps.
+    def lmm_permute(
+        self, n: int, K_without_snp: bool = False, **kwargs
+    ) -> pd.DataFrame:
+        """
+        Run lmm on n shuffled permutations of snps.
 
         @param n. Int. Number of permutations.
         @param K_without_snp. Bool. For each snp, use a covariance matrix
@@ -776,19 +799,23 @@ class HwasLmm(object):
 
         return df
 
-    def empirical_p(self, results, cutoff=0.1, nperm=int(1e3)):
-        """Compute empirical p-values for SNPs with a p-value lower than cutoff
+    def empirical_p(
+        self, results: dict, cutoff: float = 0.1, nperm: int = int(1e3)
+    ):
+        """
+        Compute empirical p-values for SNPs with a p-value lower than cutoff
 
-        @param results. pd.Panel like that returned by pd_qtl_test_lmm which
-            contains standard p-values
+        @param results. dict that contains standard p-values
 
         Note: This method expects a Panel structure and may need updating to
         work with the new DataFrame-based results from fit().
         """
         if self.pheno.shape[1] > 1:
             warnings.warn("Only implemented for univariate phenotypes")
+
         pheno = self.pheno.columns[0]
-        if "p-empirical" in results.items:
+
+        if "p-empirical" in results:
             print("empirical p values already in results will be overwritten:")
             ser = results.loc["p-empirical", pheno, :]
             print(ser[ser.notnull()])
@@ -839,9 +866,10 @@ class HwasLmm(object):
                 x=x, nperm=nperm, n1=n1, n2=n2, total_nperm=None, method="auto"
             )[0]
         results.loc["p-empirical", pheno, :] = pd.Series(empirical_p_values)
+
         return results
 
-    def snp_stripplot(self, snp, **kwargs):
+    def snp_stripplot(self, snp: str, **kwargs) -> plt.Axes:
         """
         Stripplot showing the value of the phenotype for the two values of the
         snp
@@ -862,19 +890,22 @@ class HwasLmm(object):
             means[i, 0] = x
             means[i, 1] = df.loc[idx, y].mean()
         ax.plot(means[:, 0], means[:, 1], c="darkgrey")
+
         return ax
 
-    def plot_antigens(self, color_dict=None, **kwargs):
+    def plot_antigens(
+        self, colors: Optional[dict] = None, **kwargs
+    ) -> plt.Axes:
         """
         2D scatter plot of antigens
 
-        @param color_dict: Dict / None. Values are mpl color for each antigen.
+        @param colors: Dict / None. Values are mpl color for each antigen.
             Overrides c, if c passed as a kwarg.
 
         @param **kwargs. Passed to self.pheno.plot.scatter
         """
-        if color_dict is not None:
-            c = [color_dict[i] for i in self.pheno.index]
+        if colors is not None:
+            c = [colors[i] for i in self.pheno.index]
 
         else:
             c = kwargs.pop("c", "black")
@@ -890,18 +921,30 @@ class HwasLmm(object):
             **kwargs,
         )
 
-    def summarise_joint(self, min_effect=0, max_p=1):
-        """Make a summary dataframe of the joint effects. Columns comprise
+    def summarise_joint(
+        self, min_effect: float = 0.0, max_p: float = 1.0
+    ) -> pd.DataFrame:
+        """
+        Make a summary dataframe of the joint effects. Columns comprise
         effect sizes in each dimension individually, the joint effect size, the
         p-value of the association, and -1 x log10(p-value).
 
         @param min_effect: Number. Only include snps with a joint effect size >
             min_effect
 
-        @param max_p: Number. Only inlucde snps with a p-value < max_p.
+        @param max_p: Number. Only include snps with a p-value < max_p.
 
         @returns. pd.DataFrame. Containing the summary.
         """
+        if max_p < 0 or max_p > 1:
+            raise ValueError("max_p must be in the interval [0, 1]")
+
+        if min_effect < 0:
+            raise ValueError(
+                "min_effect must be >= 0 (it is the joint effect size and "
+                "therefore cannot be negative)"
+            )
+
         df = self.results["beta"].apply(pd.Series)
         df.columns = ["b{}".format(i) for i in range(df.shape[1])]
         df["joint"] = self.results["beta"].apply(np.linalg.norm)
@@ -917,8 +960,15 @@ class HwasLmm(object):
 
         return df
 
-    def plot_antigens_with_snp(self, snp, jitter=0, randomz=None, **kwargs):
-        """Plot antigens that have a snp.
+    def plot_antigens_with_snp(
+        self,
+        snp: str,
+        jitter: float = 0,
+        randomz: Optional[float] = None,
+        **kwargs,
+    ):
+        """
+        Plot antigens that have a snp.
 
         @param snp. Must specify a column in self.snps
 
@@ -951,18 +1001,18 @@ class HwasLmm(object):
 
     def plot_multi_effects(
         self,
-        min_effect=0,
-        max_p=1,
-        snps=None,
-        label_arrows=False,
-        plot_strains_with_snps=False,
-        colors=None,
-        plot_similar_together=False,
-        max_groups=8,
-        test_pos=None,
-        lw_factor=1,
-        simple_legend=False,
-    ):
+        min_effect: float = 0.0,
+        max_p: float = 1.0,
+        snps: Optional[list[str]] = None,
+        label_arrows: bool = False,
+        plot_strains_with_snps: bool = False,
+        colors: Optional[list[str]] = None,
+        plot_similar_together: bool = False,
+        max_groups: int = 8,
+        test_pos: Optional[list[str]] = None,
+        lw_factor: float = 1.0,
+        simple_legend: bool = False,
+    ) -> plt.Axes:
         """
         Visualisation of 2D joint effects detected.
 
@@ -1133,7 +1183,7 @@ class HwasLmm(object):
 
         return ax
 
-    def interaction(self, a, b):
+    def interaction(self, a: str, b: str) -> dict:
         """
         Test for evidence of interaction between snps a and b
 

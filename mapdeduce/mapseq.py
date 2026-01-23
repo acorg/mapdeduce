@@ -265,7 +265,7 @@ class MapSeq:
             **kwargs. Passed to self.single_substitutions. Use to restrict
                 to particular positions.
         """
-        # Strains that differ by only the substituion sub
+        # Strains that differ by only the substitution sub
         combinations = self.single_substitutions(sub, **kwargs)
 
         label = "".join(map(str, sub))
@@ -353,17 +353,17 @@ class MapSeq:
                     segments = []
 
                     if pair_coords.shape[0] > 2:
-                        # Some strains are repated in the map
+                        # Some strains are repeated in the map
                         # Look for all combinations of groups of strains
                         groups = [
                             group
-                            for name, group in pair_coords.groupby(
+                            for _, group in pair_coords.groupby(
                                 pair_coords.index
                             )
                         ]
 
-                        for idx, series_1 in groups[0].iterrows():
-                            for idx, series_2 in groups[1].iterrows():
+                        for _, series_1 in groups[0].iterrows():
+                            for _, series_2 in groups[1].iterrows():
                                 segments.append(
                                     (series_1.values, series_2.values)
                                 )
@@ -789,7 +789,7 @@ class MapSeq:
                 all positions.
 
         Returns:
-            dict containing mean and median distanes.
+            dict containing mean and median distances.
         """
         identical_sequences = self.identical_sequences(positions=positions)
         n = len(identical_sequences)

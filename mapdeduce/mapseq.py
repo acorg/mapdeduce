@@ -1,5 +1,6 @@
 """Contains the main class to represent maps with sequences."""
 
+import gzip
 import itertools
 import json
 import warnings
@@ -92,10 +93,10 @@ class MapSeq:
 
     def to_disk(self, path: str) -> None:
         """
-        Save MapSeq to a JSON file.
+        Save MapSeq to a compressed JSON file.
 
         Args:
-            path: Path to save the JSON file.
+            path: Path to save the compressed JSON file.
         """
         data = {
             "version": 1,
@@ -104,21 +105,21 @@ class MapSeq:
             "coord_df": json.loads(self.all_coords.to_json(orient="split")),
         }
 
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+        with gzip.open(path, "wt") as f:
+            json.dump(data, f, separators=(",", ":"))
 
     @classmethod
     def from_disk(cls, path: str) -> "MapSeq":
         """
-        Load MapSeq from a JSON file.
+        Load MapSeq from a compressed JSON file.
 
         Args:
-            path: Path to the JSON file.
+            path: Path to the compressed JSON file.
 
         Returns:
             MapSeq instance.
         """
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         seq_df = pd.read_json(

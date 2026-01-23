@@ -2,6 +2,7 @@
 
 """Tests for MapSeq class"""
 
+import gzip
 import json
 import os
 import shutil
@@ -318,7 +319,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIsInstance(data, dict)
@@ -330,7 +331,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIn("version", data)
@@ -343,7 +344,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIn("seq_df", data)
@@ -360,7 +361,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIn("coord_df", data)
@@ -375,7 +376,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIn("map", data)
@@ -388,7 +389,7 @@ class MapSeqDiskIO(unittest.TestCase):
 
         ms.to_disk(path)
 
-        with open(path) as f:
+        with gzip.open(path, "rt") as f:
             data = json.load(f)
 
         self.assertIn("map", data)
@@ -449,6 +450,18 @@ class MapSeqDiskIO(unittest.TestCase):
         loaded = MapSeq.from_disk(path)
 
         self.assertIsNone(loaded.map)
+
+    def test_to_disk_creates_compressed_file(self):
+        """to_disk should create a gzip-compressed file"""
+        ms = MapSeq(seq_df=self.seq_df, coord_df=self.coord_df)
+        path = self._get_tmpfile()
+
+        ms.to_disk(path)
+
+        with gzip.open(path, "rt") as f:
+            data = json.load(f)
+
+        self.assertIsInstance(data, dict)
 
 
 class OrderedMapSeqTests(unittest.TestCase):

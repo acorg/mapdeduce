@@ -58,7 +58,7 @@ class MapSeqAttributes(unittest.TestCase):
             self.ms.strains_in_both, set(self.ms.coords_in_both.index)
         )
 
-    def test_unkown_sequence(self):
+    def test_unknown_sequence(self):
         """
         Anything in fasta that isn't one of the 20 standard amino acids
         should be NaN.
@@ -203,7 +203,7 @@ class MapSeqStrainsWithCombinations(unittest.TestCase):
         self.assertIn("999", str(ctx.exception))
 
 
-class MapSeqDuplicateSeqeunces(unittest.TestCase):
+class MapSeqDuplicateSequences(unittest.TestCase):
     """Tests for MapSeq.duplicate_sequences"""
 
     def setUp(self):

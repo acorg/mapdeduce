@@ -560,7 +560,15 @@ class HwasLmm:
 
             results[snp] = {"p": lmm.getPv()[0, 0], "beta": beta}
 
-        df = pd.DataFrame.from_dict(results, orient="index").sort_values("p")
+        df = pd.DataFrame.from_dict(results, orient="index")
+
+        if df.empty:
+            warnings.warn("No SNPs were successfully fitted.")
+            self.results = df
+            return
+
+        df = df.sort_values("p")
+        df["frequency"] = self.snps.loc[:, df.index].mean()
         df["logp"] = -np.log10(df["p"])
 
         # Correction using raw number of SNPs

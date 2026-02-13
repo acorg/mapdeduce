@@ -10,10 +10,10 @@ import pandas as pd
 from scipy.stats import pearsonr
 
 import mapdeduce
+from mapdeduce.dataframes import prune_collinear_snps
 from mapdeduce.hwas import (
     HwasLmm,
     find_perfectly_correlated_snps,
-    prune_collinear_snps,
 )
 
 

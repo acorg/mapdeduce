@@ -1007,6 +1007,7 @@ class OrderedMapSeq(MapSeq):
         remove_invariant: bool = True,
         get_dummies: bool = True,
         merge_duplicate_dummies: bool = False,
+        prune_collinear_dummies: Optional[float] = None,
         rename_idx: bool = False,
     ):
         """
@@ -1027,6 +1028,9 @@ class OrderedMapSeq(MapSeq):
                 sequences.
             merge_duplicate_dummies (bool): Merge dummy variables that have
                 the same profile (identical for all strains).
+            prune_collinear_dummies (float or None): If set, prune
+                near-collinear dummies (r² > threshold) after merging
+                duplicates. Requires get_dummies=True.
             rename_idx (bool): Rename strains in the format strain-X where X
                 is an integer. This is necessary for merging duplicate dummies
                 if there are duplicate strain names (which can occur if a
@@ -1064,6 +1068,11 @@ class OrderedMapSeq(MapSeq):
 
         if merge_duplicate_dummies:
             self.seqs.merge_duplicate_dummies(inplace=True)
+
+        if prune_collinear_dummies is not None:
+            self.seqs.prune_collinear_dummies(
+                threshold=prune_collinear_dummies, inplace=True
+            )
 
         if plot and patch is not None:
             self.coord.df.plot.scatter(x="x", y="y", label="Included", ax=ax)

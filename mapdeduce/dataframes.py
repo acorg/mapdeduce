@@ -208,23 +208,29 @@ class SeqDf:
         """
         Return dummies at given HA positions.
 
-        Dummy variable names are either singles (e.g. 135K), or compound
-        (e.g. 7D|135K|265E). For compound dummy variable names return the
-        entire compound name if any constituent SNP is in positions.
+        Dummy variable names are either singles (e.g. 135K), compound by
+        identity (e.g. 7D|135K|265E), or compound by collinearity
+        (e.g. 145K|155S~189K).  Return the full column name if any
+        constituent SNP is at a position in *positions*.
 
         @param positions: List of positions.
         """
         dummies = set()
 
         for dummy in self.dummies.columns:
-            for aap in dummy.split("|"):
+            found = False
+            for collinear_group in dummy.split("~"):
+                for aap in collinear_group.split("|"):
 
-                # Handle complement SNPs: "-156N" -> position 156
-                # Strip leading "-" if present, then extract position
-                pos = int(aap.lstrip("-")[:-1])
+                    # Handle complement SNPs: "-156N" -> position 156
+                    # Strip leading "-" if present, then extract position
+                    pos = int(aap.lstrip("-")[:-1])
 
-                if pos in positions:
-                    dummies.add(dummy)
+                    if pos in positions:
+                        dummies.add(dummy)
+                        found = True
+                        break
+                if found:
                     break
 
         return dummies
@@ -306,6 +312,7 @@ class SeqDf:
     ) -> Optional[pd.DataFrame]:
         """
         Merge SNPs that are identical (or complements) in all strains.
+        Identical SNPs are concatenated with '|' characters.
 
         @param inplace: Bool.
 
@@ -372,6 +379,46 @@ class SeqDf:
         else:
             return SeqDf(df)
 
+    def prune_collinear_dummies(
+        self, threshold: float = 0.95, inplace: bool = False
+    ) -> Optional[pd.DataFrame]:
+        """
+        Collapse near-collinear dummy variable clusters into a single
+        representative, following the pattern of merge_duplicate_dummies.
+
+        Clusters are joined with ``~`` in the column name.
+
+        @param threshold: float. Maximum r squared between retained SNPs.
+        @param inplace: Bool.  If True, update ``self.dummies`` and store
+            ``self.collinear_mapping`` and
+            ``self.collinear_removed_to_kept``.
+        """
+        pruned_df, removed_to_kept = prune_collinear_snps(
+            self.dummies, threshold=threshold
+        )
+
+        # Build reverse mapping: kept -> [removed1, removed2, ...]
+        clusters: dict[str, list[str]] = {}
+        for removed, kept in removed_to_kept.items():
+            clusters.setdefault(kept, []).append(removed)
+
+        # Rename retained columns that have pruned members
+        rename_map = {}
+        for kept, pruned_list in clusters.items():
+            new_name = "~".join(sorted([kept] + pruned_list))
+            rename_map[kept] = new_name
+
+        result = pruned_df.rename(columns=rename_map)
+
+        if inplace:
+            self.dummies = result
+            self.collinear_mapping = {
+                k: sorted(v) for k, v in clusters.items()
+            }
+            self.collinear_removed_to_kept = removed_to_kept
+        else:
+            return result
+
     def to_fasta(self, path: str) -> None:
         """
         Write the sequences in fasta format.
@@ -384,3 +431,70 @@ class SeqDf:
             for row in self.df.iterrows():
                 handle.write(">{}\n".format(row.name))
                 handle.write("{}\n".format("".join(row)))
+
+
+def prune_collinear_snps(
+    snps: pd.DataFrame, threshold: float = 0.95
+) -> pd.DataFrame:
+    """
+    Prune highly collinear SNPs based on pairwise correlation.
+
+    Iterates through SNPs and removes those with r2 > threshold relative to any
+    already-retained SNP.
+
+    @param snps: pd.DataFrame of SNPs (columns) for individuals (rows).
+        Column names must be unique.
+    @param threshold: maximum allowed r2 between retained SNPs
+        (default 0.95)
+
+    @returns: tuple containing:
+        pruned_df: DataFrame containing only the retained SNPs
+        removed_to_kept: dict mapping each removed SNP name to the name of
+            the retained SNP it correlates most highly with
+    """
+    if not isinstance(snps, pd.DataFrame):
+        raise TypeError("snps must be a pandas DataFrame")
+
+    if snps.columns.duplicated().any():
+        raise ValueError("SNP column names must be unique")
+
+    if not 0 <= threshold <= 1:
+        raise ValueError("r2 threshold must be between 0 and 1 inclusive")
+
+    snp_names = list(snps.columns)
+    S = len(snp_names)
+
+    # Standardize SNPs (mean=0, std=1) for correlation calculation
+    snps_std = snps.values - snps.values.mean(axis=0)
+    norms = np.sqrt((snps_std**2).sum(axis=0))
+    # Avoid division issues for uniform/near-uniform SNPs
+    norms[norms < 1e-12] = 1
+    snps_std = snps_std / norms
+
+    # First pass: determine which SNPs to keep
+    keep_indices = [0]  # always keep the first
+
+    for i in range(1, S):
+        # Compute r2 with all retained SNPs
+        # r = dot product of standardized vectors (already normalized by norms)
+        # Use np.dot instead of @ to avoid spurious warnings in NumPy < 2.4
+        r2 = np.dot(snps_std[:, i], snps_std[:, keep_indices]) ** 2
+
+        # Keep this SNP if not highly correlated with any retained SNP
+        if r2.max() < threshold:
+            keep_indices.append(i)
+
+    # Second pass: map removed SNPs to their most correlated kept SNP
+    # Done after pruning so we compare against the final set of kept SNPs
+    removed_indices = [i for i in range(1, S) if i not in keep_indices]
+    removed_to_kept = {}
+
+    kept_snps = snps_std[:, keep_indices]
+    for i in removed_indices:
+        r2 = np.dot(snps_std[:, i], kept_snps) ** 2
+        best_match_idx = keep_indices[np.argmax(r2)]
+        removed_to_kept[snp_names[i]] = snp_names[best_match_idx]
+
+    kept_cols = [snp_names[i] for i in keep_indices]
+
+    return snps[kept_cols], removed_to_kept

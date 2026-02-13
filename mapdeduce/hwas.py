@@ -92,73 +92,6 @@ def find_perfectly_correlated_snps(
     return correlated_pairs
 
 
-def prune_collinear_snps(
-    snps: pd.DataFrame, threshold: float = 0.95
-) -> pd.DataFrame:
-    """
-    Prune highly collinear SNPs based on pairwise correlation.
-
-    Iterates through SNPs and removes those with r2 > threshold relative to any
-    already-retained SNP.
-
-    @param snps: pd.DataFrame of SNPs (columns) for individuals (rows).
-        Column names must be unique.
-    @param r2_threshold: maximum allowed r2 between retained SNPs
-        (default 0.95)
-
-    @returns: tuple containing:
-        pruned_df: DataFrame containing only the retained SNPs
-        removed_to_kept: dict mapping each removed SNP name to the name of
-            the retained SNP it correlates most highly with
-    """
-    if not isinstance(snps, pd.DataFrame):
-        raise TypeError("snps must be a pandas DataFrame")
-
-    if snps.columns.duplicated().any():
-        raise ValueError("SNP column names must be unique")
-
-    if not 0 <= threshold <= 1:
-        raise ValueError("r2 threshold must be between 0 and 1 inclusive")
-
-    snp_names = list(snps.columns)
-    S = len(snp_names)
-
-    # Standardize SNPs (mean=0, std=1) for correlation calculation
-    snps_std = snps.values - snps.values.mean(axis=0)
-    norms = np.sqrt((snps_std**2).sum(axis=0))
-    # Avoid division issues for uniform/near-uniform SNPs
-    norms[norms < 1e-12] = 1
-    snps_std = snps_std / norms
-
-    # First pass: determine which SNPs to keep
-    keep_indices = [0]  # always keep the first
-
-    for i in range(1, S):
-        # Compute r2 with all retained SNPs
-        # r = dot product of standardized vectors (already normalized by norms)
-        # Use np.dot instead of @ to avoid spurious warnings in NumPy < 2.4
-        r2 = np.dot(snps_std[:, i], snps_std[:, keep_indices]) ** 2
-
-        # Keep this SNP if not highly correlated with any retained SNP
-        if r2.max() < threshold:
-            keep_indices.append(i)
-
-    # Second pass: map removed SNPs to their most correlated kept SNP
-    # Done after pruning so we compare against the final set of kept SNPs
-    removed_indices = [i for i in range(1, S) if i not in keep_indices]
-    removed_to_kept = {}
-
-    kept_snps = snps_std[:, keep_indices]
-    for i in removed_indices:
-        r2 = np.dot(snps_std[:, i], kept_snps) ** 2
-        best_match_idx = keep_indices[np.argmax(r2)]
-        removed_to_kept[snp_names[i]] = snp_names[best_match_idx]
-
-    kept_cols = [snp_names[i] for i in keep_indices]
-
-    return snps[kept_cols], removed_to_kept
-
-
 def effective_tests(snps: pd.DataFrame) -> float:
     """
     Compute the effective number of tests, given correlation between snps.
@@ -376,6 +309,7 @@ class HwasLmm:
         self.S = snps.shape[1]  # Number of snps
         self.P = pheno.shape[1]  # Number of phenotypes
         self.P0 = pheno.columns[0]
+
         self.K = cov(snps, regularise=regularise_kinship)
 
         if self.covs is not None:
@@ -404,7 +338,8 @@ class HwasLmm:
         test_snps = self.snps.columns if test_snps is None else test_snps
         self.K_leave_out = {
             s: cov(
-                self.snps.drop(s, axis=1), regularise=self.regularise_kinship
+                self.snps.drop(s, axis=1),
+                regularise=self.regularise_kinship,
             )
             for s in test_snps
         }
@@ -687,7 +622,10 @@ class HwasLmm:
             mask = (means > 0) & (means < 1)
             diverse_snps_i = mask.index[mask]
 
-            hwas_i = HwasLmm(snps=train_snps_i, pheno=train_pheno_i)
+            hwas_i = HwasLmm(
+                snps=train_snps_i,
+                pheno=train_pheno_i,
+            )
 
             hwas_i.fit(test_snps=diverse_snps_i, progress_bar=progress_bar)
 
@@ -1223,7 +1161,8 @@ class HwasLmm:
             raise ValueError("{a} and {b} don't co-occur".format(a=a, b=b))
 
         K1r = cov(
-            self.snps.drop([a, b], axis=1), regularise=self.regularise_kinship
+            self.snps.drop([a, b], axis=1),
+            regularise=self.regularise_kinship,
         )
 
         try:

@@ -569,6 +569,157 @@ class SeqDfGetDummiesAtPositionsTests(unittest.TestCase):
         dummies_145 = self.sdf.get_dummies_at_positions([145])
         self.assertEqual({"135N|-145A"}, dummies_145)
 
+    def test_finds_position_in_tilde_joined_collinear_group(self):
+        """Should find position in a ~-joined collinear group name"""
+        self.sdf.dummies = pd.DataFrame(
+            {
+                "145A~189D": [1, 1, 0, 0],
+                "156K": [1, 1, 0, 0],
+            },
+            index=["strain1", "strain2", "strain3", "strain4"],
+        )
+        result = self.sdf.get_dummies_at_positions([189])
+        self.assertEqual({"145A~189D"}, result)
+
+    def test_finds_position_in_compound_pipe_tilde_name(self):
+        """Should find position in a compound |+~ name like 145K|155S~189K"""
+        self.sdf.dummies = pd.DataFrame(
+            {
+                "145K|155S~189K": [1, 1, 0, 0],
+                "156N": [0, 0, 1, 1],
+            },
+            index=["strain1", "strain2", "strain3", "strain4"],
+        )
+        # Query position 189 — should return the full compound name
+        result = self.sdf.get_dummies_at_positions([189])
+        self.assertEqual({"145K|155S~189K"}, result)
+
+        # Query position 155 — should also return the full compound name
+        result = self.sdf.get_dummies_at_positions([155])
+        self.assertEqual({"145K|155S~189K"}, result)
+
+
+class SeqDfPruneCollinearDummiesTests(unittest.TestCase):
+    """Tests for SeqDf.prune_collinear_dummies"""
+
+    def test_inplace_true_updates_dummies_and_sets_mappings(self):
+        """inplace=True updates self.dummies and sets both mapping attrs"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {"1A": snp, "2B": snp, "3C": [1, 1, 0, 0, 1, 0]}
+        )
+
+        result = sdf.prune_collinear_dummies(threshold=0.95, inplace=True)
+
+        self.assertIsNone(result)
+        # Dummies should be updated (2 columns -> pruned)
+        self.assertEqual(2, sdf.dummies.shape[1])
+        self.assertTrue(hasattr(sdf, "collinear_mapping"))
+        self.assertTrue(hasattr(sdf, "collinear_removed_to_kept"))
+
+    def test_inplace_false_returns_pruned_df_no_modification(self):
+        """inplace=False returns pruned DataFrame, does not modify original"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {"1A": snp, "2B": snp, "3C": [1, 1, 0, 0, 1, 0]}
+        )
+        original_cols = list(sdf.dummies.columns)
+
+        result = sdf.prune_collinear_dummies(threshold=0.95, inplace=False)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(2, result.shape[1])
+        # Original should be unchanged
+        self.assertEqual(original_cols, list(sdf.dummies.columns))
+        self.assertFalse(hasattr(sdf, "collinear_mapping"))
+
+    def test_identical_snps_pruned_at_threshold_095(self):
+        """Identical SNPs (r2=1) are pruned at threshold=0.95"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame({"1A": snp, "2B": snp, "3C": snp})
+
+        result = sdf.prune_collinear_dummies(threshold=0.95, inplace=False)
+
+        self.assertEqual(1, result.shape[1])
+
+    def test_independent_snps_all_retained(self):
+        """Independent SNPs are all retained"""
+        sdf = SeqDf(pd.DataFrame())
+        sdf.dummies = pd.DataFrame(
+            {
+                "1A": [0, 1, 0, 1, 0, 1],
+                "2B": [1, 0, 0, 1, 1, 0],
+                "3C": [0, 0, 1, 0, 1, 1],
+            }
+        )
+
+        result = sdf.prune_collinear_dummies(threshold=0.95, inplace=False)
+
+        self.assertEqual(3, result.shape[1])
+
+    def test_collinear_mapping_correct(self):
+        """collinear_mapping maps retained -> [pruned list] correctly"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {"1A": snp, "2B": snp, "3C": [1, 1, 0, 0, 1, 0]}
+        )
+
+        sdf.prune_collinear_dummies(threshold=0.95, inplace=True)
+
+        self.assertIn("1A", sdf.collinear_mapping)
+        self.assertEqual(["2B"], sdf.collinear_mapping["1A"])
+        self.assertEqual({"2B": "1A"}, sdf.collinear_removed_to_kept)
+
+    def test_retained_columns_with_pruned_members_get_tilde_name(self):
+        """Retained columns with pruned members get ~-joined names"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {"1A": snp, "2B": snp, "3C": [1, 1, 0, 0, 1, 0]}
+        )
+
+        sdf.prune_collinear_dummies(threshold=0.95, inplace=True)
+
+        # 1A and 2B are identical, one should be pruned and the retained
+        # column should be renamed to "1A~2B"
+        self.assertIn("1A~2B", sdf.dummies.columns)
+        self.assertIn("3C", sdf.dummies.columns)
+
+    def test_columns_without_pruned_members_keep_original_name(self):
+        """Columns with no pruned members keep original name"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {"1A": snp, "2B": snp, "3C": [1, 1, 0, 0, 1, 0]}
+        )
+
+        result = sdf.prune_collinear_dummies(threshold=0.95, inplace=False)
+
+        self.assertIn("3C", result.columns)
+
+    def test_works_after_merge_duplicate_dummies(self):
+        """Works when input names contain | from merge_duplicate_dummies"""
+        sdf = SeqDf(pd.DataFrame())
+        snp = [0, 1, 0, 1, 1, 0]
+        sdf.dummies = pd.DataFrame(
+            {
+                "145K|155S": snp,
+                "189K": snp,
+                "169T|170A": [1, 1, 0, 0, 1, 0],
+            }
+        )
+
+        sdf.prune_collinear_dummies(threshold=0.95, inplace=True)
+
+        self.assertEqual(2, sdf.dummies.shape[1])
+        # 145K|155S and 189K are identical, should be merged with ~
+        self.assertIn("145K|155S~189K", sdf.dummies.columns)
+        self.assertIn("169T|170A", sdf.dummies.columns)
+
 
 if __name__ == "__main__":
     unittest.main()

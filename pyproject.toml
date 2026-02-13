@@ -45,5 +45,8 @@ packages = ["mapdeduce"]
 [tool.setuptools.package-data]
 mapdeduce = ["data/test/*.fa"]
 
+[tool.uv]
+no-binary-package = ["rpy2-rinterface"]
+
 [tool.black]
 line-length = 79

@@ -508,5 +508,391 @@ class OrderedMapSeqTests(unittest.TestCase):
         )
 
 
+def _make_oms(seq_data, positions, strain_names):
+    """Helper to build an OrderedMapSeq from compact sequence data."""
+    seq_df = pd.DataFrame(seq_data, columns=positions, index=strain_names)
+    coord_df = pd.DataFrame(
+        {
+            "x": np.arange(len(strain_names), dtype=float),
+            "y": np.arange(len(strain_names), dtype=float),
+        },
+        index=strain_names,
+    )
+    return OrderedMapSeq(seq_df=seq_df, coord_df=coord_df)
+
+
+class OrderedMapSeqFilterMergeDuplicateDummies(unittest.TestCase):
+    """merge_duplicate_dummies should concatenate identical-profile dummy
+    names with '|'."""
+
+    def setUp(self):
+        """Six strains, three variant positions.
+
+        Positions 200 and 300 have identical amino-acid distributions
+        (K<->D, N<->E, A<->F) so after get_dummies each pair of
+        cross-position dummies shares the same binary profile.
+        Position 400 is independent (alternating S/T).
+
+        Using three amino acids per position avoids accidental
+        complement merging across positions.
+        """
+        strains = [f"s{i}" for i in range(1, 7)]
+        #               pos200 pos300 pos400
+        seqs = [
+            ["K", "D", "S"],
+            ["K", "D", "T"],
+            ["K", "D", "S"],
+            ["N", "E", "T"],
+            ["N", "E", "S"],
+            ["A", "F", "T"],
+        ]
+        self.oms = _make_oms(seqs, [200, 300, 400], strains)
+
+    def test_identical_dummies_merged_with_pipe(self):
+        """Dummies with identical profiles are merged using '|'."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+        )
+        cols = set(self.oms.seqs.dummies.columns)
+
+        # 200K and 300D have the same profile -> merged
+        self.assertTrue(
+            any("200K" in c and "300D" in c and "|" in c for c in cols),
+            f"Expected 200K|300D merge, got columns: {cols}",
+        )
+
+    def test_all_identical_pairs_merged(self):
+        """Each pair of cross-position identical dummies is merged."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+        )
+        cols = set(self.oms.seqs.dummies.columns)
+
+        # 200N and 300E share a profile
+        self.assertTrue(
+            any("200N" in c and "300E" in c for c in cols),
+            f"Expected 200N/300E merge, got columns: {cols}",
+        )
+
+        # 200A and 300F share a profile
+        self.assertTrue(
+            any("200A" in c and "300F" in c for c in cols),
+            f"Expected 200A/300F merge, got columns: {cols}",
+        )
+
+    def test_column_count_reduced(self):
+        """Merging should reduce the number of dummy columns.
+
+        Without merging there are 9 dummies (3 amino acids x 3
+        positions).  Merging identical profiles collapses that.
+        """
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+        )
+        n_cols = self.oms.seqs.dummies.shape[1]
+        self.assertLess(n_cols, 9)
+
+    def test_independent_dummy_not_merged_cross_position(self):
+        """Dummies at position 400 (independent) should not merge with
+        any position-200 or position-300 dummy."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+        )
+        cols = set(self.oms.seqs.dummies.columns)
+
+        col_with_400 = [c for c in cols if "400" in c]
+        self.assertEqual(len(col_with_400), 1)
+        for c in col_with_400:
+            self.assertNotIn("200", c)
+            self.assertNotIn("300", c)
+
+    def test_values_preserved(self):
+        """After merging, the dummy values for a merged column should
+        be 1 for strains that had K at position 200 (equivalently D
+        at 300) and 0 otherwise (or the complement of that)."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+        )
+        merged_col = next(
+            c
+            for c in self.oms.seqs.dummies.columns
+            if "200K" in c and "300D" in c
+        )
+        series = self.oms.seqs.dummies[merged_col]
+
+        # s1, s2, s3 have K at 200 (and D at 300) -> same value
+        # s4, s5 have N at 200 -> different value
+        # s6 has A at 200 -> different value
+        k_strains = {"s1", "s2", "s3"}
+        non_k_strains = {"s4", "s5", "s6"}
+        k_vals = set(series.loc[series.index.isin(k_strains)].values)
+        non_k_vals = set(series.loc[series.index.isin(non_k_strains)].values)
+
+        # All K-strains should share one value and all non-K-strains
+        # should share the other.
+        self.assertEqual(len(k_vals), 1)
+        self.assertEqual(len(non_k_vals), 1)
+        self.assertNotEqual(k_vals, non_k_vals)
+
+
+class OrderedMapSeqFilterPruneCollinearDummies(unittest.TestCase):
+    """prune_collinear_dummies should concatenate near-collinear dummy
+    names with '~'."""
+
+    def setUp(self):
+        """Eight strains, two variant positions.
+
+        Position 200 has K (strains 1-6) or N (strains 7-8).
+        Position 300 has D (strains 1-5) or E (strains 6-8).
+
+        After get_dummies the within-position complements (e.g. 200K
+        and 200N) have r^2 = 1, while the cross-position pair
+        (200K vs 300D) has r^2 ~ 0.56.
+        """
+        strains = [f"s{i}" for i in range(1, 9)]
+        #               pos200 pos300
+        seqs = [
+            ["K", "D"],
+            ["K", "D"],
+            ["K", "D"],
+            ["K", "D"],
+            ["K", "D"],
+            ["K", "E"],
+            ["N", "E"],
+            ["N", "E"],
+        ]
+        self.oms = _make_oms(seqs, [200, 300], strains)
+
+    def test_collinear_dummies_merged_with_tilde(self):
+        """Dummies whose r^2 exceeds the threshold are joined with '~'."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=False,
+            prune_collinear_dummies=0.5,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+
+        self.assertTrue(
+            any("~" in c for c in cols),
+            f"Expected '~' in column names, got: {cols}",
+        )
+
+    def test_high_threshold_no_cross_position_merge(self):
+        """With threshold=0.99 the cross-position pair (r^2 ~ 0.56) is
+        not pruned, but within-position complements (r^2 = 1) are."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=False,
+            prune_collinear_dummies=0.99,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+
+        # 2 retained columns (one per position), each with a ~-joined
+        # complement.
+        self.assertEqual(len(cols), 2)
+        for c in cols:
+            self.assertIn("~", c)
+
+        # No column should span both positions.
+        for c in cols:
+            self.assertFalse(
+                "200" in c and "300" in c,
+                f"Column '{c}' unexpectedly spans both positions",
+            )
+
+    def test_low_threshold_all_collapse(self):
+        """With a very low threshold all dummies collapse into one
+        column."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=False,
+            prune_collinear_dummies=0.1,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+        self.assertEqual(len(cols), 1)
+        self.assertIn("~", cols[0])
+
+    def test_column_count_reduced(self):
+        """Pruning should reduce the number of columns compared to
+        no pruning."""
+        oms_no_prune = _make_oms(
+            [
+                ["K", "D"],
+                ["K", "D"],
+                ["K", "D"],
+                ["K", "D"],
+                ["K", "D"],
+                ["K", "E"],
+                ["N", "E"],
+                ["N", "E"],
+            ],
+            [200, 300],
+            [f"s{i}" for i in range(1, 9)],
+        )
+        oms_no_prune.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=False,
+            prune_collinear_dummies=None,
+        )
+        n_no_prune = oms_no_prune.seqs.dummies.shape[1]
+
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=False,
+            prune_collinear_dummies=0.5,
+        )
+        n_pruned = self.oms.seqs.dummies.shape[1]
+
+        self.assertLess(n_pruned, n_no_prune)
+
+
+class OrderedMapSeqFilterMergeThenPrune(unittest.TestCase):
+    """When both merge_duplicate_dummies and prune_collinear_dummies
+    are enabled, merge runs first (creating '|' groups), then prune
+    runs on the merged result (creating '~' groups).  The final column
+    names can therefore contain both '|' and '~'."""
+
+    def setUp(self):
+        """Eight strains, four variant positions.
+
+        Positions 200/300 share identical amino-acid distributions
+        (K<->D, N<->E) so their dummies merge with '|'.
+
+        Positions 400/500 likewise share identical distributions
+        (S<->L, T<->M) and also merge with '|'.
+
+        The resulting merged groups (200/300 block vs 400/500 block)
+        are correlated (r^2 ~ 0.56), so with threshold=0.5 they are
+        further joined with '~'.
+        """
+        strains = [f"s{i}" for i in range(1, 9)]
+        #               200  300  400  500
+        seqs = [
+            ["K", "D", "S", "L"],
+            ["K", "D", "S", "L"],
+            ["K", "D", "S", "L"],
+            ["K", "D", "S", "L"],
+            ["K", "D", "S", "L"],
+            ["K", "D", "T", "M"],
+            ["N", "E", "T", "M"],
+            ["N", "E", "T", "M"],
+        ]
+        self.oms = _make_oms(seqs, [200, 300, 400, 500], strains)
+
+    def test_merge_before_prune(self):
+        """A '~'-joined column name should contain '|'-joined groups,
+        proving that '|' merge ran first and '~' prune ran second."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+            prune_collinear_dummies=0.5,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+
+        has_both = any("|" in c and "~" in c for c in cols)
+        self.assertTrue(
+            has_both,
+            f"Expected a column with both '|' and '~', got: {cols}",
+        )
+
+    def test_pipe_groups_inside_tilde_groups(self):
+        """Within a '~'-joined name, each segment between '~' should
+        be a '|'-joined group (or a single dummy name)."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+            prune_collinear_dummies=0.5,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+
+        for col in cols:
+            if "~" in col:
+                tilde_groups = col.split("~")
+                for group in tilde_groups:
+                    for name in group.split("|"):
+                        stripped = name.lstrip("-")
+                        self.assertRegex(
+                            stripped,
+                            r"^\d+[A-Z]$",
+                            f"Invalid SNP name '{name}' in column " f"'{col}'",
+                        )
+
+    def test_identical_dummies_in_same_pipe_group(self):
+        """200K and 300D (identical profiles) should appear in the same
+        '|'-delimited segment, not separated by '~'."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+            prune_collinear_dummies=0.5,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+        col_200K = next(c for c in cols if "200K" in c)
+
+        for tilde_group in col_200K.split("~"):
+            parts = tilde_group.split("|")
+            if "200K" in parts:
+                self.assertIn(
+                    "300D",
+                    parts,
+                    f"200K and 300D should be in the same '|' group, "
+                    f"got column '{col_200K}'",
+                )
+
+    def test_collinear_groups_joined_by_tilde(self):
+        """The 200/300 merged group and the 400/500 merged group
+        should be joined by '~' (since r^2 > 0.5)."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+            prune_collinear_dummies=0.5,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+        col_200K = next(c for c in cols if "200K" in c)
+
+        self.assertTrue(
+            "400" in col_200K or "500" in col_200K,
+            f"Expected 200/300 group to be '~'-joined with 400/500 "
+            f"group, got column '{col_200K}'",
+        )
+
+    def test_high_threshold_no_tilde_across_blocks(self):
+        """With threshold=0.99, the two '|' groups are not collinear
+        enough to merge, so no column spans both blocks."""
+        self.oms.filter(
+            plot=False,
+            get_dummies=True,
+            merge_duplicate_dummies=True,
+            prune_collinear_dummies=0.99,
+        )
+        cols = list(self.oms.seqs.dummies.columns)
+
+        for c in cols:
+            has_200_or_300 = "200" in c or "300" in c
+            has_400_or_500 = "400" in c or "500" in c
+            self.assertFalse(
+                has_200_or_300 and has_400_or_500,
+                f"Column '{c}' unexpectedly merges the two blocks",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

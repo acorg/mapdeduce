@@ -47,10 +47,14 @@ def cov(
     m: np.typing.ArrayLike, regularise: bool = False
 ) -> np.typing.ArrayLike:
     """
-    Compute the covariance matrix of m
+    Compute the covariance matrix of m.
 
     @param m: ndarray / dataframe
+
+    @param regularise: bool
     """
+    m = np.asarray(m, dtype=float)
+    m = m - m.mean(axis=0)
     K = np.dot(m, m.T) / m.shape[1]
     if regularise:
         K = K + 1e-4 * np.eye(K.shape[0])

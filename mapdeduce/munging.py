@@ -161,7 +161,7 @@ def handle_duplicate_sequences(df: pd.DataFrame) -> pd.DataFrame:
         merged = pd.DataFrame.from_dict(merged, orient="index")
         merged.columns = df.columns
 
-        # Uniqe indexes
+        # Unique indexes
         unique = df[~remaining_dupe_idx]
 
         return pd.concat((merged, unique))
@@ -175,7 +175,7 @@ def merge_amino_acids(amino_acids: pd.Series) -> str:
     Merge amino acids. If there is only one unique amino acid
     return that. If there is only one unique amino acid, and the
     rest are unknown (np.nan), then return the known amino acid.
-    If there are multiple known amino acids, then return unkown
+    If there are multiple known amino acids, then return unknown
     (np.nan)
 
     @param amino_acids: pd.Series

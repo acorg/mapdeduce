@@ -235,6 +235,14 @@ class MapSeq:
                     label=label, x="x", y="y", ax=ax, **kwds
                 )
 
+        # Set axis limits from all coordinates so plots for different sites
+        # have identical extent, even if some strains have NaN as an amino acid
+        # at this position.
+        all_x = self.all_coords["x"]
+        all_y = self.all_coords["y"]
+        ax.set_xlim(all_x.min(), all_x.max())
+        ax.set_ylim(all_y.min(), all_y.max())
+
         if ellipses:
             add_ellipses(self.map)
 

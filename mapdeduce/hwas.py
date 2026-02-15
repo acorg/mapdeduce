@@ -1223,9 +1223,37 @@ class HwasLmmSubstitution:
     """
     Linear mixed models for testing amino acid substitution effects.
 
-    For each substitution (e.g. N145K), subsets to strains with either
-    amino acid at that position and fits a binary LMM to estimate the
-    substitution effect size directly.
+    HwasLmm tests each amino acid polymorphism (e.g. "145K") in a marginal
+    regression against all strains, using all other amino acids at that site as
+    the implicit reference group. This gives valid association p-values but the
+    effect size reflects the contrast between strains with a specific amino
+    acid at that site (e.g. "145K") and all others, which could be a mixture of
+    multiple amino acid backgrounds.
+
+    HwasLmmSubstitution instead tests specific pairwise substitutions
+    (e.g. "N145K"). For each substitution it:
+
+    1. Subsets to only strains carrying either the lost (N) or gained (K)
+       amino acid at that position, excluding strains with other amino
+       acids.
+    2. Fits a binary LMM with a single test variable (0 = aa_lost,
+       1 = aa_gained), giving a beta that is directly interpretable as
+       the effect of the change of specific amino acids at a position.
+    3. Computes kinship from SNP columns at other positions only (for
+       the subsetted strains), so kinship is recomputed per substitution.
+
+    Because each substitution may involve a different subset of strains,
+    effective-tests correction is not applied — the strain subsets across
+    substitutions may be completely different, making the SNP correlation-based
+    correction inappropriate. Only simple Bonferroni correction (n_tests) is
+    provided.
+
+    Column names in the SNPs DataFrame may be compound (e.g.
+    "145K|189R" or "145K~193C") after merging duplicate or collinear
+    dummies. The class resolves simple AAP names to their compound
+    column automatically. When a compound column is used, the result
+    row is flagged with compound=True and the actual column names are
+    stored in merged_aa_lost / merged_aa_gained.
     """
 
     def __init__(

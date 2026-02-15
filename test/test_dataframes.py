@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from mapdeduce.dataframes import CoordDf, SeqDf
+from mapdeduce.dataframes import CoordDf, SeqDf, columns_at_positions
 
 
 class CoordDfPairedDistTests(unittest.TestCase):
@@ -719,6 +719,52 @@ class SeqDfPruneCollinearDummiesTests(unittest.TestCase):
         # 145K|155S and 189K are identical, should be merged with ~
         self.assertIn("145K|155S~189K", sdf.dummies.columns)
         self.assertIn("169T|170A", sdf.dummies.columns)
+
+
+class ColumnsAtPositionsTests(unittest.TestCase):
+    """Tests for columns_at_positions standalone function"""
+
+    def test_simple_columns(self):
+        """Should find simple column names at given positions"""
+        columns = ["145A", "156K", "189D"]
+        result = columns_at_positions(columns, [145])
+        self.assertEqual({"145A"}, result)
+
+    def test_multiple_positions(self):
+        """Should find columns at multiple positions"""
+        columns = ["145A", "156K", "189D"]
+        result = columns_at_positions(columns, [145, 189])
+        self.assertEqual({"145A", "189D"}, result)
+
+    def test_pipe_joined_columns(self):
+        """Should find position in pipe-joined compound name"""
+        columns = ["145K|155S", "189D"]
+        result = columns_at_positions(columns, [155])
+        self.assertEqual({"145K|155S"}, result)
+
+    def test_tilde_joined_columns(self):
+        """Should find position in tilde-joined collinear group"""
+        columns = ["145A~189D", "156K"]
+        result = columns_at_positions(columns, [189])
+        self.assertEqual({"145A~189D"}, result)
+
+    def test_complement_columns(self):
+        """Should find position in complement column name (with -)"""
+        columns = ["135N|-145A", "156K"]
+        result = columns_at_positions(columns, [145])
+        self.assertEqual({"135N|-145A"}, result)
+
+    def test_no_match(self):
+        """Should return empty set when no columns match"""
+        columns = ["145A", "156K", "189D"]
+        result = columns_at_positions(columns, [999])
+        self.assertEqual(set(), result)
+
+    def test_compound_pipe_tilde_name(self):
+        """Should find position in compound |+~ name"""
+        columns = ["145K|155S~189K", "156N"]
+        result = columns_at_positions(columns, [189])
+        self.assertEqual({"145K|155S~189K"}, result)
 
 
 if __name__ == "__main__":

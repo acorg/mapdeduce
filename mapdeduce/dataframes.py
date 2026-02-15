@@ -14,6 +14,35 @@ from .helper import expand_sequences, site_consensus
 from .munging import df_from_fasta
 
 
+def columns_at_positions(columns, positions: list[int]) -> set[str]:
+    """
+    Return column names that involve any of the given positions.
+
+    Column names may be singles (e.g. 135K), compound by identity
+    (e.g. 7D|135K|265E), or compound by collinearity
+    (e.g. 145K|155S~189K). Returns the full column name if any
+    constituent SNP is at a position in *positions*.
+
+    @param columns: Iterable of column name strings.
+    @param positions: List of positions.
+    """
+    result = set()
+
+    for col in columns:
+        found = False
+        for collinear_group in col.split("~"):
+            for aap in collinear_group.split("|"):
+                pos = int(aap.lstrip("-")[:-1])
+                if pos in positions:
+                    result.add(col)
+                    found = True
+                    break
+            if found:
+                break
+
+    return result
+
+
 class CoordDf:
     """Class for x, y coordinate data."""
 
@@ -215,25 +244,7 @@ class SeqDf:
 
         @param positions: List of positions.
         """
-        dummies = set()
-
-        for dummy in self.dummies.columns:
-            found = False
-            for collinear_group in dummy.split("~"):
-                for aap in collinear_group.split("|"):
-
-                    # Handle complement SNPs: "-156N" -> position 156
-                    # Strip leading "-" if present, then extract position
-                    pos = int(aap.lstrip("-")[:-1])
-
-                    if pos in positions:
-                        dummies.add(dummy)
-                        found = True
-                        break
-                if found:
-                    break
-
-        return dummies
+        return columns_at_positions(self.dummies.columns, positions)
 
     def _merge_identical_dummies(self) -> pd.DataFrame:
         """

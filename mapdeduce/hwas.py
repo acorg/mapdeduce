@@ -20,7 +20,8 @@ from limix_legacy.deprecated.modules.varianceDecomposition import (
 )
 from tqdm import tqdm
 
-from .dataframes import CoordDf
+from .data import amino_acids
+from .dataframes import CoordDf, columns_at_positions
 from .permp import permp
 from .plotting import make_ax_a_map, plot_arrow
 
@@ -1216,3 +1217,234 @@ class HwasLmm:
             "count_b_without_a": (Xb - Xab).sum(),
             "count_not_a_or_b": np.logical_not(np.logical_or(Xa, Xb)).sum(),
         }
+
+
+class HwasLmmSubstitution:
+    """
+    Linear mixed models for testing amino acid substitution effects.
+
+    For each substitution (e.g. N145K), subsets to strains with either
+    amino acid at that position and fits a binary LMM to estimate the
+    substitution effect size directly.
+    """
+
+    def __init__(
+        self,
+        snps: pd.DataFrame,
+        pheno: pd.DataFrame,
+        covs: Optional[pd.DataFrame] = None,
+        regularise_kinship: bool = True,
+    ):
+        """
+        @param snps: pd.DataFrame. (N, S). S dummy-encoded SNP columns.
+        @param pheno: pd.DataFrame. (N, P). P phenotypes for N individuals.
+        @param covs: pd.DataFrame. (N, Q). Q covariates for N individuals.
+        @param regularise_kinship: Bool. Regularise the kinship matrix.
+        """
+        if (snps.index != pheno.index).sum() != 0:
+            raise ValueError("snps and pheno have different indexes.")
+
+        if len(snps.index) != len(set(snps.index)):
+            raise ValueError("snps indices aren't all unique.")
+
+        if len(snps.columns) != len(set(snps.columns)):
+            raise ValueError("snps columns aren't all unique.")
+
+        if len(pheno.index) != len(set(pheno.index)):
+            raise ValueError("pheno indices aren't all unique.")
+
+        if len(pheno.columns) != len(set(pheno.columns)):
+            raise ValueError("pheno columns aren't all unique.")
+
+        self.snps = snps
+        self.pheno = pheno
+        self.covs = covs
+        self.regularise_kinship = regularise_kinship
+        self.P = pheno.shape[1]
+
+    @staticmethod
+    def _parse_substitution(sub: str) -> tuple[str, int, str]:
+        """
+        Parse a substitution string like 'N145K' into (aa_lost, position,
+        aa_gained).
+
+        @param sub: Substitution string.
+        @returns: Tuple of (aa_lost, position, aa_gained).
+        """
+        if len(sub) < 3:
+            raise ValueError(f"Invalid substitution string: '{sub}'")
+
+        aa_lost = sub[0]
+        aa_gained = sub[-1]
+        site = sub[1:-1]
+
+        if not site.isdigit():
+            raise ValueError(
+                f"Invalid substitution string: '{sub}' "
+                f"(position '{site}' is not numeric)"
+            )
+
+        pos = int(site)
+
+        if aa_lost not in amino_acids:
+            raise ValueError(f"Invalid aa_lost '{aa_lost}' in '{sub}'")
+
+        if aa_gained not in amino_acids:
+            raise ValueError(f"Invalid aa_gained '{aa_gained}' in '{sub}'")
+
+        if aa_lost == aa_gained:
+            raise ValueError(f"aa_lost and aa_gained are the same in '{sub}'")
+
+        return aa_lost, pos, aa_gained
+
+    def _resolve_column(self, aap: str) -> str:
+        """
+        Resolve a simple AAP name (e.g. '145K') to the actual column in
+        self.snps, which may be compound (e.g. '145K|189R' or '145K~193C').
+
+        If the simple name exists as an exact column, it is returned directly.
+        Otherwise, columns_at_positions is used to find columns containing
+        the AAP, and the match is validated.
+
+        @param aap: Simple AAP string like '145K'.
+        @returns: The actual column name in self.snps.
+        @raises ValueError: If no column or multiple columns match.
+        """
+        # Find all columns containing this specific AAP
+        pos = int(aap[:-1])
+        candidates = columns_at_positions(self.snps.columns, [pos])
+
+        matches = []
+        for col in candidates:
+            for collinear_group in col.split("~"):
+                for component in collinear_group.split("|"):
+                    if component.lstrip("-") == aap:
+                        matches.append(col)
+                        break
+
+        if len(matches) == 0:
+            raise ValueError(f"Column '{aap}' not found in snps DataFrame")
+
+        if len(matches) > 1:
+            raise ValueError(
+                f"Ambiguous: multiple columns match '{aap}': {matches}"
+            )
+
+        return matches[0]
+
+    def fit(
+        self,
+        substitutions: list[str],
+        progress_bar: bool = False,
+    ) -> None:
+        """
+        Fit LMM for each substitution.
+
+        @param substitutions: List of substitution strings (e.g. ["N145K"]).
+        @param progress_bar: Bool. Show tqdm progress bar.
+        """
+        results = {}
+
+        iterable = tqdm(substitutions) if progress_bar else substitutions
+
+        for sub in iterable:
+            aa_lost, pos, aa_gained = self._parse_substitution(sub)
+
+            aa_lost_aap = f"{pos}{aa_lost}"
+            aa_gained_aap = f"{pos}{aa_gained}"
+
+            aa_lost_col = self._resolve_column(aa_lost_aap)
+            aa_gained_col = self._resolve_column(aa_gained_aap)
+
+            is_compound = (
+                aa_lost_col != aa_lost_aap or aa_gained_col != aa_gained_aap
+            )
+
+            # Identify strains with either amino acid
+            has_aa_lost = self.snps[aa_lost_col] == 1
+            has_aa_gained = self.snps[aa_gained_col] == 1
+            mask = has_aa_lost | has_aa_gained
+            strain_idx = self.snps.index[mask]
+
+            n_aa_lost = has_aa_lost.sum()
+            n_aa_gained = has_aa_gained.sum()
+
+            # Subset phenotype and covariates
+            pheno_subset = self.pheno.loc[strain_idx]
+            covs_subset = (
+                self.covs.loc[strain_idx].values
+                if self.covs is not None
+                else None
+            )
+
+            # Build test variable: 0 for aa_lost, 1 for aa_gained
+            test_var = self.snps.loc[strain_idx, aa_gained_col].values.reshape(
+                -1, 1
+            )
+
+            # Compute kinship from other-position columns only
+            cols_at_pos = columns_at_positions(self.snps.columns, [pos])
+            kinship_cols = [
+                c for c in self.snps.columns if c not in cols_at_pos
+            ]
+            kinship_snps = self.snps.loc[strain_idx, kinship_cols]
+
+            K = cov(kinship_snps, regularise=self.regularise_kinship)
+
+            P = self.P
+
+            if P == 1:
+                lmm = qtl_test_lmm(
+                    snps=test_var,
+                    pheno=pheno_subset.values,
+                    K=K,
+                    covs=covs_subset,
+                )
+                beta = lmm.getBetaSNP()[0, 0]
+            else:
+                Asnps = np.eye(P)
+                Acovs = np.eye(P) if self.covs is not None else None
+
+                lmm, _ = qtl_test_lmm_kronecker(
+                    snps=test_var,
+                    phenos=pheno_subset.values,
+                    Asnps=Asnps,
+                    K1r=K,
+                    covs=covs_subset,
+                    Acovs=Acovs,
+                )
+                beta = lmm.getBetaSNP()[:, 0]
+
+            results[sub] = {
+                "p": lmm.getPv()[0, 0],
+                "beta": beta,
+                "n_aa_lost": int(n_aa_lost),
+                "n_aa_gained": int(n_aa_gained),
+                "merged_aa_lost": aa_lost_col,
+                "merged_aa_gained": aa_gained_col,
+                "compound": is_compound,
+            }
+
+        df = pd.DataFrame.from_dict(results, orient="index")
+
+        if df.empty:
+            warnings.warn("No substitutions were successfully fitted.")
+            self.results = df
+            return
+
+        df = df.sort_values("p")
+        df["logp"] = -np.log10(df["p"])
+
+        n_tests = len(substitutions)
+        corrected = df["p"] * n_tests
+        df["p_corrected_n_tests"] = corrected.clip(upper=1)
+        df["logp_corrected_n_tests"] = -np.log10(df["p_corrected_n_tests"])
+        df.loc[df["p_corrected_n_tests"] == 1, "logp_corrected_n_tests"] = 0
+        df["n_tests"] = n_tests
+
+        if P > 1:
+            df["joint-effect"] = df["beta"].apply(np.linalg.norm)
+
+        df.index.name = "substitution"
+
+        self.results = df

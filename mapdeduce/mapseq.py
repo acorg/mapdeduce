@@ -753,6 +753,240 @@ class MapSeq:
 
         return pairs
 
+    def find_natural_experiments(self, site: int, sites: list[int]):
+        """Find groups of strains identical at all sites except `site`.
+
+        Groups strains by their amino acids at all positions in `sites`
+        other than `site`. Within each group, identifies pairs of amino
+        acids at `site` and yields the two sets of strains.
+
+        Yields:
+            (aa0, aa1, strains_aa0, strains_aa1, group_idx) tuples.
+            aa0 < aa1 alphabetically. group_idx is 1-indexed per
+            (aa0, aa1) pair.
+        """
+        seq = self.seq_in_both
+        available_sites = [s for s in sites if s in seq.columns]
+        if site not in available_sites:
+            return
+
+        other_sites = [s for s in available_sites if s != site]
+        if not other_sites:
+            return
+
+        grouped = seq.groupby([seq[s] for s in other_sites])
+
+        pair_groups: dict[
+            tuple[str, str], list[tuple[list[str], list[str]]]
+        ] = {}
+
+        for _, group_df in grouped:
+            if len(group_df) < 2:
+                continue
+            aa_at_site = group_df[site]
+            aa_at_site = aa_at_site[
+                aa_at_site.notna() & ~aa_at_site.isin(["X", "-"])
+            ]
+            unique_aas = sorted(aa_at_site.unique())
+            if len(unique_aas) < 2:
+                continue
+
+            for aa0, aa1 in itertools.combinations(unique_aas, 2):
+                strains_0 = list(aa_at_site[aa_at_site == aa0].index)
+                strains_1 = list(aa_at_site[aa_at_site == aa1].index)
+                if strains_0 and strains_1:
+                    pair_groups.setdefault((aa0, aa1), []).append(
+                        (strains_0, strains_1)
+                    )
+
+        for (aa0, aa1), groups in sorted(pair_groups.items()):
+            for idx, (strains_0, strains_1) in enumerate(groups, start=1):
+                yield aa0, aa1, strains_0, strains_1, idx
+
+    def scatter_natural_experiment(
+        self,
+        site: int,
+        aa0: str,
+        aa1: str,
+        strains_aa0: list[str],
+        strains_aa1: list[str],
+        group_idx: int,
+        point_size: float = 80,
+    ) -> tuple:
+        """Plot a single natural experiment comparison.
+
+        Creates a figure showing two groups of strains that are identical
+        at all other sites but differ at `site`. Background strains are
+        shown in grey, highlighted groups are coloured by amino acid with
+        connecting lines and a Hotelling's T² annotation.
+
+        Does NOT save the figure — the caller is responsible for applying
+        axis limits, saving at the desired DPI, and closing.
+
+        Returns:
+            (fig, ax, info) where info is a dict with keys: site, aa0,
+            aa1, group_idx, hotelling_report.
+        """
+        fig, ax = plt.subplots(figsize=(8, 8))
+
+        coords_all = self.coords_in_both
+
+        # Background: strains without sequence in light grey
+        no_seq_strains = self.strains_in_coords - self.strains_in_both
+        coords_no_seq = self.all_coords.loc[
+            self.all_coords.index.isin(no_seq_strains)
+        ]
+        if not coords_no_seq.empty:
+            ax.scatter(
+                coords_no_seq["x"],
+                coords_no_seq["y"],
+                s=point_size * 0.0625,
+                c="lightgrey",
+                alpha=0.5,
+                zorder=1,
+                lw=0,
+                label=None,
+            )
+
+        # Background: all known-sequence strains in dark grey
+        ax.scatter(
+            coords_all["x"],
+            coords_all["y"],
+            s=point_size * 0.125,
+            c="darkgrey",
+            alpha=0.5,
+            zorder=2,
+            lw=0,
+            label=None,
+        )
+
+        # Highlight groups
+        coords_a = coords_all.loc[coords_all.index.isin(strains_aa0)]
+        coords_b = coords_all.loc[coords_all.index.isin(strains_aa1)]
+
+        color_a = amino_acid_colors.get(
+            aa0, amino_acid_colors.get("X", "gray")
+        )
+        color_b = amino_acid_colors.get(
+            aa1, amino_acid_colors.get("X", "gray")
+        )
+
+        scatter_kwds = dict(
+            edgecolors="white",
+            linewidths=0.5,
+            zorder=5,
+            clip_on=False,
+            s=point_size,
+        )
+
+        ax.scatter(
+            coords_a["x"],
+            coords_a["y"],
+            c=color_a,
+            label=f"{aa0} (n={len(coords_a)})",
+            **scatter_kwds,
+        )
+        ax.scatter(
+            coords_b["x"],
+            coords_b["y"],
+            c=color_b,
+            label=f"{aa1} (n={len(coords_b)})",
+            **scatter_kwds,
+        )
+
+        # Connecting lines between all pairs
+        lines = []
+        a_xy = coords_a[["x", "y"]].values
+        b_xy = coords_b[["x", "y"]].values
+        for pa in a_xy:
+            for pb in b_xy:
+                lines.append([pa, pb])
+
+        if lines:
+            alpha = max(0.95 ** len(lines), 0.3)
+            lc = LineCollection(
+                lines,
+                colors="grey",
+                linewidths=0.5,
+                alpha=alpha,
+                zorder=3,
+            )
+            ax.add_collection(lc)
+
+        # Hotelling's T²
+        h_report = "[Insufficient data]"
+        if not coords_a.empty and not coords_b.empty:
+            if len(coords_a) > 1 and len(coords_b) > 1:
+                try:
+                    h = spm1d.stats.hotellings2(
+                        coords_a[["x", "y"]].values,
+                        coords_b[["x", "y"]].values,
+                    )
+                    inf = h.inference()
+                    h_report = (
+                        "p = {:.2E}\nz = {:.3f}\ndf = {:d}, {:d}".format(
+                            inf.p, h.z, *list(map(int, h.df))
+                        )
+                    )
+                except Exception:
+                    h_report = "[T² failed]"
+
+            ax.annotate(
+                h_report,
+                xy=(0.02, 0.02),
+                xycoords="axes fraction",
+                fontsize=8,
+                verticalalignment="bottom",
+                fontfamily="monospace",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+            )
+
+        make_ax_a_map(ax)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.tick_params(bottom=False, left=False)
+        ax.grid(True, linewidth=0.5, alpha=0.3)
+        ax.legend(loc="upper left", fontsize=14, framealpha=0.8)
+        ax.set_title(
+            f"Site {site}: {aa0} vs {aa1} (group {group_idx})",
+            fontsize=16,
+        )
+        fig.tight_layout()
+
+        info = {
+            "site": site,
+            "aa0": aa0,
+            "aa1": aa1,
+            "group_idx": group_idx,
+            "hotelling_report": h_report,
+        }
+        return fig, ax, info
+
+    def iter_natural_experiments(
+        self, sites: list[int], point_size: float = 80
+    ):
+        """Yield (fig, ax, info) for every natural experiment across sites.
+
+        Iterates over all sites and amino acid pairs, plotting each
+        natural experiment group. The caller should apply any desired
+        axis limits, save the figure, and call plt.close(fig).
+
+        Args:
+            sites: List of site positions to consider.
+            point_size: Marker area for highlighted points (default 80).
+                Background points scale proportionally.
+
+        Yields:
+            (fig, ax, info) tuples — see scatter_natural_experiment.
+        """
+        for site in sites:
+            for aa0, aa1, s0, s1, gidx in self.find_natural_experiments(
+                site, sites
+            ):
+                yield self.scatter_natural_experiment(
+                    site, aa0, aa1, s0, s1, gidx, point_size=point_size
+                )
+
     def identical_sequences(
         self, positions: Optional[list[int]] = None
     ) -> list:

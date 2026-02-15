@@ -285,7 +285,7 @@ class MapSeq:
         # Collect x, y of points to plot, and lines between
         aas = sub[0], sub[2]
         for i, pairs in enumerate(combinations):
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
 
             # Antigens without a known sequence
             self.coords_excl_to_coords.plot.scatter(

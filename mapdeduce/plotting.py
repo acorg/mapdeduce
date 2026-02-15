@@ -209,6 +209,7 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     """
     ax = kwargs.pop("ax", plt.gca())
     zorder = kwargs.pop("zorder", None)
+    edgecolor = kwargs.pop("edgecolor", color)
     anno = ax.annotate(
         label,
         xy=end,
@@ -216,7 +217,7 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
         zorder=zorder,
         arrowprops=dict(
             facecolor=color,
-            edgecolor=color,
+            edgecolor=edgecolor,
             width=lw,
             headwidth=5 * lw,
             headlength=4 * lw,

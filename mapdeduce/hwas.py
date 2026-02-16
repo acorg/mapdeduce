@@ -1,5 +1,6 @@
 """Classes and functions for running Hemagglutinin wide association studies"""
 
+import re
 import warnings
 from itertools import combinations
 from typing import Optional
@@ -26,6 +27,14 @@ from .permp import permp
 from .plotting import make_ax_a_map, plot_arrow
 
 warnings.filterwarnings("ignore", module="h5py")
+
+
+def is_aap(string: str) -> bool:
+    """
+    Test if a string is an amino acid polymorphism (i.e. a site followed by a
+    single amino acid).
+    """
+    return bool(re.match(r"^\d+[ACDEFGHIKLMNPQRSTVWY]$", string))
 
 
 def shuffle_values(nperm: int, values: np.ndarray) -> np.ndarray:
@@ -1338,6 +1347,12 @@ class HwasLmmSubstitution:
         @returns: The actual column name in self.snps.
         @raises ValueError: If no column or multiple columns match.
         """
+        if not is_aap(aap):
+            raise ValueError(
+                f"{aap} is not an amino acid polymorphism (i.e. a site "
+                "followed by a single amino acid)"
+            )
+
         # Find all columns containing this specific AAP
         pos = int(aap[:-1])
         candidates = columns_at_positions(self.snps.columns, [pos])

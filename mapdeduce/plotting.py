@@ -5,7 +5,7 @@ import math
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Ellipse, Rectangle
+from matplotlib.patches import Ellipse, Rectangle, Shadow
 
 
 def setup_ax(map):
@@ -196,7 +196,9 @@ def point_size(n):
     return (-4.26764259e-03 * n) + (2.30663771e-07 * n**2) + 20.21953616
 
 
-def plot_arrow(start, end, color, lw=2, label="", **kwargs):
+def plot_arrow(
+    start, end, color, lw=2, label="", shadow=False, shadow_kwds=None, **kwargs
+):
     """
     Plot an arrow
 
@@ -205,6 +207,8 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
     @param color: Arrow color
     @param lw: Arrow linewidth
     @param label: Text label for the arrow
+    @param shadow: bool. If True, add a drop shadow to the arrow.
+    @param shadow_kwds: dict. Passed to matplotlib.patches.Shadow.
     @param kwargs: Passed to arrowprops
     """
     ax = kwargs.pop("ax", plt.gca())
@@ -224,7 +228,15 @@ def plot_arrow(start, end, color, lw=2, label="", **kwargs):
             **kwargs,
         ),
     )
-    return anno.arrow_patch
+    arrow_patch = anno.arrow_patch
+    if shadow:
+        if shadow_kwds is None:
+            shadow_kwds = {}
+        ox = shadow_kwds.pop("ox", 0.01)
+        oy = shadow_kwds.pop("oy", -0.01)
+        shadow_patch = Shadow(arrow_patch, ox, oy, **shadow_kwds)
+        ax.add_patch(shadow_patch)
+    return arrow_patch
 
 
 def make_ax_a_map(ax=None):

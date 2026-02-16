@@ -844,6 +844,7 @@ class MapSeq:
                 c="lightgrey",
                 alpha=0.5,
                 zorder=1,
+                lw=0,
                 label=None,
             )
 
@@ -855,6 +856,7 @@ class MapSeq:
             c="darkgrey",
             alpha=0.5,
             zorder=2,
+            lw=0,
             label=None,
         )
 
@@ -869,25 +871,27 @@ class MapSeq:
             aa1, amino_acid_colors.get("X", "gray")
         )
 
+        scatter_kwds = dict(
+            edgecolors="white",
+            linewidths=0.5,
+            zorder=5,
+            clip_on=False,
+            s=point_size,
+        )
+
         ax.scatter(
             coords_a["x"],
             coords_a["y"],
-            s=point_size,
             c=color_a,
-            edgecolors="black",
-            linewidths=0.5,
-            zorder=5,
             label=f"{aa0} (n={len(coords_a)})",
+            **scatter_kwds,
         )
         ax.scatter(
             coords_b["x"],
             coords_b["y"],
-            s=point_size,
             c=color_b,
-            edgecolors="black",
-            linewidths=0.5,
-            zorder=5,
             label=f"{aa1} (n={len(coords_b)})",
+            **scatter_kwds,
         )
 
         # Connecting lines between all pairs

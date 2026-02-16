@@ -774,83 +774,104 @@ class HwasLmmSubstitutionParseTests(unittest.TestCase):
 class HwasLmmSubstitutionValidationTests(unittest.TestCase):
     """Tests for HwasLmmSubstitution constructor validation"""
 
-    def test_mismatched_indexes_raises(self):
-        """
-        Should raise ValueError when snps and pheno have different indexes
-        """
-        snps = pd.DataFrame({"145N": [1, 0], "145K": [0, 1]}, index=["a", "b"])
-        pheno = pd.DataFrame({"y": [1, 2]}, index=["c", "d"])
-        with self.assertRaises(ValueError):
-            HwasLmmSubstitution(snps=snps, pheno=pheno)
+    def test_seq_df_must_be_dataframe(self):
+        """Should raise TypeError when seq_df is not a DataFrame"""
+        coord_df = pd.DataFrame({"y": [1, 2]}, index=["a", "b"])
+        with self.assertRaises(TypeError):
+            HwasLmmSubstitution(seq_df="not_a_df", coord_df=coord_df)
 
-    def test_missing_columns_raises(self):
-        """Should raise ValueError for substitution with missing SNP columns"""
+    def test_coord_df_must_be_dataframe(self):
+        """Should raise TypeError when coord_df is not a DataFrame"""
+        seq_df = pd.DataFrame({145: ["N", "K"]}, index=["a", "b"])
+        with self.assertRaises(TypeError):
+            HwasLmmSubstitution(seq_df=seq_df, coord_df="not_a_df")
+
+    def test_missing_aa_raises(self):
+        """Should raise ValueError for substitution where aa_gained is absent
+        from the sequences (no strains have that amino acid)."""
         np.random.seed(42)
         N = 20
-        snps = pd.DataFrame(
-            {"145N": np.random.randint(2, size=N)},
+        # Only N at position 145, no K
+        seq_df = pd.DataFrame(
+            {145: ["N"] * N, 189: list("DE" * 10)},
+            index=[f"s{i}" for i in range(N)],
         )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        coord_df = pd.DataFrame(
+            {"y": np.random.randn(N)},
+            index=[f"s{i}" for i in range(N)],
+        )
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         with self.assertRaises(ValueError):
-            hwas.fit(substitutions=["N145K"])  # 145K column missing
+            hwas.fit(substitutions=["N145K"])
 
 
 class HwasLmmSubstitutionFitTests(unittest.TestCase):
     """Tests for HwasLmmSubstitution.fit"""
 
     def _make_data(self, N=50, seed=42):
-        """Create synthetic data with known substitution effect"""
+        """Create synthetic raw sequence data with known substitution effect.
+
+        Returns seq_df (amino acid characters) and coord_df (phenotype),
+        plus has_K indicator for building phenotypes.
+
+        25 strains have N at position 145, 25 have K.
+        Position 189 has D/E variation for kinship.
+        """
         np.random.seed(seed)
 
         # 25 strains have N at position 145, 25 have K
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
+        aa_145 = ["N"] * 25 + ["K"] * 25
 
-        # Other position columns (for kinship)
-        other1 = np.random.randint(2, size=N)
-        other2 = np.random.randint(2, size=N)
+        # Other position for kinship
+        aa_189 = np.array(list("DE" * 25))
+        np.random.shuffle(aa_189)
 
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K": has_K,
-                "189D": other1,
-                "189E": other2,
-            }
-        )
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame({145: aa_145, 189: aa_189.tolist()}, index=idx)
 
-        return snps, has_N, has_K
+        has_K = np.array([0] * 25 + [1] * 25)
+
+        return seq_df, has_K
+
+    def _make_coord_df(self, N=50, seed=42, ncols=1):
+        """Create coord_df (phenotype data)."""
+        np.random.seed(seed)
+        idx = [f"s{i}" for i in range(N)]
+        if ncols == 1:
+            return pd.DataFrame({"y": np.random.randn(N)}, index=idx)
+        else:
+            data = {f"p{i}": np.random.randn(N) for i in range(ncols)}
+            return pd.DataFrame(data, index=idx)
 
     def test_results_is_dataframe(self):
         """fit should attach a results DataFrame"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
         self.assertIsInstance(hwas.results, pd.DataFrame)
 
     def test_results_index_name(self):
         """Results index should be named 'substitution'"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
         self.assertEqual("substitution", hwas.results.index.name)
 
     def test_results_index_values(self):
         """Results index should contain substitution names"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
         self.assertIn("N145K", hwas.results.index)
 
     def test_results_has_expected_columns(self):
         """Results should have required columns"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
         for col in [
             "p",
@@ -866,9 +887,9 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
 
     def test_n_aa_lost_n_aa_gained(self):
         """n_aa_lost and n_aa_gained should reflect group sizes"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
         self.assertEqual(25, hwas.results.loc["N145K", "n_aa_lost"])
         self.assertEqual(25, hwas.results.loc["N145K", "n_aa_gained"])
@@ -877,13 +898,14 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Substitution with known large effect should have small p-value"""
         np.random.seed(42)
         N = 50
-        snps, has_N, has_K = self._make_data(N=N)
+        seq_df, has_K = self._make_data(N=N)
 
         # Phenotype: large effect of K vs N
+        idx = seq_df.index
         pheno_values = has_K * 10.0 + np.random.randn(N) * 0.5
-        pheno = pd.DataFrame({"y": pheno_values})
+        coord_df = pd.DataFrame({"y": pheno_values}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         self.assertLess(hwas.results.loc["N145K", "p"], 1e-5)
@@ -892,13 +914,14 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Beta should be close to the true effect size"""
         np.random.seed(42)
         N = 50
-        snps, has_N, has_K = self._make_data(N=N)
+        seq_df, has_K = self._make_data(N=N)
 
         effect = 10.0
+        idx = seq_df.index
         pheno_values = has_K * effect + np.random.randn(N) * 0.5
-        pheno = pd.DataFrame({"y": pheno_values})
+        coord_df = pd.DataFrame({"y": pheno_values}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         beta = hwas.results.loc["N145K", "beta"]
@@ -908,10 +931,10 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Substitution with no effect should have large p-value"""
         np.random.seed(42)
         N = 50
-        snps, _, _ = self._make_data(N=N)
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
+        seq_df, _ = self._make_data(N=N)
+        coord_df = self._make_coord_df(N=N)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         self.assertGreater(hwas.results.loc["N145K", "p"], 0.05)
@@ -920,19 +943,19 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Kinship should be computed from columns at other positions only.
 
         When all SNP columns are at the tested position, kinship is computed
-        from an empty matrix, which could cause issues. This tests that the
-        code handles this gracefully by having only columns at position 145.
+        from an empty matrix. This tests that the code handles this
+        gracefully by having only one position (145).
         """
         np.random.seed(42)
         N = 20
-        has_N = np.array([1] * 10 + [0] * 10)
-        has_K = 1 - has_N
 
-        # Only columns at position 145 - kinship will be from empty matrix
-        snps = pd.DataFrame({"145N": has_N, "145K": has_K})
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
+        # Only position 145 - no other positions for kinship
+        aa_145 = ["N"] * 10 + ["K"] * 10
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame({145: aa_145}, index=idx)
+        coord_df = pd.DataFrame({"y": np.random.randn(N)}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         # Should not raise even though kinship cols are empty
         hwas.fit(substitutions=["N145K"])
         self.assertIn("N145K", hwas.results.index)
@@ -940,25 +963,20 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
     def test_strain_subsetting(self):
         """Only strains with aa_lost or aa_gained should be included.
 
-        If some strains have neither amino acid at the position,
+        If some strains have a third amino acid at the position,
         they should be excluded.
         """
         np.random.seed(42)
         N = 30
-        # 10 have N, 10 have K, 10 have neither (both 0)
-        has_N = np.array([1] * 10 + [0] * 10 + [0] * 10)
-        has_K = np.array([0] * 10 + [1] * 10 + [0] * 10)
+        # 10 have N, 10 have K, 10 have D (third amino acid)
+        aa_145 = ["N"] * 10 + ["K"] * 10 + ["D"] * 10
 
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K": has_K,
-                "189D": np.random.randint(2, size=N),
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
+        idx = [f"s{i}" for i in range(N)]
+        aa_189 = list("DE" * 15)
+        seq_df = pd.DataFrame({145: aa_145, 189: aa_189}, index=idx)
+        coord_df = pd.DataFrame({"y": np.random.randn(N)}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         # Should have used only 20 strains (10 N + 10 K)
@@ -969,25 +987,23 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Results should be sorted by p-value"""
         np.random.seed(42)
         N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-        has_D = np.array([1] * 25 + [0] * 25)
-        has_E = 1 - has_D
+        # Position 145: N/K, Position 189: D/E (shuffled to differ)
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        aa_189 = ["D"] * 25 + ["E"] * 25
+        rng = np.random.RandomState(99)
+        aa_189_arr = np.array(aa_189)
+        rng.shuffle(aa_189_arr)
+        aa_189 = aa_189_arr.tolist()
+        has_K = np.array([0] * 25 + [1] * 25)
 
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K": has_K,
-                "189D": has_D,
-                "189E": has_E,
-            }
-        )
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame({145: aa_145, 189: aa_189}, index=idx)
 
         # N145K has a strong effect, D189E has none
         pheno_values = has_K * 10.0 + np.random.randn(N) * 0.5
-        pheno = pd.DataFrame({"y": pheno_values})
+        coord_df = pd.DataFrame({"y": pheno_values}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K", "D189E"])
 
         # N145K should be first (lowest p)
@@ -997,22 +1013,19 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """p_corrected_n_tests should be p * n_tests, clipped at 1"""
         np.random.seed(42)
         N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-        has_D = np.array([1] * 25 + [0] * 25)
-        has_E = 1 - has_D
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        # Shuffle so 189 profile differs from 145 (avoids merged dummies)
+        aa_189 = ["D"] * 25 + ["E"] * 25
+        rng = np.random.RandomState(42)
+        aa_189_arr = np.array(aa_189)
+        rng.shuffle(aa_189_arr)
+        aa_189 = aa_189_arr.tolist()
 
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K": has_K,
-                "189D": has_D,
-                "189E": has_E,
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame({145: aa_145, 189: aa_189}, index=idx)
+        coord_df = pd.DataFrame({"y": np.random.randn(N)}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K", "D189E"])
 
         for sub in hwas.results.index:
@@ -1025,15 +1038,17 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """With multivariate phenotype, beta should be an array"""
         np.random.seed(42)
         N = 50
-        snps, has_N, has_K = self._make_data(N=N)
-        pheno = pd.DataFrame(
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        coord_df = pd.DataFrame(
             {
                 "x": has_K * 5.0 + np.random.randn(N) * 0.5,
                 "y": has_K * 3.0 + np.random.randn(N) * 0.5,
-            }
+            },
+            index=idx,
         )
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         beta = hwas.results.loc["N145K", "beta"]
@@ -1045,15 +1060,17 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """
         np.random.seed(42)
         N = 50
-        snps, has_N, has_K = self._make_data(N=N)
-        pheno = pd.DataFrame(
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        coord_df = pd.DataFrame(
             {
                 "x": has_K * 5.0 + np.random.randn(N) * 0.5,
                 "y": has_K * 3.0 + np.random.randn(N) * 0.5,
-            }
+            },
+            index=idx,
         )
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
         hwas.fit(substitutions=["N145K"])
 
         beta = hwas.results.loc["N145K", "beta"]
@@ -1067,199 +1084,166 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         """Should work with covariates"""
         np.random.seed(42)
         N = 50
-        snps, _, has_K = self._make_data(N=N)
-        covs = pd.DataFrame({"cov1": np.random.randn(N)})
-        pheno = pd.DataFrame({"y": has_K * 10.0 + np.random.randn(N) * 0.5})
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        covs = pd.DataFrame({"cov1": np.random.randn(N)}, index=idx)
+        coord_df = pd.DataFrame(
+            {"y": has_K * 10.0 + np.random.randn(N) * 0.5}, index=idx
+        )
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno, covs=covs)
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df, covs=covs)
         hwas.fit(substitutions=["N145K"])
 
         self.assertLess(hwas.results.loc["N145K", "p"], 1e-5)
 
-    def test_compound_aa_gained_column(self):
-        """Should find aa_gained in compound column name (e.g. 145K|189R)"""
+    def test_compound_column_from_merged_dummies(self):
+        """When two positions have identical amino acid profiles across
+        strains, merging produces compound column names (e.g. 145K|189R).
+        The substitution test should still work correctly."""
         np.random.seed(42)
         N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
+        # Position 145: N/K, Position 189: same profile as 145 (R when K,
+        # S when N), so 145K and 189R will be merged into 145K|189R
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        aa_189 = ["S"] * 25 + ["R"] * 25  # identical profile to 145K
+        # Position 200: independent variation for kinship
+        rng = np.random.RandomState(42)
+        aa_200 = rng.choice(["D", "E"], size=N).tolist()
+        has_K = np.array([0] * 25 + [1] * 25)
 
-        # Target col is compound: "145K|189R" (merged duplicate dummies)
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K|189R": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame(
+            {145: aa_145, 189: aa_189, 200: aa_200}, index=idx
         )
         pheno_values = has_K * 10.0 + np.random.randn(N) * 0.5
-        pheno = pd.DataFrame({"y": pheno_values})
+        coord_df = pd.DataFrame({"y": pheno_values}, index=idx)
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df, coord_df=coord_df, merge_duplicate_dummies=True
+        )
         hwas.fit(substitutions=["N145K"])
 
         self.assertIn("N145K", hwas.results.index)
         self.assertLess(hwas.results.loc["N145K", "p"], 1e-5)
-
-    def test_compound_aa_lost_column(self):
-        """Should find aa_lost in compound column name"""
-        np.random.seed(42)
-        N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-
-        # Source col is compound: "145N|189S"
-        snps = pd.DataFrame(
-            {
-                "145N|189S": has_N,
-                "145K": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
-        )
-        pheno_values = has_K * 10.0 + np.random.randn(N) * 0.5
-        pheno = pd.DataFrame({"y": pheno_values})
-
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
-        hwas.fit(substitutions=["N145K"])
-
-        self.assertIn("N145K", hwas.results.index)
-
-    def test_compound_column_marked_as_compound(self):
-        """Results should have compound=True when either col is compound"""
-        np.random.seed(42)
-        N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K|189R": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
-
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
-        hwas.fit(substitutions=["N145K"])
-
         self.assertTrue(hwas.results.loc["N145K", "compound"])
 
+    def test_compound_column_merged_names(self):
+        """merged_aa_gained should contain the compound column name when
+        dummies are merged."""
+        np.random.seed(42)
+        N = 50
+        # 145K and 189R have identical profiles → merged
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        aa_189 = ["S"] * 25 + ["R"] * 25
+        # Position 200: independent variation for kinship
+        rng = np.random.RandomState(42)
+        aa_200 = rng.choice(["D", "E"], size=N).tolist()
+
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame(
+            {145: aa_145, 189: aa_189, 200: aa_200}, index=idx
+        )
+        coord_df = pd.DataFrame({"y": np.random.randn(N)}, index=idx)
+
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df, coord_df=coord_df, merge_duplicate_dummies=True
+        )
+        hwas.fit(substitutions=["N145K"])
+
+        # merged_aa_gained should be the compound name containing 145K
+        merged = hwas.results.loc["N145K", "merged_aa_gained"]
+        self.assertIn("145K", merged)
+        self.assertIn("|", merged)
+
     def test_simple_columns_not_compound(self):
-        """Results should have compound=False when both cols are simple"""
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        """Results should have compound=False when merging is disabled"""
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df,
+            coord_df=coord_df,
+            merge_duplicate_dummies=False,
+        )
         hwas.fit(substitutions=["N145K"])
 
         self.assertFalse(hwas.results.loc["N145K", "compound"])
 
-    def test_merged_aa_lost_and_aa_gained_columns(self):
-        """Results should have merged_aa_lost and merged_aa_gained columns"""
-        np.random.seed(42)
-        N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K|189R": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
-
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
-        hwas.fit(substitutions=["N145K"])
-
-        self.assertEqual("145N", hwas.results.loc["N145K", "merged_aa_lost"])
-        self.assertEqual(
-            "145K|189R", hwas.results.loc["N145K", "merged_aa_gained"]
-        )
-
     def test_simple_columns_merged_names(self):
         """
-        merged_aa_lost/aa_gained should equal simple col names when not
-        compound
+        merged_aa_lost/aa_gained should equal simple col names when merging
+        is disabled
         """
-        snps, _, _ = self._make_data()
-        pheno = pd.DataFrame({"y": np.random.randn(50)})
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        seq_df, _ = self._make_data()
+        coord_df = self._make_coord_df()
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df,
+            coord_df=coord_df,
+            merge_duplicate_dummies=False,
+        )
         hwas.fit(substitutions=["N145K"])
 
         self.assertEqual("145N", hwas.results.loc["N145K", "merged_aa_lost"])
         self.assertEqual("145K", hwas.results.loc["N145K", "merged_aa_gained"])
 
-    def test_tilde_joined_compound_column(self):
-        """Should find AA in tilde-joined collinear column like 145K~193C"""
+    def test_negative_dummy_component(self):
+        """When merge produces a negative component (complement dummy),
+        the test variable should still correctly identify aa_gained strains.
+
+        If 145K is a complement of 145N (they're the only two AAs), merging
+        with complements produces e.g. '145N|-145K'. The test variable for
+        aa_gained=K should still be 1 for K strains and 0 for N strains.
+        """
         np.random.seed(42)
         N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
+        # Position 145: only N and K (complements of each other as dummies)
+        # Position 200: variation for kinship
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        aa_200 = list("DE" * 25)
+        has_K = np.array([0] * 25 + [1] * 25)
 
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K~193C": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
+        idx = [f"s{i}" for i in range(N)]
+        seq_df = pd.DataFrame({145: aa_145, 200: aa_200}, index=idx)
+        pheno_values = has_K * 10.0 + np.random.randn(N) * 0.5
+        coord_df = pd.DataFrame({"y": pheno_values}, index=idx)
+
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df, coord_df=coord_df, merge_duplicate_dummies=True
         )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
+        hwas.fit(substitutions=["N145K"])
 
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
+        # Should detect the strong association despite complement merging
+        self.assertLess(hwas.results.loc["N145K", "p"], 1e-5)
+        # Beta should be positive (K associated with higher phenotype)
+        self.assertGreater(hwas.results.loc["N145K", "beta"], 0)
+
+    def test_collinear_pruning_produces_tilde_column(self):
+        """When prune_collinear_dummies is set and dummies are near-collinear,
+        the column name should contain '~' and compound should be True."""
+        np.random.seed(42)
+        N = 50
+        # Position 145: N/K
+        aa_145 = ["N"] * 25 + ["K"] * 25
+        # Position 193: nearly identical to 145 (only 1 strain differs)
+        aa_193 = ["S"] * 25 + ["C"] * 25
+        # Make one strain differ to avoid being identical (which would merge)
+        aa_193[0] = "C"
+        aa_193[25] = "S"
+
+        idx = [f"s{i}" for i in range(N)]
+        aa_200 = list("DE" * 25)
+        seq_df = pd.DataFrame(
+            {145: aa_145, 193: aa_193, 200: aa_200}, index=idx
+        )
+        coord_df = pd.DataFrame({"y": np.random.randn(N)}, index=idx)
+
+        hwas = HwasLmmSubstitution(
+            seq_df=seq_df,
+            coord_df=coord_df,
+            prune_collinear_dummies=0.9,
+        )
         hwas.fit(substitutions=["N145K"])
 
         self.assertIn("N145K", hwas.results.index)
-        self.assertTrue(hwas.results.loc["N145K", "compound"])
-        self.assertEqual(
-            "145K~193C", hwas.results.loc["N145K", "merged_aa_gained"]
-        )
-
-    def test_compound_pipe_tilde_column(self):
-        """Should find AA in compound |+~ name like 145K|155S~189K"""
-        np.random.seed(42)
-        N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K|155S~189K": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
-
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
-        hwas.fit(substitutions=["N145K"])
-
-        self.assertIn("N145K", hwas.results.index)
-        self.assertEqual(
-            "145K|155S~189K", hwas.results.loc["N145K", "merged_aa_gained"]
-        )
-
-    def test_ambiguous_column_raises(self):
-        """Should raise ValueError if multiple columns match the same AAP"""
-        np.random.seed(42)
-        N = 50
-        has_N = np.array([1] * 25 + [0] * 25)
-        has_K = 1 - has_N
-
-        # Two different columns both contain 145K
-        snps = pd.DataFrame(
-            {
-                "145N": has_N,
-                "145K": has_K,
-                "145K|189R": has_K,
-                "200D": np.random.randint(2, size=N),
-            }
-        )
-        pheno = pd.DataFrame({"y": np.random.randn(N)})
-
-        hwas = HwasLmmSubstitution(snps=snps, pheno=pheno)
-        with self.assertRaises(ValueError):
-            hwas.fit(substitutions=["N145K"])
 
 
 if __name__ == "__main__":

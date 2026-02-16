@@ -23,6 +23,7 @@ from tqdm import tqdm
 
 from .data import amino_acids
 from .dataframes import CoordDf, columns_at_positions
+from .mapseq import OrderedMapSeq
 from .permp import permp
 from .plotting import make_ax_a_map, plot_arrow
 
@@ -1245,10 +1246,14 @@ class HwasLmmSubstitution:
     1. Subsets to only strains carrying either the lost (N) or gained (K)
        amino acid at that position, excluding strains with other amino
        acids.
-    2. Fits a binary LMM with a single test variable (0 = aa_lost,
+    2. Creates a fresh OrderedMapSeq from the subsetted strains and
+       applies filtering (dummy encoding, merging, collinear pruning)
+       so that compound columns correctly reflect the genetic diversity
+       in the subset.
+    3. Fits a binary LMM with a single test variable (0 = aa_lost,
        1 = aa_gained), giving a beta that is directly interpretable as
        the effect of the change of specific amino acids at a position.
-    3. Computes kinship from SNP columns at other positions only (for
+    4. Computes kinship from SNP columns at other positions only (for
        the subsetted strains), so kinship is recomputed per substitution.
 
     Because each substitution may involve a different subset of strains,
@@ -1257,7 +1262,7 @@ class HwasLmmSubstitution:
     correction inappropriate. Only simple Bonferroni correction (n_tests) is
     provided.
 
-    Column names in the SNPs DataFrame may be compound (e.g.
+    Column names in the filtered dummies may be compound (e.g.
     "145K|189R" or "145K~193C") after merging duplicate or collinear
     dummies. The class resolves simple AAP names to their compound
     column automatically. When a compound column is used, the result
@@ -1267,37 +1272,36 @@ class HwasLmmSubstitution:
 
     def __init__(
         self,
-        snps: pd.DataFrame,
-        pheno: pd.DataFrame,
+        seq_df: pd.DataFrame,
+        coord_df: pd.DataFrame,
         covs: Optional[pd.DataFrame] = None,
         regularise_kinship: bool = True,
+        merge_duplicate_dummies: bool = True,
+        prune_collinear_dummies: Optional[float] = None,
     ):
         """
-        @param snps: pd.DataFrame. (N, S). S dummy-encoded SNP columns.
-        @param pheno: pd.DataFrame. (N, P). P phenotypes for N individuals.
+        @param seq_df: pd.DataFrame. (N, positions). Amino acid characters.
+        @param coord_df: pd.DataFrame. (N, P). P phenotype columns.
         @param covs: pd.DataFrame. (N, Q). Q covariates for N individuals.
         @param regularise_kinship: Bool. Regularise the kinship matrix.
+        @param merge_duplicate_dummies: Bool. Merge identical/complement
+            dummy variables per substitution subset.
+        @param prune_collinear_dummies: Float or None. If set, prune
+            near-collinear dummies (r^2 > threshold) per substitution subset.
         """
-        if (snps.index != pheno.index).sum() != 0:
-            raise ValueError("snps and pheno have different indexes.")
+        if not isinstance(seq_df, pd.DataFrame):
+            raise TypeError("seq_df must be a pandas DataFrame")
 
-        if len(snps.index) != len(set(snps.index)):
-            raise ValueError("snps indices aren't all unique.")
+        if not isinstance(coord_df, pd.DataFrame):
+            raise TypeError("coord_df must be a pandas DataFrame")
 
-        if len(snps.columns) != len(set(snps.columns)):
-            raise ValueError("snps columns aren't all unique.")
-
-        if len(pheno.index) != len(set(pheno.index)):
-            raise ValueError("pheno indices aren't all unique.")
-
-        if len(pheno.columns) != len(set(pheno.columns)):
-            raise ValueError("pheno columns aren't all unique.")
-
-        self.snps = snps
-        self.pheno = pheno
+        self.seq_df = seq_df
+        self.coord_df = coord_df
         self.covs = covs
         self.regularise_kinship = regularise_kinship
-        self.P = pheno.shape[1]
+        self.merge_duplicate_dummies = merge_duplicate_dummies
+        self.prune_collinear_dummies = prune_collinear_dummies
+        self.P = coord_df.shape[1]
 
     @staticmethod
     def _parse_substitution(sub: str) -> tuple[str, int, str]:
@@ -1334,17 +1338,19 @@ class HwasLmmSubstitution:
 
         return aa_lost, pos, aa_gained
 
-    def _resolve_column(self, aap: str) -> str:
+    @staticmethod
+    def _resolve_column(aap: str, columns: pd.Index) -> tuple[str, bool]:
         """
-        Resolve a simple AAP name (e.g. '145K') to the actual column in
-        self.snps, which may be compound (e.g. '145K|189R' or '145K~193C').
-
-        If the simple name exists as an exact column, it is returned directly.
-        Otherwise, columns_at_positions is used to find columns containing
-        the AAP, and the match is validated.
+        Resolve a simple AAP name (e.g. '145K') to the actual column in the
+        given columns, which may be compound (e.g. '145K|189R' or
+        '145K~193C').
 
         @param aap: Simple AAP string like '145K'.
-        @returns: The actual column name in self.snps.
+        @param columns: pd.Index of column names to search.
+        @returns: Tuple of (column_name, is_negative). is_negative is True
+            when the AAP appears as a negative component (e.g. '-145K' in
+            '145N|-145K'), meaning the column values are inverted relative
+            to what the AAP represents.
         @raises ValueError: If no column or multiple columns match.
         """
         if not is_aap(aap):
@@ -1353,27 +1359,29 @@ class HwasLmmSubstitution:
                 "followed by a single amino acid)"
             )
 
-        # Find all columns containing this specific AAP
         pos = int(aap[:-1])
-        candidates = columns_at_positions(self.snps.columns, [pos])
+        candidates = columns_at_positions(columns, [pos])
 
         matches = []
+        match_is_negative = []
         for col in candidates:
             for collinear_group in col.split("~"):
                 for component in collinear_group.split("|"):
-                    if component.lstrip("-") == aap:
+                    stripped = component.lstrip("-")
+                    if stripped == aap:
                         matches.append(col)
+                        match_is_negative.append(component.startswith("-"))
                         break
 
         if len(matches) == 0:
-            raise ValueError(f"Column '{aap}' not found in snps DataFrame")
+            raise ValueError(f"Column '{aap}' not found in columns")
 
         if len(matches) > 1:
             raise ValueError(
                 f"Ambiguous: multiple columns match '{aap}': {matches}"
             )
 
-        return matches[0]
+        return matches[0], match_is_negative[0]
 
     def fit(
         self,
@@ -1382,6 +1390,10 @@ class HwasLmmSubstitution:
     ) -> None:
         """
         Fit LMM for each substitution.
+
+        For each substitution, subsets strains to only those with aa_lost or
+        aa_gained, creates a fresh OrderedMapSeq, filters it (dummy encoding,
+        merging, pruning), then fits the LMM on the fresh dummies.
 
         @param substitutions: List of substitution strings (e.g. ["N145K"]).
         @param progress_bar: Bool. Show tqdm progress bar.
@@ -1396,41 +1408,88 @@ class HwasLmmSubstitution:
             aa_lost_aap = f"{pos}{aa_lost}"
             aa_gained_aap = f"{pos}{aa_gained}"
 
-            aa_lost_col = self._resolve_column(aa_lost_aap)
-            aa_gained_col = self._resolve_column(aa_gained_aap)
+            # Subset strains from raw sequences
+            if pos not in self.seq_df.columns:
+                raise ValueError(f"Position {pos} not found in seq_df columns")
 
-            is_compound = (
-                aa_lost_col != aa_lost_aap or aa_gained_col != aa_gained_aap
+            has_aa_lost = self.seq_df[pos] == aa_lost
+            has_aa_gained = self.seq_df[pos] == aa_gained
+
+            if has_aa_gained.sum() == 0:
+                raise ValueError(
+                    f"No strains have amino acid '{aa_gained}' at "
+                    f"position {pos} for substitution '{sub}'"
+                )
+
+            if has_aa_lost.sum() == 0:
+                raise ValueError(
+                    f"No strains have amino acid '{aa_lost}' at "
+                    f"position {pos} for substitution '{sub}'"
+                )
+
+            mask = has_aa_lost | has_aa_gained
+            n_aa_lost = int(has_aa_lost.sum())
+            n_aa_gained = int(has_aa_gained.sum())
+
+            # Create fresh OrderedMapSeq from subsetted data
+            oms = OrderedMapSeq(
+                seq_df=self.seq_df.loc[mask].copy(),
+                coord_df=self.coord_df.loc[mask].copy(),
+            )
+            oms.filter(
+                remove_invariant=True,
+                get_dummies=True,
+                merge_duplicate_dummies=self.merge_duplicate_dummies,
+                prune_collinear_dummies=self.prune_collinear_dummies,
+                rename_idx=True,
+                plot=False,
             )
 
-            # Identify strains with either amino acid
-            has_aa_lost = self.snps[aa_lost_col] == 1
-            has_aa_gained = self.snps[aa_gained_col] == 1
-            mask = has_aa_lost | has_aa_gained
-            strain_idx = self.snps.index[mask]
+            dummies = oms.seqs.dummies
 
-            n_aa_lost = has_aa_lost.sum()
-            n_aa_gained = has_aa_gained.sum()
+            # Resolve test variable from fresh dummies
+            aa_gained_col, gained_is_negative = self._resolve_column(
+                aa_gained_aap, dummies.columns
+            )
+            aa_lost_col, _ = self._resolve_column(aa_lost_aap, dummies.columns)
 
-            # Subset phenotype and covariates
-            pheno_subset = self.pheno.loc[strain_idx]
-            covs_subset = (
-                self.covs.loc[strain_idx].values
-                if self.covs is not None
-                else None
+            is_compound = (
+                aa_gained_col != aa_gained_aap or aa_lost_col != aa_lost_aap
             )
 
             # Build test variable: 0 for aa_lost, 1 for aa_gained
-            test_var = self.snps.loc[strain_idx, aa_gained_col].values.reshape(
-                -1, 1
-            )
+            test_var = dummies[aa_gained_col].values.copy()
+
+            if gained_is_negative:
+                test_var = 1 - test_var
+
+            test_var = test_var.reshape(-1, 1)
+
+            # Subset phenotype (use OMS coord which has matching index)
+            pheno_subset = oms.coord.df
+
+            # Subset covariates
+            if self.covs is not None:
+                covs_subset = self.covs.loc[self.seq_df.index[mask]].reindex(
+                    oms.coord.df.index
+                )
+                # If rename_idx was used, we need to map back
+                # OMS renames to strain-0, strain-1, ... so use
+                # the strain_names mapping
+                if hasattr(oms, "strain_names"):
+                    original_names = [
+                        oms.strain_names[s] for s in oms.coord.df.index
+                    ]
+                    covs_subset = self.covs.loc[original_names].values
+                else:
+                    covs_subset = self.covs.loc[oms.coord.df.index].values
+            else:
+                covs_subset = None
 
             # Compute kinship from other-position columns only
-            cols_at_pos = columns_at_positions(self.snps.columns, [pos])
-            kinship_cols = [
-                c for c in self.snps.columns if c not in cols_at_pos
-            ]
-            kinship_snps = self.snps.loc[strain_idx, kinship_cols]
+            cols_at_pos = columns_at_positions(dummies.columns, [pos])
+            kinship_cols = [c for c in dummies.columns if c not in cols_at_pos]
+            kinship_snps = dummies[kinship_cols]
 
             K = cov(kinship_snps, regularise=self.regularise_kinship)
 
@@ -1461,8 +1520,8 @@ class HwasLmmSubstitution:
             results[sub] = {
                 "p": lmm.getPv()[0, 0],
                 "beta": beta,
-                "n_aa_lost": int(n_aa_lost),
-                "n_aa_gained": int(n_aa_gained),
+                "n_aa_lost": n_aa_lost,
+                "n_aa_gained": n_aa_gained,
                 "merged_aa_lost": aa_lost_col,
                 "merged_aa_gained": aa_gained_col,
                 "compound": is_compound,

@@ -1295,8 +1295,14 @@ class HwasLmmSubstitution:
         if not isinstance(coord_df, pd.DataFrame):
             raise TypeError("coord_df must be a pandas DataFrame")
 
-        self.seq_df = seq_df
-        self.coord_df = coord_df
+        # Align indexes: keep only strains present in both DataFrames,
+        # in a consistent order. Raw DataFrames from load_map may have
+        # different indexes (different strains, different order).
+        common = seq_df.index.intersection(coord_df.index)
+        if len(common) == 0:
+            raise ValueError("seq_df and coord_df have no strains in common")
+        self.seq_df = seq_df.loc[common]
+        self.coord_df = coord_df.loc[common]
         self.covs = covs
         self.regularise_kinship = regularise_kinship
         self.merge_duplicate_dummies = merge_duplicate_dummies

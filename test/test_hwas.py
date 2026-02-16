@@ -786,6 +786,27 @@ class HwasLmmSubstitutionValidationTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             HwasLmmSubstitution(seq_df=seq_df, coord_df="not_a_df")
 
+    def test_no_common_strains_raises(self):
+        """Should raise ValueError when seq_df and coord_df share no strains"""
+        seq_df = pd.DataFrame({145: ["N", "K"]}, index=["a", "b"])
+        coord_df = pd.DataFrame({"y": [1, 2]}, index=["c", "d"])
+        with self.assertRaises(ValueError):
+            HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
+
+    def test_partial_overlap_uses_intersection(self):
+        """
+        When seq_df and coord_df partially overlap, should use intersection
+        """
+        seq_df = pd.DataFrame(
+            {145: ["N", "K", "N"], 189: ["D", "E", "D"]},
+            index=["a", "b", "c"],
+        )
+        coord_df = pd.DataFrame({"y": [1, 2, 3]}, index=["b", "c", "d"])
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
+        # Only strains b and c are in both
+        self.assertEqual(2, len(hwas.seq_df))
+        self.assertEqual(2, len(hwas.coord_df))
+
     def test_missing_aa_raises(self):
         """Should raise ValueError for substitution where aa_gained is absent
         from the sequences (no strains have that amino acid)."""

@@ -1536,7 +1536,7 @@ class HwasLmmSubstitution:
                 Asnps = np.eye(P)
                 Acovs = np.eye(P) if self.covs is not None else None
 
-                lmm, pv, beta_snp, beta_snp_ste = qtl_test_lmm_kronecker(
+                lmm, pv, _, beta_snp_ste = qtl_test_lmm_kronecker(
                     snps=test_var,
                     phenos=pheno_subset.values,
                     Asnps=Asnps,

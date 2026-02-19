@@ -275,7 +275,9 @@ class MapSeq:
         setup_ax(self.map)
 
         ax.legend()
-        ax.text(x=0.5, y=1, s=p, fontsize=25, va="top", transform=ax.transAxes)
+        ax.text(
+            x=0.5, y=0.99, s=p, fontsize=25, va="top", transform=ax.transAxes
+        )
 
         return ax
 

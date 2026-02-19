@@ -196,7 +196,7 @@ class MapSeq:
                 y="y",
                 s=5,
                 color="darkgrey",
-                label="Unknown sequence",
+                label="Unknown",
             )
 
         # Antigens with a known sequence

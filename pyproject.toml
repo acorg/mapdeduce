@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mapdeduce"
-version = "2.0.0"
+version = "2.1.0"
 description = """Handling antigenic maps and sequence data, testing amino \
     acid polymorphisms associated with antigenicity."""
 readme = "README.md"
@@ -22,7 +22,7 @@ dependencies = [
     "biopython",
     "flake8>=7.3.0",
     "isort>=6.1.0",
-    "limix_legacy @ git+https://github.com/davipatti/limix-legacy@master",
+    "limix_legacy>=0.8.15",
     "matplotlib",
     "pandas",
     "rpy2>=3.0.0",
@@ -47,6 +47,9 @@ mapdeduce = ["data/test/*.fa"]
 
 [tool.uv]
 no-binary-package = ["rpy2-rinterface"]
+
+[tool.uv.sources]
+limix_legacy = { git = "https://github.com/davipatti/limix-legacy", branch = "master" }
 
 [tool.black]
 line-length = 79

@@ -312,6 +312,63 @@ class HwasLmmFit(unittest.TestCase):
         self.assertEqual(hwas.results.index[0], "causal")
 
 
+class HwasLmmFitMultivariate(unittest.TestCase):
+    """Tests for HwasLmm.fit with multivariate phenotypes (P > 1)"""
+
+    def _make_multivariate_hwas(self, N=50, effect_x=5.0, effect_y=3.0):
+        """Helper to create a multivariate HwasLmm with a known causal SNP."""
+        np.random.seed(42)
+        snp_causal = np.array([0] * (N // 2) + [1] * (N // 2))
+        pheno = pd.DataFrame(
+            {
+                "x": snp_causal * effect_x + np.random.randn(N) * 0.5,
+                "y": snp_causal * effect_y + np.random.randn(N) * 0.5,
+            }
+        )
+        snps = pd.DataFrame(
+            {
+                "causal": snp_causal,
+                "null1": np.random.randint(2, size=N),
+                "null2": np.random.randint(2, size=N),
+            }
+        )
+        return HwasLmm(snps=snps, pheno=pheno)
+
+    def test_multivariate_results_has_beta_ste(self):
+        """Multivariate results should contain beta_ste column"""
+        hwas = self._make_multivariate_hwas()
+        hwas.fit()
+        self.assertIn("beta_ste", hwas.results.columns)
+
+    def test_multivariate_beta_ste_is_scalar(self):
+        """beta_ste should be a scalar (standard error of joint SNP effect)"""
+        hwas = self._make_multivariate_hwas()
+        hwas.fit()
+        beta_ste = hwas.results.loc["causal", "beta_ste"]
+        self.assertIsInstance(beta_ste, float)
+
+    def test_multivariate_beta_ste_positive(self):
+        """Standard errors should be positive"""
+        hwas = self._make_multivariate_hwas()
+        hwas.fit()
+        beta_ste = hwas.results.loc["causal", "beta_ste"]
+        self.assertGreater(beta_ste, 0)
+
+    def test_multivariate_p_value_uses_returned_pv(self):
+        """p-value should be present and valid for multivariate case"""
+        hwas = self._make_multivariate_hwas()
+        hwas.fit()
+        p = hwas.results.loc["causal", "p"]
+        self.assertLess(p, 1e-5)
+
+    def test_multivariate_beta_is_per_phenotype_array(self):
+        """beta should be an array of length P (per-phenotype effects)"""
+        hwas = self._make_multivariate_hwas()
+        hwas.fit()
+        beta = hwas.results.loc["causal", "beta"]
+        self.assertEqual(2, len(beta))
+
+
 class FindPerfectlyCorrelatedSnpsTests(unittest.TestCase):
     """Tests for find_perfectly_correlated_snps function"""
 
@@ -1236,6 +1293,65 @@ class HwasLmmSubstitutionFitTests(unittest.TestCase):
         self.assertLess(hwas.results.loc["N145K", "p"], 1e-5)
         # Beta should be positive (K associated with higher phenotype)
         self.assertGreater(hwas.results.loc["N145K", "beta"], 0)
+
+    def test_multivariate_results_has_beta_ste(self):
+        """With multivariate phenotype, results should have beta_ste column"""
+        np.random.seed(42)
+        N = 50
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        coord_df = pd.DataFrame(
+            {
+                "x": has_K * 5.0 + np.random.randn(N) * 0.5,
+                "y": has_K * 3.0 + np.random.randn(N) * 0.5,
+            },
+            index=idx,
+        )
+
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
+        hwas.fit(substitutions=["N145K"])
+
+        self.assertIn("beta_ste", hwas.results.columns)
+
+    def test_multivariate_beta_ste_is_scalar(self):
+        """With multivariate phenotype, beta_ste should be a scalar"""
+        np.random.seed(42)
+        N = 50
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        coord_df = pd.DataFrame(
+            {
+                "x": has_K * 5.0 + np.random.randn(N) * 0.5,
+                "y": has_K * 3.0 + np.random.randn(N) * 0.5,
+            },
+            index=idx,
+        )
+
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
+        hwas.fit(substitutions=["N145K"])
+
+        beta_ste = hwas.results.loc["N145K", "beta_ste"]
+        self.assertIsInstance(beta_ste, float)
+
+    def test_multivariate_beta_ste_positive(self):
+        """Standard errors should be positive"""
+        np.random.seed(42)
+        N = 50
+        seq_df, has_K = self._make_data(N=N)
+        idx = seq_df.index
+        coord_df = pd.DataFrame(
+            {
+                "x": has_K * 5.0 + np.random.randn(N) * 0.5,
+                "y": has_K * 3.0 + np.random.randn(N) * 0.5,
+            },
+            index=idx,
+        )
+
+        hwas = HwasLmmSubstitution(seq_df=seq_df, coord_df=coord_df)
+        hwas.fit(substitutions=["N145K"])
+
+        beta_ste = hwas.results.loc["N145K", "beta_ste"]
+        self.assertGreater(beta_ste, 0)
 
     def test_collinear_pruning_produces_tilde_column(self):
         """When prune_collinear_dummies is set and dummies are near-collinear,

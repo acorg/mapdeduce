@@ -1158,8 +1158,8 @@ wheels = [
 
 [[package]]
 name = "limix-legacy"
-version = "0.8.14"
-source = { git = "https://github.com/davipatti/limix-legacy?rev=master#9270ea49a42f1c1d533153a5be04e75954abf324" }
+version = "0.8.15"
+source = { git = "https://github.com/davipatti/limix-legacy?branch=master#4e48f4f1169819cff046fd074d7a6e8f625eefce" }
 dependencies = [
     { name = "h5py", version = "3.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "h5py", version = "3.15.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
@@ -1177,7 +1177,7 @@ dependencies = [
 
 [[package]]
 name = "mapdeduce"
-version = "2.0.0"
+version = "2.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "biopython", version = "1.85", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -1214,7 +1214,7 @@ requires-dist = [
     { name = "flake8", specifier = ">=7.3.0" },
     { name = "flake8", marker = "extra == 'dev'" },
     { name = "isort", specifier = ">=6.1.0" },
-    { name = "limix-legacy", git = "https://github.com/davipatti/limix-legacy?rev=master" },
+    { name = "limix-legacy", git = "https://github.com/davipatti/limix-legacy?branch=master" },
     { name = "matplotlib" },
     { name = "pandas" },
     { name = "pytest", marker = "extra == 'dev'" },

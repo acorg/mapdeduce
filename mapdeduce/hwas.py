@@ -11,7 +11,6 @@ import pandas as pd
 import scipy
 import seaborn as sns
 import sklearn
-from limix_legacy.deprecated import CKroneckerLMM
 from limix_legacy.deprecated.modules.qtl import (
     qtl_test_lmm,
     qtl_test_lmm_kronecker,
@@ -360,8 +359,11 @@ class HwasLmm:
         }
 
     def _manual_variance_decomposition(
-        self, snp: str, snp_profile: np.ndarray, covs: Optional[np.ndarray]
-    ) -> Optional[CKroneckerLMM]:
+        self,
+        snp: str,
+        snp_profile: np.ndarray,
+        covs: Optional[np.ndarray],
+    ) -> Optional[tuple]:
         """
         Perform manual variance decomposition when qtl_test_lmm_kronecker
         fails.
@@ -370,7 +372,8 @@ class HwasLmm:
         @param snp_profile: (N, 1) array of SNP values.
         @param covs: (N, Q) array of covariates, or None.
 
-        @returns: CKroneckerLMM if successful, None if decomposition fails.
+        @returns: Tuple of (lmm, pv, beta_snp, beta_snp_ste) if successful,
+            None if decomposition fails.
         """
         vs = VarianceDecomposition(Y=self.pheno.values)
 
@@ -399,7 +402,7 @@ class HwasLmm:
             )
             return None
 
-        lmm, _ = qtl_test_lmm_kronecker(
+        lmm, pv, beta_snp, beta_snp_ste = qtl_test_lmm_kronecker(
             snps=snp_profile,
             phenos=self.pheno.values,
             Asnps=self.Asnps,
@@ -410,7 +413,7 @@ class HwasLmm:
             K2c=vs.getTraitCovar(1),
         )
 
-        return lmm
+        return lmm, pv, beta_snp, beta_snp_ste
 
     def fit(
         self, test_snps: Optional[list[str]] = None, progress_bar: bool = False
@@ -477,10 +480,12 @@ class HwasLmm:
 
                 beta = lmm.getBetaSNP()[0, 0]
 
+                results[snp] = {"p": lmm.getPv()[0, 0], "beta": beta}
+
             else:
 
                 try:
-                    lmm, _ = qtl_test_lmm_kronecker(
+                    lmm, pv, _, beta_snp_ste = qtl_test_lmm_kronecker(
                         phenos=self.pheno.values,
                         Asnps=self.Asnps,
                         K1r=self.K_leave_out[snp],
@@ -494,21 +499,28 @@ class HwasLmm:
                         f"Doing manual variance decomposition for {snp}..."
                     )
 
-                    lmm = self._manual_variance_decomposition(
+                    result = self._manual_variance_decomposition(
                         snp, snp_profile, covs
                     )
-                    if lmm is None:
+                    if result is None:
                         warnings.warn(
                             "Couldn't fit manual variance decomposition for "
                             f"{snp}. Skipping..."
                         )
                         continue
 
-                # lmm.getBetaSNP() returns (P, S) array of effect sizes
+                    lmm, pv, _, beta_snp_ste = result
+
+                # lmm.getBetaSNP() returns (P, S) per-phenotype effects
                 # Only tested 1 snp
                 beta = lmm.getBetaSNP()[:, 0]
+                beta_ste = beta_snp_ste[0, 0]
 
-            results[snp] = {"p": lmm.getPv()[0, 0], "beta": beta}
+                results[snp] = {
+                    "p": pv[0, 0],
+                    "beta": beta,
+                    "beta_ste": beta_ste,
+                }
 
         df = pd.DataFrame.from_dict(results, orient="index")
 
@@ -1181,7 +1193,7 @@ class HwasLmm:
         )
 
         try:
-            lmm, pv = qtl_test_lmm_kronecker(
+            lmm, pv, _, beta_snp_ste = qtl_test_lmm_kronecker(
                 snps=Xab,
                 phenos=self.pheno.values,
                 covs=covs,
@@ -1200,7 +1212,7 @@ class HwasLmm:
             conv = vs.optimize()
 
             if conv:
-                lmm, pv = qtl_test_lmm_kronecker(
+                lmm, pv, _, beta_snp_ste = qtl_test_lmm_kronecker(
                     snps=Xab,
                     phenos=self.pheno.values,
                     covs=covs,
@@ -1214,14 +1226,15 @@ class HwasLmm:
             else:
                 raise ValueError("Variance decom. didn't optimize")
 
-        pv = pv[0, 0]
-        # lmm.getBetaSNP() returns (P, S) array of effect sizes
+        # lmm.getBetaSNP() returns (P, S) per-phenotype effects
         # Only tested 1 snp
         beta = lmm.getBetaSNP()[:, 0]
+        beta_ste = beta_snp_ste[0, 0]
 
         return {
-            "p": pv,
+            "p": pv[0, 0],
             "beta": beta,
+            "beta_ste": beta_ste,
             "count_ab": Xab.sum(),
             "count_a_without_b": (Xa - Xab).sum(),
             "count_b_without_a": (Xb - Xab).sum(),
@@ -1509,11 +1522,21 @@ class HwasLmmSubstitution:
                     covs=covs_subset,
                 )
                 beta = lmm.getBetaSNP()[0, 0]
+
+                results[sub] = {
+                    "p": lmm.getPv()[0, 0],
+                    "beta": beta,
+                    "n_aa_lost": n_aa_lost,
+                    "n_aa_gained": n_aa_gained,
+                    "merged_aa_lost": aa_lost_col,
+                    "merged_aa_gained": aa_gained_col,
+                    "compound": is_compound,
+                }
             else:
                 Asnps = np.eye(P)
                 Acovs = np.eye(P) if self.covs is not None else None
 
-                lmm, _ = qtl_test_lmm_kronecker(
+                lmm, pv, beta_snp, beta_snp_ste = qtl_test_lmm_kronecker(
                     snps=test_var,
                     phenos=pheno_subset.values,
                     Asnps=Asnps,
@@ -1521,17 +1544,20 @@ class HwasLmmSubstitution:
                     covs=covs_subset,
                     Acovs=Acovs,
                 )
+                # lmm.getBetaSNP() returns (P, S) per-phenotype effects
                 beta = lmm.getBetaSNP()[:, 0]
+                beta_ste = beta_snp_ste[0, 0]
 
-            results[sub] = {
-                "p": lmm.getPv()[0, 0],
-                "beta": beta,
-                "n_aa_lost": n_aa_lost,
-                "n_aa_gained": n_aa_gained,
-                "merged_aa_lost": aa_lost_col,
-                "merged_aa_gained": aa_gained_col,
-                "compound": is_compound,
-            }
+                results[sub] = {
+                    "p": pv[0, 0],
+                    "beta": beta,
+                    "beta_ste": beta_ste,
+                    "n_aa_lost": n_aa_lost,
+                    "n_aa_gained": n_aa_gained,
+                    "merged_aa_lost": aa_lost_col,
+                    "merged_aa_gained": aa_gained_col,
+                    "compound": is_compound,
+                }
 
         df = pd.DataFrame.from_dict(results, orient="index")
 

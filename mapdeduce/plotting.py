@@ -230,6 +230,10 @@ def plot_arrow(
     )
     arrow_patch = anno.arrow_patch
     if shadow:
+        # The arrow patch must be added to the axes before creating the
+        # Shadow, otherwise the shadow won't render. See
+        # https://github.com/matplotlib/matplotlib/issues/9377
+        ax.add_patch(arrow_patch)
         if shadow_kwds is None:
             shadow_kwds = {}
         ox = shadow_kwds.pop("ox", 0.01)

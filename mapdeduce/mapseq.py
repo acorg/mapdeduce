@@ -210,27 +210,53 @@ class MapSeq:
         proportions = self.variant_proportions(p=p) * 100
         seq_grouped = self.seq_in_both.groupby(p)
 
-        for amino_acid, seq_group in seq_grouped:
-            coord_group = self.coords_in_both.loc[seq_group.index, :]
+        if randomz:
+            # Shuffle all points and plot once for speed. Within a single
+            # scatter call, later points draw on top of earlier ones, so
+            # shuffling prevents any one amino-acid group from
+            # systematically overplotting another.
+            coords = self.coords_in_both.copy()
+            aa_series = self.seq_in_both[p]
+            coords = coords.sample(frac=1)
+            aa_series = aa_series.loc[coords.index]
 
-            try:
-                kwds["color"] = amino_acid_colors[amino_acid]
+            colors = aa_series.map(amino_acid_colors).fillna(
+                amino_acid_colors["X"]
+            )
 
-            except KeyError:
-                kwds["color"] = amino_acid_colors["X"]
+            ax.scatter(
+                x=coords["x"].values,
+                y=coords["y"].values,
+                c=colors.values,
+                zorder=5,
+                **kwds,
+            )
 
-            label = "{} {:.1f}%".format(amino_acid, proportions[amino_acid])
+            # Manual legend handles
+            for amino_acid in seq_grouped.groups:
+                try:
+                    color = amino_acid_colors[amino_acid]
+                except KeyError:
+                    color = amino_acid_colors["X"]
+                label = "{} {:.1f}%".format(
+                    amino_acid, proportions[amino_acid]
+                )
+                ax.plot(
+                    [], [], marker="o", linestyle="", color=color, label=label
+                )
 
-            if randomz:
-                zorders = np.random.rand(seq_group.shape[0]) + 5
+        else:
+            for amino_acid, seq_group in seq_grouped:
+                coord_group = self.coords_in_both.loc[seq_group.index, :]
 
-                for z, (strain, row) in zip(zorders, coord_group.iterrows()):
-                    ax.scatter(x=row["x"], y=row["y"], zorder=z, **kwds)
+                try:
+                    kwds["color"] = amino_acid_colors[amino_acid]
+                except KeyError:
+                    kwds["color"] = amino_acid_colors["X"]
 
-                # Plot the final point twice, but add a label for the group
-                ax.scatter(x=row["x"], y=row["y"], label=label, **kwds)
-
-            else:
+                label = "{} {:.1f}%".format(
+                    amino_acid, proportions[amino_acid]
+                )
                 coord_group.plot.scatter(
                     label=label, x="x", y="y", ax=ax, **kwds
                 )

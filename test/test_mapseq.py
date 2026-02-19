@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import unittest
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -892,6 +893,79 @@ class OrderedMapSeqFilterMergeThenPrune(unittest.TestCase):
                 has_200_or_300 and has_400_or_500,
                 f"Column '{c}' unexpectedly merges the two blocks",
             )
+
+
+class ScatterColoredByAminoAcidRandomZ(unittest.TestCase):
+    """Tests for scatter_colored_by_amino_acid with randomz=True."""
+
+    def setUp(self):
+        seq_df = pd.DataFrame(
+            {
+                1: ("Q", "Q", "Q", "Q", "Q", "Q"),
+                2: ("K", "K", "N", "K", "N", "K"),
+            },
+            index=(
+                "strain1",
+                "strain2",
+                "strain3",
+                "strain4",
+                "strain5",
+                "strain6",
+            ),
+        )
+        coord_df = pd.DataFrame(
+            {
+                "x": (0.0, 1.0, 2.0, 3.0, 4.0, 5.0),
+                "y": (0.0, 1.0, 2.0, 3.0, 4.0, 5.0),
+            },
+            index=(
+                "strain1",
+                "strain2",
+                "strain3",
+                "strain4",
+                "strain5",
+                "strain6",
+            ),
+        )
+        self.ms = MapSeq(seq_df=seq_df, coord_df=coord_df)
+
+    def tearDown(self):
+        plt.close("all")
+
+    def test_all_points_plotted(self):
+        """All strains should be plotted when randomz=True."""
+        self.ms.scatter_colored_by_amino_acid(
+            p=2, randomz=True, ellipses=False
+        )
+        ax = plt.gca()
+        # Count total number of points across all PathCollections
+        n_points = sum(len(c.get_offsets()) for c in ax.collections)
+        # 6 strains in both seq and coord
+        self.assertEqual(n_points, 6)
+
+    def test_legend_contains_all_amino_acids(self):
+        """Legend should have entries for each amino acid at position 2."""
+        self.ms.scatter_colored_by_amino_acid(
+            p=2, randomz=True, ellipses=False
+        )
+        ax = plt.gca()
+        legend_texts = [t.get_text() for t in ax.get_legend().get_texts()]
+        amino_acids_in_legend = {t.split()[0] for t in legend_texts}
+        self.assertIn("K", amino_acids_in_legend)
+        self.assertIn("N", amino_acids_in_legend)
+
+    def test_fewer_scatter_calls_than_points(self):
+        """With the optimized approach, there should be far fewer
+        PathCollections than individual points."""
+        self.ms.scatter_colored_by_amino_acid(
+            p=2, randomz=True, ellipses=False
+        )
+        ax = plt.gca()
+        # Old approach: one PathCollection per point (6 + extra for labels)
+        # New approach: 1 PathCollection for all points + legend handles
+        n_collections = len(ax.collections)
+        # Should be much less than the number of points (6)
+        self.assertLess(n_collections, 6)
 
 
 if __name__ == "__main__":

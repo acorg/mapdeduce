@@ -654,6 +654,68 @@ class OrderedMapSeqFromCombined(unittest.TestCase):
         pd.testing.assert_frame_equal(df, original)
 
 
+class OrderedMapSeqFromArrays(unittest.TestCase):
+    """Tests for OrderedMapSeq.from_arrays classmethod."""
+
+    def test_from_arrays_basic(self):
+        """
+        Numpy arrays in, verify coords/seqs match equivalent from_combined.
+        """
+        coords = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0]])
+        seqs = np.array(["QKL", "QNA", "AKA"])
+        names = np.array(["flu1", "flu2", "flu3"])
+
+        oms = OrderedMapSeq.from_arrays(coords, seqs, names)
+
+        # Build equivalent via from_combined
+        df = pd.DataFrame(
+            {
+                "x": [0.0, 1.0, 2.0],
+                "y": [0.0, 1.0, 2.0],
+                "seq_aa": ["QKL", "QNA", "AKA"],
+            },
+            index=["flu1", "flu2", "flu3"],
+        )
+        expected = OrderedMapSeq.from_combined(df)
+
+        pd.testing.assert_frame_equal(oms.coord.df, expected.coord.df)
+        pd.testing.assert_frame_equal(oms.seqs.df, expected.seqs.df)
+
+    def test_from_arrays_with_lists(self):
+        """Plain Python lists should work as array-like inputs."""
+        coords = [[0.0, 0.0], [1.0, 1.0]]
+        seqs = ["QKL", "QNA"]
+        names = ["flu1", "flu2"]
+
+        oms = OrderedMapSeq.from_arrays(coords, seqs, names)
+
+        self.assertEqual(list(oms.coord.df.index), ["flu1", "flu2"])
+        self.assertEqual(list(oms.seqs.df.index), ["flu1", "flu2"])
+        self.assertEqual(list(oms.coord.df.columns), ["x", "y"])
+
+    def test_from_arrays_forwards_kwargs(self):
+        """Custom coord_columns and map should be passed through."""
+        coords = np.array([[0.0, 0.0], [1.0, 1.0]])
+        seqs = np.array(["QK", "QN"])
+        names = np.array(["flu1", "flu2"])
+
+        oms = OrderedMapSeq.from_arrays(
+            coords, seqs, names, coord_columns=["PC1", "PC2"], map=2017
+        )
+
+        self.assertEqual(list(oms.coord.df.columns), ["PC1", "PC2"])
+        self.assertEqual(oms.map, 2017)
+
+    def test_from_arrays_length_mismatch(self):
+        """Mismatched array lengths should raise ValueError."""
+        coords = np.array([[0.0, 0.0], [1.0, 1.0]])
+        seqs = np.array(["QK", "QN", "AK"])  # 3 vs 2
+        names = np.array(["flu1", "flu2"])
+
+        with self.assertRaises(ValueError):
+            OrderedMapSeq.from_arrays(coords, seqs, names)
+
+
 def _make_oms(seq_data, positions, strain_names):
     """Helper to build an OrderedMapSeq from compact sequence data."""
     seq_df = pd.DataFrame(seq_data, columns=positions, index=strain_names)

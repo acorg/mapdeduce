@@ -1326,6 +1326,59 @@ class OrderedMapSeq(MapSeq):
 
         return instance
 
+    @classmethod
+    def from_arrays(
+        cls,
+        coordinates,
+        sequences,
+        names,
+        coord_columns: Optional[list[str]] = None,
+        **kwargs,
+    ) -> "OrderedMapSeq":
+        """
+        Create an OrderedMapSeq from separate arrays of coordinates,
+        sequences, and names.
+
+        Args:
+            coordinates: array-like, shape (n, d). Coordinate values.
+            sequences: array-like of strings, shape (n,). Amino acid
+                sequences.
+            names: array-like of strings, shape (n,). Strain / sample
+                names used as the DataFrame index.
+            coord_columns: Names for the coordinate columns. Defaults
+                to ``["x", "y"]``, which assumes 2-D coordinates. If
+                ``coordinates`` has a different number of columns you
+                must pass a list with one name per column.
+            **kwargs: Forwarded to ``from_combined``
+                (``seq_column``, ``map``).
+
+        Returns:
+            OrderedMapSeq
+        """
+        coordinates = np.asarray(coordinates)
+        sequences = np.asarray(sequences)
+        names = np.asarray(names)
+
+        if not (len(coordinates) == len(sequences) == len(names)):
+            raise ValueError(
+                f"Length mismatch: coordinates ({len(coordinates)}), "
+                f"sequences ({len(sequences)}), names ({len(names)})"
+            )
+
+        if coord_columns is None:
+            coord_columns = ["x", "y"]
+
+        seq_column = kwargs.get("seq_column", "seq_aa")
+
+        coord_df = pd.DataFrame(
+            coordinates, columns=coord_columns, index=names
+        )
+        coord_df[seq_column] = sequences
+
+        return cls.from_combined(
+            coord_df, coord_columns=coord_columns, **kwargs
+        )
+
     def filter(
         self,
         patch: Optional[matplotlib.patches.Patch] = None,

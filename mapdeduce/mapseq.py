@@ -210,23 +210,27 @@ class MapSeq:
         )
 
         proportions = self.variant_proportions(p=p) * 100
-        seq_grouped = self.seq_in_both.groupby(p)
+
+        # Use integer-indexed copies so that .loc never expands rows when
+        # the original strain-name index contains duplicates.
+        coords = self.coords_in_both.reset_index(drop=True)
+        seqs = self.seq_in_both.reset_index(drop=True)
+        seq_grouped = seqs.groupby(p)
 
         if randomz:
             # Shuffle all points and plot once for speed. Within a single
             # scatter call, later points draw on top of earlier ones, so
             # shuffling prevents any one amino-acid group from
             # systematically overplotting another.
-            coords = self.coords_in_both.copy()
-            aa_series = self.seq_in_both[p]
-            coords = coords.sample(frac=1)
-            aa_series = aa_series.loc[coords.index]
+            perm = np.random.permutation(len(coords))
+            coords_shuf = coords.iloc[perm]
+            aa_series = seqs[p].iloc[perm]
 
             colors = aa_series.map(aa_colors).fillna(aa_colors["X"])
 
             ax.scatter(
-                x=coords["x"].values,
-                y=coords["y"].values,
+                x=coords_shuf["x"].values,
+                y=coords_shuf["y"].values,
                 c=colors.values,
                 zorder=5,
                 **kwds,
@@ -245,7 +249,7 @@ class MapSeq:
 
         else:
             for aa, seq_group in seq_grouped:
-                coord_group = self.coords_in_both.loc[seq_group.index, :]
+                coord_group = coords.loc[seq_group.index, :]
 
                 kwds["color"] = aa_colors.get(aa, aa_colors["X"])
 
@@ -1293,7 +1297,7 @@ class OrderedMapSeq(MapSeq):
         # Split into coordinates and sequence series
         # Expand sequence strings into per-position columns
         coord_df = combined[coord_columns]
-        seq_df = expand_sequences(combined[seq_column])
+        seq_df = expand_sequences(combined[seq_column], drop_incomplete=False)
 
         # Replace non-standard amino acids with NaN
         seq_df = seq_df.mask(seq_df.map(lambda x: x not in amino_acids))

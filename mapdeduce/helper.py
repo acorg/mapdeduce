@@ -47,15 +47,21 @@ def string_to_series(arg: str) -> pd.Series:
         return pd.Series(dtype="object")
 
 
-def expand_sequences(series: pd.Series) -> pd.DataFrame:
+def expand_sequences(
+    series: pd.Series, drop_incomplete: bool = True
+) -> pd.DataFrame:
     """
     Expand Series containing sequences into DataFrame.
 
     Notes:
-        Any elements in series that cannot be expanded will be dropped.
+        Any elements in series that cannot be expanded will be dropped
+        when ``drop_incomplete`` is True (the default).  When False,
+        shorter sequences get NaN at extra positions.
 
     Args:
         series (pd.Series)
+        drop_incomplete (bool): If True, drop rows shorter than the
+            longest sequence.  Default True for backward compatibility.
 
     Returns:
         pd.DataFrame: Columns are sequence positions, indexes match
@@ -64,7 +70,9 @@ def expand_sequences(series: pd.Series) -> pd.DataFrame:
     df = series.apply(string_to_series)
     df.columns = list(range(df.shape[1]))
     df.columns += 1
-    return df[df.notnull().all(axis=1)]
+    if drop_incomplete:
+        return df[df.notnull().all(axis=1)]
+    return df
 
 
 def check_all_not_null(df: pd.DataFrame) -> Optional[pd.Index]:

@@ -1262,6 +1262,81 @@ class OrderedMapSeq(MapSeq):
         self.coord = CoordDf(combined.loc[:, phenotypes])
         self.seqs = SeqDf(combined.drop(phenotypes, axis=1))
 
+    @classmethod
+    def from_combined(
+        cls,
+        df: pd.DataFrame,
+        seq_column: str = "seq_aa",
+        coord_columns: Optional[list[str]] = None,
+        map: Optional[int] = None,
+    ) -> "OrderedMapSeq":
+        """
+        Create an OrderedMapSeq from a DataFrame that contains coordinates and
+        sequences.
+
+        Args:
+            df: DataFrame with coordinate columns and a single column
+                containing sequences.
+            seq_column: Name of the column containing amino acid
+                sequences. Default "seq_aa".
+            coord_columns: Names of the coordinate columns.
+                Default ["x", "y"].
+            map: Optional map identifier for plotting configuration.
+
+        Returns:
+            OrderedMapSeq
+        """
+        if coord_columns is None:
+            coord_columns = ["x", "y"]
+
+        combined = df.copy()
+
+        # Remove rows with any NaN values
+        mask = combined.notnull().all(axis=1)
+        n_with_nan = (~mask).sum()
+        if n_with_nan:
+            print(
+                f"Removed {n_with_nan} strains with NaN coordinates or "
+                "sequence"
+            )
+            combined = combined[mask]
+
+        # Split into coordinates and sequence series
+        # Expand sequence strings into per-position columns
+        coord_df = combined[coord_columns]
+        seq_df = expand_sequences(combined[seq_column])
+
+        # Replace non-standard amino acids with NaN
+        seq_df = seq_df.mask(seq_df.map(lambda x: x not in amino_acids))
+
+        # Create instance without calling __init__ to avoid name-based sequence
+        # - coordinate matching.
+        instance = object.__new__(cls)
+        instance.map = map
+
+        # Attributes
+        instance.coord = CoordDf(coord_df)
+        instance.seqs = SeqDf(seq_df)
+        instance.all_seqs = instance.seqs.df
+        instance.all_coords = instance.coord.df
+
+        # (These two attrs are redundant for instances generated from combined
+        # data, but here for consistency and use by other methods.)
+        instance.seq_in_both = instance.seqs.df
+        instance.coords_in_both = instance.coord.df
+
+        instance.strains_in_coords = set(instance.coord.df.index)
+        instance.strains_in_both = set(instance.coord.df.index)
+        instance.coords_excl_to_coords = instance.coord.df.iloc[0:0]
+
+        # Find variant positions
+        instance.variant_positions = set()
+        for p in instance.seq_in_both.columns:
+            if len(instance.seq_in_both[p].unique()) != 1:
+                instance.variant_positions.add(p)
+
+        return instance
+
     def filter(
         self,
         patch: Optional[matplotlib.patches.Patch] = None,

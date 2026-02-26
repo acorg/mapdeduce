@@ -509,6 +509,151 @@ class OrderedMapSeqTests(unittest.TestCase):
         )
 
 
+class OrderedMapSeqFromCombined(unittest.TestCase):
+    """Tests for OrderedMapSeq.from_combined classmethod."""
+
+    def _make_combined_df(self):
+        """Helper: a simple combined DataFrame with seq_aa + x + y."""
+        return pd.DataFrame(
+            {
+                "x": [0.0, 1.0, 2.0, 3.0],
+                "y": [0.0, 1.0, 2.0, 3.0],
+                "seq_aa": ["QKL", "QNA", "QKA", "AKL"],
+            },
+            index=["flu1", "flu2", "flu3", "flu4"],
+        )
+
+    def test_from_combined_basic(self):
+        """coord and seqs should have correct data and matching indexes."""
+        df = self._make_combined_df()
+        oms = OrderedMapSeq.from_combined(df)
+
+        self.assertIsInstance(oms.coord, mapdeduce.dataframes.CoordDf)
+        self.assertIsInstance(oms.seqs, mapdeduce.dataframes.SeqDf)
+        self.assertEqual(list(oms.coord.df.index), list(oms.seqs.df.index))
+        self.assertEqual(
+            set(oms.coord.df.index), {"flu1", "flu2", "flu3", "flu4"}
+        )
+        # Sequences should be expanded into per-position columns 1, 2, 3
+        self.assertEqual(list(oms.seqs.df.columns), [1, 2, 3])
+        self.assertEqual(oms.seqs.df.loc["flu1", 1], "Q")
+        self.assertEqual(oms.seqs.df.loc["flu1", 3], "L")
+
+    def test_from_combined_drops_nan_rows(self):
+        """Rows with NaN coordinates should be removed."""
+        df = self._make_combined_df()
+        df.loc["flu2", "x"] = np.nan
+        oms = OrderedMapSeq.from_combined(df)
+
+        self.assertNotIn("flu2", oms.coord.df.index)
+        self.assertNotIn("flu2", oms.seqs.df.index)
+        self.assertEqual(len(oms.coord.df), 3)
+
+    def test_from_combined_replaces_unknown_amino_acids_with_nan(self):
+        """Non-standard amino acids should be replaced with NaN but the
+        row should be kept."""
+        df = self._make_combined_df()
+        # "Z" is not a standard amino acid
+        df.loc["flu3", "seq_aa"] = "QZA"
+        oms = OrderedMapSeq.from_combined(df)
+
+        self.assertIn("flu3", oms.seqs.df.index)
+        self.assertEqual(oms.seqs.df.loc["flu3", 1], "Q")
+        self.assertTrue(pd.isna(oms.seqs.df.loc["flu3", 2]))
+        self.assertEqual(oms.seqs.df.loc["flu3", 3], "A")
+
+    def test_from_combined_custom_coord_columns(self):
+        """Should work with non-default coordinate column names."""
+        df = pd.DataFrame(
+            {
+                "PC1": [0.0, 1.0, 2.0],
+                "PC2": [0.0, 1.0, 2.0],
+                "seq_aa": ["QKL", "QNA", "AKA"],
+            },
+            index=["flu1", "flu2", "flu3"],
+        )
+        oms = OrderedMapSeq.from_combined(df, coord_columns=["PC1", "PC2"])
+
+        self.assertEqual(list(oms.coord.df.columns), ["PC1", "PC2"])
+        self.assertEqual(set(oms.coord.df.index), {"flu1", "flu2", "flu3"})
+
+    def test_from_combined_map_attribute(self):
+        """The map parameter should be stored as an attribute."""
+        df = self._make_combined_df()
+        oms = OrderedMapSeq.from_combined(df, map=2017)
+        self.assertEqual(oms.map, 2017)
+
+    def test_from_combined_map_default_none(self):
+        """map should default to None."""
+        df = self._make_combined_df()
+        oms = OrderedMapSeq.from_combined(df)
+        self.assertIsNone(oms.map)
+
+    def test_from_combined_sets_mapseq_attributes(self):
+        """All inherited MapSeq attributes should be set correctly."""
+        df = self._make_combined_df()
+        oms = OrderedMapSeq.from_combined(df)
+
+        strains = {"flu1", "flu2", "flu3", "flu4"}
+
+        # all_seqs and all_coords should match seqs.df and coord.df
+        pd.testing.assert_frame_equal(oms.all_seqs, oms.seqs.df)
+        pd.testing.assert_frame_equal(oms.all_coords, oms.coord.df)
+
+        # seq_in_both and coords_in_both should match seqs.df and coord.df
+        pd.testing.assert_frame_equal(oms.seq_in_both, oms.seqs.df)
+        pd.testing.assert_frame_equal(oms.coords_in_both, oms.coord.df)
+
+        # strains_in_coords and strains_in_both should be all strains
+        self.assertEqual(oms.strains_in_coords, strains)
+        self.assertEqual(oms.strains_in_both, strains)
+
+        # coords_excl_to_coords should be empty
+        self.assertEqual(len(oms.coords_excl_to_coords), 0)
+
+    def test_from_combined_variant_positions(self):
+        """variant_positions should reflect positions with variation."""
+        df = self._make_combined_df()
+        # Position 1: Q, Q, Q, A -> variant
+        # Position 2: K, N, K, K -> variant
+        # Position 3: L, A, A, L -> variant
+        oms = OrderedMapSeq.from_combined(df)
+        self.assertEqual(oms.variant_positions, {1, 2, 3})
+
+    def test_from_combined_invariant_position(self):
+        """An invariant position should not appear in variant_positions."""
+        df = pd.DataFrame(
+            {
+                "x": [0.0, 1.0, 2.0],
+                "y": [0.0, 1.0, 2.0],
+                "seq_aa": ["QKL", "QNA", "QKA"],
+            },
+            index=["flu1", "flu2", "flu3"],
+        )
+        oms = OrderedMapSeq.from_combined(df)
+        # Position 1 is invariant (all Q)
+        self.assertNotIn(1, oms.variant_positions)
+        self.assertIn(2, oms.variant_positions)
+        self.assertIn(3, oms.variant_positions)
+
+    def test_from_combined_works_with_filter(self):
+        """The object should be compatible with filter()."""
+        df = self._make_combined_df()
+        oms = OrderedMapSeq.from_combined(df)
+        # Should not raise
+        oms.filter(
+            patch=None, plot=False, remove_invariant=True, get_dummies=True
+        )
+        self.assertTrue(hasattr(oms.seqs, "dummies"))
+
+    def test_from_combined_does_not_mutate_input(self):
+        """The input DataFrame should not be modified."""
+        df = self._make_combined_df()
+        original = df.copy()
+        OrderedMapSeq.from_combined(df)
+        pd.testing.assert_frame_equal(df, original)
+
+
 def _make_oms(seq_data, positions, strain_names):
     """Helper to build an OrderedMapSeq from compact sequence data."""
     seq_df = pd.DataFrame(seq_data, columns=positions, index=strain_names)

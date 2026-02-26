@@ -21,11 +21,13 @@ from scipy import spatial
 
 from .data import amino_acids
 from .dataframes import CoordDf, SeqDf
-from .helper import is_not_amino_acid
+from .helper import expand_sequences, is_not_amino_acid
 from .munging import handle_duplicate_sequences
 from .plotting import (
     add_ellipses,
-    amino_acid_colors,
+)
+from .plotting import amino_acid_colors as aa_colors
+from .plotting import (
     combination_label,
     make_ax_a_map,
     point_size,
@@ -220,9 +222,7 @@ class MapSeq:
             coords = coords.sample(frac=1)
             aa_series = aa_series.loc[coords.index]
 
-            colors = aa_series.map(amino_acid_colors).fillna(
-                amino_acid_colors["X"]
-            )
+            colors = aa_series.map(aa_colors).fillna(aa_colors["X"])
 
             ax.scatter(
                 x=coords["x"].values,
@@ -233,32 +233,28 @@ class MapSeq:
             )
 
             # Manual legend handles
-            for amino_acid in seq_grouped.groups:
-                try:
-                    color = amino_acid_colors[amino_acid]
-                except KeyError:
-                    color = amino_acid_colors["X"]
-                label = "{} {:.1f}%".format(
-                    amino_acid, proportions[amino_acid]
-                )
+            for aa in seq_grouped.groups:
                 ax.plot(
-                    [], [], marker="o", linestyle="", color=color, label=label
+                    [],
+                    [],
+                    marker="o",
+                    linestyle="",
+                    color=aa_colors.get(aa, aa_colors["X"]),
+                    label=f"{aa} {proportions[aa]:>5.1f}%",
                 )
 
         else:
-            for amino_acid, seq_group in seq_grouped:
+            for aa, seq_group in seq_grouped:
                 coord_group = self.coords_in_both.loc[seq_group.index, :]
 
-                try:
-                    kwds["color"] = amino_acid_colors[amino_acid]
-                except KeyError:
-                    kwds["color"] = amino_acid_colors["X"]
+                kwds["color"] = aa_colors.get(aa, aa_colors["X"])
 
-                label = "{} {:.1f}%".format(
-                    amino_acid, proportions[amino_acid]
-                )
                 coord_group.plot.scatter(
-                    label=label, x="x", y="y", ax=ax, **kwds
+                    label=f"{aa} {proportions[aa]:>.1f}%",
+                    x="x",
+                    y="y",
+                    ax=ax,
+                    **kwds,
                 )
 
         # Set axis limits from all coordinates so plots for different sites
@@ -274,10 +270,7 @@ class MapSeq:
 
         setup_ax(self.map)
 
-        ax.legend()
-        ax.text(
-            x=0.5, y=0.99, s=p, fontsize=25, va="top", transform=ax.transAxes
-        )
+        ax.legend(title=str(p))
 
         return ax
 
@@ -353,7 +346,7 @@ class MapSeq:
                     x="x",
                     y="y",
                     s=150,
-                    c=amino_acid_colors[aas[j]],
+                    c=aa_colors[aas[j]],
                     edgecolor="white",
                     linewidth=1,
                     zorder=20,
@@ -892,12 +885,8 @@ class MapSeq:
         coords_a = coords_all.loc[coords_all.index.isin(strains_aa0)]
         coords_b = coords_all.loc[coords_all.index.isin(strains_aa1)]
 
-        color_a = amino_acid_colors.get(
-            aa0, amino_acid_colors.get("X", "gray")
-        )
-        color_b = amino_acid_colors.get(
-            aa1, amino_acid_colors.get("X", "gray")
-        )
+        color_a = aa_colors.get(aa0, aa_colors.get("X", "gray"))
+        color_b = aa_colors.get(aa1, aa_colors.get("X", "gray"))
 
         scatter_kwds = dict(
             edgecolors="white",
